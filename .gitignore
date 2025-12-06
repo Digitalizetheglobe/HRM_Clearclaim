@@ -2,3 +2,4 @@
 Modules/LandingPage.zip
 # If you prefer ignoring all zips under Modules, uncomment the next line
 # Modules/*.zip
+/vendor/
