@@ -4,6 +4,7 @@ use App\Http\Controllers\AamarpayController;
 use App\Models\Employee;
 use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\UserController;
+use App\Http\Controllers\SearchController;
 use App\Http\Controllers\AwardController;
 use App\Http\Controllers\HomeController;
 use App\Http\Controllers\SettingsController;
@@ -117,10 +118,13 @@ use App\Http\Controllers\XenditPaymentController;
 use App\Http\Controllers\YooKassaController;
 use Illuminate\Support\Facades\Artisan;
 use App\Http\Controllers\ToDoListController;
+use App\Http\Controllers\NoticeController;
+use App\Http\Controllers\ExpenseReimbursementController;
+use App\Http\Controllers\ExpenseCategoryController;
+use App\Http\Controllers\ExpensePolicyController;
 use App\Http\Controllers\QuoteController;
 use App\Http\Controllers\ProjectController;
 use App\Http\Controllers\TaskAssignController;
-use App\Http\Controllers\NoticeController;  
 use Illuminate\Support\Facades\File;
 
 
@@ -200,6 +204,10 @@ Route::any('/hrm/loan/deduction/{id}/update', function($id) {
     return response()->json(['message' => 'Debug endpoint']);
 });
 
+// web.php
+Route::post('/attendance/overview', [AttendanceController::class, 'attendanceOverview'])
+    ->name('attendance.overview')
+    ->middleware(['auth']); // or your middleware
 
 
 
@@ -247,6 +255,23 @@ Route::middleware(['auth'])->group(function () {
 
     // Delete notice
     Route::delete('/notices/{notice}', [NoticeController::class, 'destroy'])->name('notices.destroy');
+    
+    // Expenses & Reimbursement Routes (Single Controller)
+    Route::get('/expenses', [ExpenseReimbursementController::class, 'index'])->name('expenses.index');
+    Route::get('/expenses/create', [ExpenseReimbursementController::class, 'create'])->name('expenses.create');
+    Route::post('/expenses', [ExpenseReimbursementController::class, 'store'])->name('expenses.store');
+    Route::get('/expenses/{id}', [ExpenseReimbursementController::class, 'show'])->name('expenses.show');
+    Route::post('/expenses/{id}/approve', [ExpenseReimbursementController::class, 'approve'])->name('expenses.approve');
+    Route::post('/expenses/{id}/reject', [ExpenseReimbursementController::class, 'reject'])->name('expenses.reject');
+    Route::post('/expenses/{id}/mark-paid', [ExpenseReimbursementController::class, 'markPaid'])->name('expenses.mark-paid');
+    Route::delete('/expenses/{id}', [ExpenseReimbursementController::class, 'destroy'])->name('expenses.destroy');
+
+    // Expense Categories (Admin)
+    Route::resource('expense-categories', ExpenseCategoryController::class)->middleware(['auth', 'XSS']);
+
+    // Expense Policies (Admin)
+    Route::get('/expense-policies', [ExpensePolicyController::class, 'index'])->name('expense-policies.index');
+    Route::post('/expense-policies', [ExpensePolicyController::class, 'update'])->name('expense-policies.update');
     
 });
 
@@ -402,6 +427,9 @@ Route::group(['middleware' => ['verified']], function () {
     //     ]
     // );
     Route::get('/home/getlanguvage', [HomeController::class, 'getlanguvage'])->name('home.getlanguvage');
+    
+    // Global Search
+    Route::get('/search', [SearchController::class, 'search'])->name('search')->middleware(['auth', 'XSS']);
 
 
     Route::group(
@@ -1149,6 +1177,20 @@ Route::group(['middleware' => ['verified']], function () {
     );
 
     Route::post('attendanceemployee/attendance', [AttendanceEmployeeController::class, 'attendance'])->name('attendanceemployee.attendance')->middleware(
+        [
+            'auth',
+            'XSS',
+        ]
+    );
+
+    Route::post('attendance/overview', [AttendanceEmployeeController::class, 'attendanceOverview'])->name('attendance.overview')->middleware(
+        [
+            'auth',
+            'XSS',
+        ]
+    );
+
+    Route::match(['get', 'post'], 'attendance/process-missing-punchouts', [AttendanceEmployeeController::class, 'processMissingPunchOuts'])->name('attendance.processMissingPunchOuts')->middleware(
         [
             'auth',
             'XSS',

@@ -70,6 +70,80 @@
             });
         }
     </script>
+
+    <script>
+        // Function to process missing punch outs
+        function processMissingPunchOuts() {
+            if (!confirm('This will process all missing punch-outs for past dates. First missing punch-out in each month will be skipped. Continue?')) {
+                return false;
+            }
+            
+            var btn = document.getElementById('processMissingPunchOutsBtn');
+            if (!btn) {
+                alert('Button not found!');
+                return false;
+            }
+            
+            var originalHtml = btn.innerHTML;
+            btn.disabled = true;
+            btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Processing...';
+            
+            var routeUrl = '{{ route("attendance.processMissingPunchOuts") }}';
+            var token = '{{ csrf_token() }}';
+            
+            // Use fetch API as fallback if jQuery fails
+            fetch(routeUrl, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRF-TOKEN': token,
+                    'X-Requested-With': 'XMLHttpRequest'
+                },
+                body: JSON.stringify({})
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    alert(data.message || 'Missing punch-outs processed successfully!');
+                    location.reload();
+                } else {
+                    alert('Error: ' + (data.message || 'Unknown error occurred'));
+                    btn.disabled = false;
+                    btn.innerHTML = originalHtml;
+                }
+            })
+            .catch(error => {
+                console.error('Error:', error);
+                alert('An error occurred while processing missing punch-outs. Please check the console for details.');
+                btn.disabled = false;
+                btn.innerHTML = originalHtml;
+            });
+            
+            return false;
+        }
+        
+        $(document).ready(function() {
+            console.log('Document ready - Setting up Process Missing Punch Outs button');
+            
+            // Check if button exists
+            var btn = $('#processMissingPunchOutsBtn');
+            if (btn.length === 0) {
+                console.warn('Process Missing Punch Outs button not found!');
+            } else {
+                console.log('Process Missing Punch Outs button found!');
+            }
+            
+            // Process Missing Punch Outs Button - Use event delegation
+            $(document).on('click', '#processMissingPunchOutsBtn', function(e) {
+                e.preventDefault();
+                e.stopPropagation();
+                
+                console.log('Button clicked via jQuery!');
+                processMissingPunchOuts();
+                return false;
+            });
+        });
+    </script>
 @endpush
 @section('action-button')
 @endsection
@@ -177,6 +251,17 @@
                                             data-bs-original-title="{{ __('Export') }}">
                                             <i class="ti ti-download"></i>
                                         </a>
+
+                                        @if (\Auth::user()->type != 'employee')
+                                            <button type="button" class="btn btn-sm btn-warning" 
+                                                id="processMissingPunchOutsBtn"
+                                                onclick="return processMissingPunchOuts();"
+                                                data-bs-toggle="tooltip" 
+                                                title="{{ __('Process Missing Punch Outs') }}" 
+                                                data-bs-original-title="{{ __('Process Missing Punch Outs') }}">
+                                                <i class="ti ti-clock"></i> {{ __('Process Missing Punch Outs') }}
+                                            </button>
+                                        @endif
                                     </div>
 
                                 </div>
@@ -202,6 +287,8 @@
                                     <th>{{ __('Status') }}</th>
                                     <th>{{ __('Clock-In Time') }}</th>
                                     <th>{{ __('Clock-Out Time') }}</th>
+                                    <th>{{ __('Total Hours') }}</th>
+                                    <th>{{ __('Difference') }}</th>
                                     @if (Gate::check('Edit Attendance') || Gate::check('Delete Attendance'))
                                         <th width="200px">{{ __('Action') }}</th>
                                     @endif
@@ -209,6 +296,66 @@
                             </thead>
                             <tbody>
                                 @foreach ($attendanceEmployee as $attendance)
+                                    @php
+                                        // Calculate total hours
+                                        $totalHours = null;
+                                        $totalMinutes = null;
+                                        $diffMinutes = null;
+                                        
+                                        if ($attendance->clock_in != '00:00:00' && $attendance->clock_out != '00:00:00' && $attendance->clock_in && $attendance->clock_out) {
+                                            try {
+                                                // Combine date with time for proper calculation
+                                                $date = $attendance->date;
+                                                $inTime = \Carbon\Carbon::parse($date . ' ' . $attendance->clock_in);
+                                                $outTime = \Carbon\Carbon::parse($date . ' ' . $attendance->clock_out);
+                                                
+                                                // Handle case where clock out might be next day (e.g., clock out at 7:00 PM when clock in was 10:00 AM)
+                                                if ($outTime->lt($inTime)) {
+                                                    $outTime->addDay();
+                                                }
+                                                
+                                                $totalMinutes = $outTime->diffInMinutes($inTime);
+                                                
+                                                // Calculate difference from standard (9 hours = 540 minutes)
+                                                $standardMinutes = 540;
+                                                $diffMinutes = $totalMinutes - $standardMinutes;
+                                            } catch (\Exception $e) {
+                                                $totalMinutes = null;
+                                                $diffMinutes = null;
+                                            }
+                                        }
+                                        
+                                        // Format total hours
+                                        $totalHoursFormatted = '-';
+                                        if ($totalMinutes !== null) {
+                                            $hours = floor($totalMinutes / 60);
+                                            $minutes = $totalMinutes % 60;
+                                            $totalHoursFormatted = $hours . 'h ' . $minutes . 'm';
+                                        }
+                                        
+                                        // Format difference
+                                        $differenceFormatted = '-';
+                                        if ($diffMinutes !== null) {
+                                            if ($diffMinutes == 0) {
+                                                $differenceFormatted = '0m';
+                                            } else {
+                                                $sign = $diffMinutes > 0 ? '+' : '-';
+                                                $absMinutes = abs($diffMinutes);
+                                                
+                                                if ($absMinutes >= 60) {
+                                                    $diffHours = floor($absMinutes / 60);
+                                                    $diffMins = $absMinutes % 60;
+                                                    if ($diffMins > 0) {
+                                                        $differenceFormatted = $sign . $diffHours . 'h ' . $diffMins . 'm';
+                                                    } else {
+                                                        $differenceFormatted = $sign . $diffHours . 'h';
+                                                    }
+                                                } else {
+                                                    $differenceFormatted = $sign . $absMinutes . 'm';
+                                                }
+                                            }
+                                        }
+                                    @endphp
                                     <tr>
                                         @if (\Auth::user()->type != 'employee')
                                             <td>{{ !empty($attendance->employee) ? $attendance->employee->name : '' }}</td>
@@ -219,6 +366,8 @@
                                         </td>
                                         <td>{{ $attendance->clock_out != '00:00:00' ? \Auth::user()->timeFormat($attendance->clock_out) : '00:00' }}
                                         </td>
+                                        <td>{{ $totalHoursFormatted }}</td>
+                                        <td>{{ $differenceFormatted }}</td>
                                         @if (Gate::check('Edit Attendance') || Gate::check('Delete Attendance'))
                                             <td class="Action">
                                                 <div class="d-flex align-items-center justify-content-start">
@@ -267,38 +416,3 @@
         </div>
     </div>
 @endsection
-
-
-<script>
-    $(document).ready(function() {
-    $('.export-btn').click(function() {
-        // Get all the filter values
-        var type = $('input[name="type"]:checked').val();
-        var month = $('input[name="month"]').val();
-        var date = $('input[name="date"]').val();
-        var branch = $('select[name="branch"]').val();
-        var department = $('select[name="department"]').val();
-        
-        // Build the export URL with all filters
-        var url = "{{ route('attendance.export') }}";
-        url += "?type=" + type;
-        
-        if (type == 'monthly' && month) {
-            url += "&month=" + month;
-        } else if (type == 'daily' && date) {
-            url += "&date=" + date;
-        }
-        
-        if (branch) {
-            url += "&branch=" + branch;
-        }
-        
-        if (department) {
-            url += "&department=" + department;
-        }
-        
-        // Redirect to the export URL which will trigger the download
-        window.location.href = url;
-    });
-});
-</script>

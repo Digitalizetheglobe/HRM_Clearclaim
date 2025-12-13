@@ -74,11 +74,22 @@
         </ul>
     </div>
     
-    <!-- Marquee Section for Daily Quote -->
-    <div class="quote-container" style="display: flex; justify-content: center; align-items: center; flex-grow: 1;">
-        <marquee behavior="scroll" direction="left" scrollamount="6" style="color: #0a3c77; font-size: 18px; font-weight: bold; width: 100%;margin: left 11px;">
-            " {{ $quote->quote ?? 'No quote for today!!' }} "
-        </marquee>
+    <!-- Global Search Bar -->
+    <div class="search-container" style=" display: flex; justify-content: center; align-items: center; flex-grow: 1; position: relative; max-width: 600px; margin: 0 auto;">
+        <div class="global-search-wrapper" style="position: relative; width: 100%;">
+            <input 
+                type="text" 
+                id="global-search-input" 
+                class="form-control" 
+                placeholder="Search employees, projects, departments..." 
+                autocomplete="off"
+                style="width: 100%; padding: 10px 40px 10px 15px; border-radius: 25px; border: 2px solid #0a3772; background: rgba(255,255,255,0.9); color: #333; font-size: 14px;"
+            />
+            <i class="ti ti-search" style="position: absolute; right: 15px; top: 50%; transform: translateY(-50%); color: #666; pointer-events: none;"></i>
+            <div id="search-results" style="display: none; position: absolute; top: 100%; left: 0; right: 0; background: white; border: 1px solid #ddd; border-radius: 8px; box-shadow: 0 4px 12px rgba(0,0,0,0.15); z-index: 1000; max-height: 400px; overflow-y: auto; margin-top: 5px;">
+                <div id="search-results-content"></div>
+            </div>
+        </div>
     </div>
 
     <div class="ms-auto" style="display: flex; justify-content: flex-end; align-items: center;">
@@ -442,5 +453,174 @@
                 .catch(error => console.error('Error:', error));
             }
         });
+
+        // Global Search Functionality
+        (function() {
+            const searchInput = document.getElementById('global-search-input');
+            const searchResults = document.getElementById('search-results');
+            const searchResultsContent = document.getElementById('search-results-content');
+            let searchTimeout;
+
+            if (!searchInput) return;
+
+            searchInput.addEventListener('input', function(e) {
+                const query = e.target.value.trim();
+
+                clearTimeout(searchTimeout);
+
+                if (query.length < 2) {
+                    searchResults.style.display = 'none';
+                    return;
+                }
+
+                searchTimeout = setTimeout(() => {
+                    performSearch(query);
+                }, 300);
+            });
+
+            searchInput.addEventListener('focus', function() {
+                if (searchResultsContent.innerHTML.trim() !== '') {
+                    searchResults.style.display = 'block';
+                }
+            });
+
+            // Close search results when clicking outside
+            document.addEventListener('click', function(e) {
+                if (!searchInput.contains(e.target) && !searchResults.contains(e.target)) {
+                    searchResults.style.display = 'none';
+                }
+            });
+
+            // Handle keyboard navigation
+            searchInput.addEventListener('keydown', function(e) {
+                if (e.key === 'Escape') {
+                    searchResults.style.display = 'none';
+                    searchInput.blur();
+                }
+            });
+
+            function performSearch(query) {
+                fetch(`{{ route('search') }}?q=${encodeURIComponent(query)}`, {
+                    method: 'GET',
+                    headers: {
+                        'X-Requested-With': 'XMLHttpRequest',
+                        'Accept': 'application/json',
+                    }
+                })
+                .then(response => {
+                    if (!response.ok) {
+                        return response.json().then(err => {
+                            throw new Error(err.error || 'Server error: ' + response.status);
+                        }).catch(() => {
+                            throw new Error('Server error: ' + response.status);
+                        });
+                    }
+                    return response.json();
+                })
+                .then(data => {
+                    if (data && data.results) {
+                        displayResults(data.results);
+                    } else {
+                        searchResultsContent.innerHTML = '<div class="p-3 text-center text-muted">No results found</div>';
+                        searchResults.style.display = 'block';
+                    }
+                })
+                .catch(error => {
+                    console.error('Search error:', error);
+                    let errorMsg = error.message || 'Error performing search. Please try again.';
+                    searchResultsContent.innerHTML = `<div class="p-3 text-center text-danger">${errorMsg}</div>`;
+                    searchResults.style.display = 'block';
+                });
+            }
+
+            function displayResults(results) {
+                if (results.length === 0) {
+                    searchResultsContent.innerHTML = '<div class="p-3 text-center text-muted">No results found</div>';
+                    searchResults.style.display = 'block';
+                    return;
+                }
+
+                // Group results by employee_id or category
+                const grouped = {};
+                const otherResults = [];
+                
+                results.forEach(result => {
+                    if (result.employee_id) {
+                        if (!grouped[result.employee_id]) {
+                            grouped[result.employee_id] = [];
+                        }
+                        grouped[result.employee_id].push(result);
+                    } else {
+                        otherResults.push(result);
+                    }
+                });
+
+                let html = '<div style="padding: 4px; max-height: 500px; overflow-y: auto;">';
+                
+                // Display grouped employee results first
+                Object.keys(grouped).forEach(employeeId => {
+                    const employeeResults = grouped[employeeId];
+                    const employeeProfile = employeeResults.find(r => r.type === 'Employee Profile');
+                    const employeeName = employeeProfile ? employeeProfile.title.replace(' - Profile', '') : 'Employee';
+                    
+                    html += `
+                        <div style="background: #f8f9fa; padding: 8px; margin: 4px 0; border-radius: 4px; border-left: 3px solid #0a3772;">
+                            <div style="font-weight: 700; color: #0a3772; font-size: 13px; margin-bottom: 6px;">
+                                <i class="ti ti-user" style="margin-right: 6px;"></i>${escapeHtml(employeeName)}
+                            </div>
+                    `;
+                    
+                    employeeResults.forEach(result => {
+                        html += `
+                            <a href="${result.url}" class="search-result-item" style="display: block; padding: 8px 8px 8px 24px; border-bottom: 1px solid #e9ecef; text-decoration: none; color: inherit; transition: background 0.2s; border-radius: 3px; margin: 2px 0;" 
+                               onmouseover="this.style.background='#e9ecef'" 
+                               onmouseout="this.style.background='transparent'">
+                                <div style="display: flex; align-items: center; gap: 10px;">
+                                    <i class="${result.icon}" style="font-size: 16px; color: #0a3772;"></i>
+                                    <div style="flex: 1;">
+                                        <div style="font-weight: 500; color: #333; font-size: 13px; margin-bottom: 2px;">${escapeHtml(result.title)}</div>
+                                        <div style="font-size: 11px; color: #666;">${escapeHtml(result.subtitle)}</div>
+                                    </div>
+                                </div>
+                            </a>
+                        `;
+                    });
+                    
+                    html += '</div>';
+                });
+
+                // Display other results
+                if (otherResults.length > 0) {
+                    html += '<div style="margin-top: 12px; padding-top: 12px; border-top: 2px solid #e9ecef;">';
+                    otherResults.forEach(result => {
+                        html += `
+                            <a href="${result.url}" class="search-result-item" style="display: block; padding: 10px; border-bottom: 1px solid #f0f0f0; text-decoration: none; color: inherit; transition: background 0.2s; border-radius: 3px;" 
+                               onmouseover="this.style.background='#f8f9fa'" 
+                               onmouseout="this.style.background='white'">
+                                <div style="display: flex; align-items: center; gap: 12px;">
+                                    <i class="${result.icon}" style="font-size: 18px; color: #0a3772;"></i>
+                                    <div style="flex: 1;">
+                                        <div style="font-weight: 600; color: #333; margin-bottom: 4px; font-size: 13px;">${escapeHtml(result.title)}</div>
+                                        <div style="font-size: 11px; color: #666;">${escapeHtml(result.subtitle)}</div>
+                                        <div style="font-size: 10px; color: #999; margin-top: 2px;">${result.type}</div>
+                                    </div>
+                                </div>
+                            </a>
+                        `;
+                    });
+                    html += '</div>';
+                }
+                
+                html += '</div>';
+                searchResultsContent.innerHTML = html;
+                searchResults.style.display = 'block';
+            }
+
+            function escapeHtml(text) {
+                const div = document.createElement('div');
+                div.textContent = text;
+                return div.innerHTML;
+            }
+        })();
     </script>
 @endpush

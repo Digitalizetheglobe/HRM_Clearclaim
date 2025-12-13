@@ -242,10 +242,81 @@ class HomeController extends Controller
                             return strtotime($a['start']) - strtotime($b['start']);
                         });
                         
+                        // Fetch attendance data for calendar (fetch 3 months for smooth navigation)
+                        $attendanceData = [];
+                        if ($emp) {
+                            $currentDate = Carbon::now();
+                            // Fetch data for previous month, current month, and next month
+                            $startRange = $currentDate->copy()->subMonth()->startOfMonth();
+                            $endRange = $currentDate->copy()->addMonth()->endOfMonth();
+                            
+                            // Get all attendance records for the range
+                            $attendances = AttendanceEmployee::where('employee_id', $emp->id)
+                                ->whereBetween('date', [$startRange->format('Y-m-d'), $endRange->format('Y-m-d')])
+                                ->get();
+                            
+                            $employeeData = [];
+                            foreach ($attendances as $attendance) {
+                                $dateFormatted = $attendance->date;
+                                $employeeData[$dateFormatted] = [
+                                    'type' => 'present',
+                                    'clock_in' => $attendance->clock_in,
+                                    'clock_out' => $attendance->clock_out
+                                ];
+                            }
+                            
+                            // Get leaves for the range
+                            $leaves = Leave::where('employee_id', $emp->id)
+                                ->where('status', 'approved')
+                                ->where(function($query) use ($startRange, $endRange) {
+                                    $query->whereBetween('start_date', [$startRange->format('Y-m-d'), $endRange->format('Y-m-d')])
+                                          ->orWhereBetween('end_date', [$startRange->format('Y-m-d'), $endRange->format('Y-m-d')])
+                                          ->orWhere(function($q) use ($startRange, $endRange) {
+                                              $q->where('start_date', '<=', $startRange->format('Y-m-d'))
+                                                ->where('end_date', '>=', $endRange->format('Y-m-d'));
+                                          });
+                                })
+                                ->get();
+                            
+                            foreach ($leaves as $leave) {
+                                $start = Carbon::parse($leave->start_date);
+                                $end = Carbon::parse($leave->end_date);
+                                
+                                for ($date = $start->copy(); $date->lte($end); $date->addDay()) {
+                                    $formattedDate = $date->format('Y-m-d');
+                                    if ($date->between($startRange, $endRange)) {
+                                        if (!isset($employeeData[$formattedDate])) {
+                                            $employeeData[$formattedDate] = [
+                                                'type' => 'leave',
+                                                'reason' => $leave->leave_reason ?? ''
+                                            ];
+                                        }
+                                    }
+                                }
+                            }
+                            
+                            // Mark absent for dates without attendance or leave (only for past dates)
+                            $today = Carbon::today();
+                            for ($date = $startRange->copy(); $date->lte($endRange); $date->addDay()) {
+                                $dateFormatted = $date->format('Y-m-d');
+                                if (!isset($employeeData[$dateFormatted]) && $date->lte($today)) {
+                                    $employeeData[$dateFormatted] = ['type' => 'absent'];
+                                }
+                            }
+                            
+                            $attendanceData[$emp->id] = [
+                                'name' => $emp->name,
+                                'data' => $employeeData
+                            ];
+                        }
 
+                // Get pending leave requests count for the employee
+                $pendingLeaveCount = Leave::where('employee_id', $emp->id)
+                    ->where('status', 'Pending')
+                    ->count();
 
                 // Pass employee details to the dashboard
-                return view('dashboard.dashboard', compact('allEvents', 'employeesNotWorkingToday', 'notices', 'arrEvents', 'announcements', 'employees', 'meetings', 'employeeAttendance', 'officeTime', 'quote', 'emp', 'clockInTime', 'todos'));
+                return view('dashboard.dashboard', compact('allEvents', 'employeesNotWorkingToday', 'notices', 'arrEvents', 'announcements', 'employees', 'meetings', 'employeeAttendance', 'officeTime', 'quote', 'emp', 'clockInTime', 'todos', 'attendanceData', 'pendingLeaveCount'));
             }
             else if ($user->type == 'super admin') {
                 $user                       = \Auth::user();

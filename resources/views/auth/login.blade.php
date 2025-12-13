@@ -193,7 +193,7 @@
         </div>
         <div class="login-form">
             <div class="logo">
-                <img src="{{ asset('storage/uploads/logo/logo-dark.png') }}" alt="Logo">
+                <img src="{{ asset('storage/uploads/logo/2_dark_logo.png') }}" alt="Logo">
             </div>
             
             @if(session('status'))

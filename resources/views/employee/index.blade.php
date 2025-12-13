@@ -57,7 +57,6 @@
                                             <th>{{ __('Employee ID') }}</th>
                                             <th>{{ __('Name') }}</th>
                                             <th>{{ __('Email') }}</th>
-                                            <th>{{ __('Branch') }}</th>
                                             <th>{{ __('Department') }}</th>
                                             <th>{{ __('Designation') }}</th>
                                             <th>{{ __('Date Of Joining') }}</th>
@@ -83,11 +82,7 @@
                                                 </td>
                                                 <td>{{ $employee->name ?? '-' }}</td>
                                                 <td>{{ $employee->email ?? '-' }}</td>  
-                                                <td>
-                                                    <span class="">
-                                                        {{ $employee->branch?->name ?? '-' }}
-                                                    </span>
-                                                </td>
+
                                                 <td>
                                                     <span class="">
                                                         {{ $employee->department?->name ?? '-' }}

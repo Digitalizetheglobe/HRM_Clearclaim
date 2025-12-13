@@ -49,11 +49,16 @@
                                 @foreach ($terminations as $termination)
                                     <tr>
                                         @role('company')
-                                            <td>{{ !empty($termination->employee_id) ? $termination->employee->name : '' }}
+                                            <td>
+                                                @if($termination->employee)
+                                                    {{ $termination->employee->name }}
+                                                @else
+                                                    {{ __('N/A') }}
+                                                @endif
                                             </td>
                                         @endrole
 
-                                        <td>{{ !empty($termination->termination_type) ? $termination->terminationType->name : '' }}
+                                        <td>{{ !empty($termination->termination_type) && $termination->terminationType ? $termination->terminationType->name : '' }}
                                         </td>
                                         <td>{{ \Auth::user()->dateFormat($termination->notice_date) }}</td>
                                         <td>{{ \Auth::user()->dateFormat($termination->termination_date) }}</td>

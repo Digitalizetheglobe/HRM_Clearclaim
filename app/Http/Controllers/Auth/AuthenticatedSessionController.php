@@ -57,19 +57,45 @@ class AuthenticatedSessionController extends Controller
 
         $this->validate($request, $validation);
 
-        $remember = $request->filled('remember');
+        // For employees and company users, always enable remember me for persistent login
+        $email = $request->input('email');
+        $userCheck = User::where('email', $email)->first();
+        $isEmployee = $userCheck && $userCheck->type === 'employee';
+        $isCompany = $userCheck && $userCheck->type === 'company';
+        
+        $remember = $request->filled('remember') || $isEmployee || $isCompany;
+
+        // Set session lifetime before authentication for employees and company users
+        if ($isEmployee) {
+            config(['session.lifetime' => 5256000]); // 10 years for employees
+        } elseif ($isCompany) {
+            config(['session.lifetime' => 5256000]); // 10 years for company users
+        }
 
         // ✅ Check login success
         if (!Auth::attempt($request->only('email', 'password'), $remember)) {
             return back()->with('error', __('Invalid email or password.'))->withInput();
         }
 
-        if ($remember) {
-            config(['session.lifetime' => 43200]); // 30 days
-        }
-
         $request->session()->regenerate();
         $user = Auth::user();
+
+        // For employees and company users, ensure persistent login with extended session
+        if ($user->type === 'employee') {
+            // Set session lifetime to 10 years (5256000 minutes) for employees
+            config(['session.lifetime' => 5256000]);
+            
+            // Re-authenticate with remember me enabled to create persistent login
+            Auth::login($user, true);
+        } elseif ($user->type === 'company') {
+            // Set session lifetime to 10 years (5256000 minutes) for company users
+            config(['session.lifetime' => 5256000]);
+            
+            // Re-authenticate with remember me enabled to create persistent login
+            Auth::login($user, true);
+        } elseif ($remember) {
+            config(['session.lifetime' => 43200]); // 30 days for other users
+        }
 
         // Account status checks
         if ($user->is_active == 0 || $user->is_disable == 0) {
@@ -129,6 +155,25 @@ class AuthenticatedSessionController extends Controller
         // Save login details for non-admin users
         if (!in_array($user->type, ['company', 'super admin'])) {
             $this->saveLoginDetails($user);
+        }
+
+        // For employees and company users, extend session cookie expiration to prevent automatic logout
+        if ($user->type === 'employee' || $user->type === 'company') {
+            $sessionName = config('session.cookie');
+            $sessionLifetime = 5256000; // 10 years in minutes
+            
+            return redirect()->intended(RouteServiceProvider::HOME)
+                ->withCookie(cookie(
+                    $sessionName,
+                    $request->session()->getId(),
+                    $sessionLifetime,
+                    config('session.path'),
+                    config('session.domain'),
+                    config('session.secure'),
+                    config('session.http_only'),
+                    false,
+                    config('session.same_site')
+                ));
         }
 
         return redirect()->intended(RouteServiceProvider::HOME);

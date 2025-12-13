@@ -50,7 +50,12 @@
                             @foreach ($resignations as $resignation)
                                 <tr>
                                     @role('company')
-                                        <td>{{ !empty($resignation->employee_id) ? $resignation->employee->name : '' }}
+                                        <td>
+                                            @if($resignation->employee)
+                                                {{ $resignation->employee->name }}
+                                            @else
+                                                {{ __('N/A') }}
+                                            @endif
                                         </td>
                                     @endrole
                                     <td>{{ \Auth::user()->dateFormat($resignation->notice_date) }}</td>

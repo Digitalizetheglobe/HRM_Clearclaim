@@ -137,6 +137,71 @@ class AttendanceEmployeeController extends Controller
                 $attendanceEmployee = $attendanceEmployee->get();
             }
 
+            // Process records with missing clock-out based on date
+            $today = Carbon::today()->format('Y-m-d');
+            foreach ($attendanceEmployee as $attendance) {
+                if ($attendance->clock_out == '00:00:00' && $attendance->clock_in != '00:00:00') {
+                    $attendanceDate = Carbon::parse($attendance->date)->format('Y-m-d');
+                    
+                    if ($attendanceDate < $today) {
+                        // Past date: Apply missing punch-out logic (Half Day with calculated clock out)
+                        try {
+                            // Parse clock_in time
+                            $clockInTime = Carbon::parse($attendance->date . ' ' . $attendance->clock_in);
+                            
+                            // Add 4.5 hours (4 hours 30 minutes) to clock_in
+                            $calculatedClockOut = $clockInTime->copy()->addHours(4)->addMinutes(30);
+                            
+                            // If calculated time goes past midnight (next day), cap it at end of day (23:59:59)
+                            $endOfDay = Carbon::parse($attendance->date . ' 23:59:59');
+                            if ($calculatedClockOut->gt($endOfDay)) {
+                                $calculatedClockOut = $endOfDay;
+                            }
+                            
+                            // Format as H:i:s
+                            $clockOutTime = $calculatedClockOut->format('H:i:s');
+                            
+                            // Update attendance record
+                            $attendance->clock_out = $clockOutTime;
+                            $attendance->status = AttendanceEmployee::STATUS_HALF_DAY;
+                            
+                            // Calculate early leaving (if applicable)
+                            $endTime = Utility::getValByName('company_end_time');
+                            if ($endTime) {
+                                $expectedEndTime = Carbon::parse($attendance->date . ' ' . $endTime);
+                                if ($calculatedClockOut->lt($expectedEndTime)) {
+                                    $totalEarlyLeavingSeconds = $expectedEndTime->diffInSeconds($calculatedClockOut);
+                                    $hours = floor($totalEarlyLeavingSeconds / 3600);
+                                    $mins = floor(($totalEarlyLeavingSeconds % 3600) / 60);
+                                    $secs = $totalEarlyLeavingSeconds % 60;
+                                    $attendance->early_leaving = sprintf('%02d:%02d:%02d', $hours, $mins, $secs);
+                                } else {
+                                    $attendance->early_leaving = '00:00:00';
+                                }
+                            }
+                            
+                            // Set overtime to 00:00:00 (no overtime for half day)
+                            $attendance->overtime = '00:00:00';
+                            
+                            $attendance->save();
+                        } catch (\Exception $e) {
+                            \Log::error('Error processing missing punch-out for attendance ID ' . $attendance->id . ': ' . $e->getMessage());
+                            // If error occurs, at least set status to Single Punch In
+                            if ($attendance->status != AttendanceEmployee::STATUS_SINGLE_PUNCH) {
+                                $attendance->status = AttendanceEmployee::STATUS_SINGLE_PUNCH;
+                                $attendance->save();
+                            }
+                        }
+                    } else {
+                        // Current date: Keep as "Single Punch In"
+                        if ($attendance->status != AttendanceEmployee::STATUS_SINGLE_PUNCH) {
+                            $attendance->status = AttendanceEmployee::STATUS_SINGLE_PUNCH;
+                            $attendance->save();
+                        }
+                    }
+                }
+            }
+
             return view('attendance.index', compact('attendanceEmployee', 'branch', 'department', 'employees'));
         } else {
             return redirect()->back()->with('error', __('Permission denied.'));
@@ -423,33 +488,41 @@ class AttendanceEmployeeController extends Controller
             $secs  = floor($totalLateSeconds % 60);
             $late  = sprintf('%02d:%02d:%02d', $hours, $mins, $secs);
 
-            // Calculate early leaving
-            $totalEarlyLeavingSeconds = strtotime($endTime) - strtotime($clockOut);
-            $hours = floor($totalEarlyLeavingSeconds / 3600);
-            $mins  = floor($totalEarlyLeavingSeconds / 60 % 60);
-            $secs  = floor($totalEarlyLeavingSeconds % 60);
-            $earlyLeaving = sprintf('%02d:%02d:%02d', $hours, $mins, $secs);
-
-            // Calculate overtime
-            if (strtotime($clockOut) > strtotime($endTime)) {
-                $totalOvertimeSeconds = strtotime($clockOut) - strtotime($endTime);
-                $hours = floor($totalOvertimeSeconds / 3600);
-                $mins  = floor($totalOvertimeSeconds / 60 % 60);
-                $secs  = floor($totalOvertimeSeconds % 60);
-                $overtime = sprintf('%02d:%02d:%02d', $hours, $mins, $secs);
-            } else {
+            // Determine status and calculate other values
+            // If clock_out is '00:00:00' or empty, it's a single punch in
+            if (empty($clockOut) || $clockOut == '00:00:00') {
+                $status = AttendanceEmployee::STATUS_SINGLE_PUNCH;
+                $earlyLeaving = '00:00:00';
                 $overtime = '00:00:00';
-            }
-
-            // Calculate total worked hours
-            $workedSeconds = strtotime($clockOut) - strtotime($clockIn);
-            $workedHours = $workedSeconds / 3600;
-            
-            // Determine status
-            if ($workedHours >= AttendanceEmployee::REQUIRED_WORKING_HOURS) {
-                $status = AttendanceEmployee::STATUS_PRESENT;
             } else {
-                $status = AttendanceEmployee::STATUS_HALF_DAY;
+                // Calculate early leaving
+                $totalEarlyLeavingSeconds = strtotime($endTime) - strtotime($clockOut);
+                $hours = floor($totalEarlyLeavingSeconds / 3600);
+                $mins  = floor($totalEarlyLeavingSeconds / 60 % 60);
+                $secs  = floor($totalEarlyLeavingSeconds % 60);
+                $earlyLeaving = sprintf('%02d:%02d:%02d', $hours, $mins, $secs);
+
+                // Calculate overtime
+                if (strtotime($clockOut) > strtotime($endTime)) {
+                    $totalOvertimeSeconds = strtotime($clockOut) - strtotime($endTime);
+                    $hours = floor($totalOvertimeSeconds / 3600);
+                    $mins  = floor($totalOvertimeSeconds / 60 % 60);
+                    $secs  = floor($totalOvertimeSeconds % 60);
+                    $overtime = sprintf('%02d:%02d:%02d', $hours, $mins, $secs);
+                } else {
+                    $overtime = '00:00:00';
+                }
+
+                // Calculate total worked hours
+                $workedSeconds = strtotime($clockOut) - strtotime($clockIn);
+                $workedHours = $workedSeconds / 3600;
+                
+                // Determine status based on worked hours
+                if ($workedHours >= AttendanceEmployee::REQUIRED_WORKING_HOURS) {
+                    $status = AttendanceEmployee::STATUS_PRESENT;
+                } else {
+                    $status = AttendanceEmployee::STATUS_HALF_DAY;
+                }
             }
 
             if ($check->date == date('Y-m-d')) {
@@ -1328,6 +1401,519 @@ class AttendanceEmployeeController extends Controller
             return 'Half Day';
         }
     }
+
+    /**
+     * Get attendance overview data for dashboard
+     */
+    public function attendanceOverview(Request $request)
+    {
+        try {
+            $employeeId = $request->employee_id ?? (\Auth::user()->employee->id ?? 0);
+            $filterType = $request->filter_type ?? 'today';
+    
+            if (!$employeeId) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Employee not found'
+                ]);
+            }
+    
+            $data = [];
+    
+            if ($filterType === 'today' || $filterType === 'date') {
+                // Today or specific date
+                if ($filterType === 'today') {
+                    $date = Carbon::today()->format('Y-m-d');
+                } else {
+                    $requestDate = $request->input('date');
+                    if (empty($requestDate)) {
+                        return response()->json([
+                            'success' => false,
+                            'message' => 'Date is required',
+                            'debug' => 'No date parameter received'
+                        ]);
+                    }
+                    try {
+                        $date = Carbon::parse($requestDate)->format('Y-m-d');
+                        \Log::info('Attendance Overview - Date selected: ' . $date . ', Employee ID: ' . $employeeId . ', Request date: ' . $requestDate);
+                    } catch (\Exception $e) {
+                        return response()->json([
+                            'success' => false,
+                            'message' => 'Invalid date format: ' . $e->getMessage(),
+                            'debug' => 'Date received: ' . $requestDate
+                        ]);
+                    }
+                }
+    
+                \Log::info('Attendance Overview - Querying for date: ' . $date . ', Employee ID: ' . $employeeId);
+                
+                // Query attendance table for the specific date
+                $attendance = AttendanceEmployee::where('employee_id', $employeeId)
+                    ->where('date', $date)
+                    ->first();
+    
+                \Log::info('Attendance Overview - Found attendance: ' . ($attendance ? 'Yes' : 'No') . ' for date: ' . $date);
+    
+                if ($attendance) {
+                    // Format clock_in and clock_out times
+                    $clockIn = null;
+                    $clockOut = null;
+                    $isLate = false;
+                    
+                    if ($attendance->clock_in && $attendance->clock_in != '00:00:00') {
+                        $clockIn = Carbon::parse($attendance->date . ' ' . $attendance->clock_in)->format('h:i A');
+                        
+                        // Check if clock-in is late (after company start time)
+                        $companyStartTime = Utility::getValByName('company_start_time');
+                        if ($companyStartTime) {
+                            $clockInTime = Carbon::parse($attendance->date . ' ' . $attendance->clock_in);
+                            $expectedStartTime = Carbon::parse($attendance->date . ' ' . $companyStartTime);
+                            $isLate = $clockInTime->gt($expectedStartTime);
+                        }
+                    }
+                    
+                    if ($attendance->clock_out && $attendance->clock_out != '00:00:00') {
+                        $clockOut = Carbon::parse($attendance->date . ' ' . $attendance->clock_out)->format('h:i A');
+                    }
+    
+                    // Calculate hours worked (decimal)
+                    $hoursCompleted = 0;
+                    if ($attendance->clock_in && $attendance->clock_in != '00:00:00') {
+                        if ($attendance->clock_out && $attendance->clock_out != '00:00:00') {
+                            // Both clock_in and clock_out exist - calculate difference
+                            $clockInTime = Carbon::parse($attendance->date . ' ' . $attendance->clock_in);
+                            $clockOutTime = Carbon::parse($attendance->date . ' ' . $attendance->clock_out);
+                            
+                            // Handle overnight shifts (clock out next day)
+                            if ($clockOutTime->lt($clockInTime)) {
+                                $clockOutTime->addDay();
+                            }
+                            
+                            $minutes = $clockInTime->diffInMinutes($clockOutTime);
+                            $hoursCompleted = $minutes / 60;
+                        } else {
+                            // Only clock_in exists - calculate from clock_in to now if today, else 0
+                            $selectedDate = Carbon::parse($date);
+                            if ($selectedDate->isToday()) {
+                                $clockInTime = Carbon::parse($date . ' ' . $attendance->clock_in);
+                                $now = Carbon::now();
+                                $minutes = $clockInTime->diffInMinutes($now);
+                                $hoursCompleted = $minutes / 60;
+                            } else {
+                                $hoursCompleted = 0; // incomplete past date
+                            }
+                        }
+                    }
+    
+                    $data = [
+                        'clock_in' => $clockIn,
+                        'clock_out' => $clockOut,
+                        'hours_completed' => round($hoursCompleted, 2),
+                        'today_hours' => round($hoursCompleted, 2), // Store for real-time calculation
+                        'is_late' => $isLate,
+                        'date' => $date, // Pass the attendance date for accurate calculations
+                        'clock_in_raw' => $attendance->clock_in // Pass raw clock-in time for calculations
+                    ];
+                } else {
+                    // No attendance record found for this date
+                    $data = [
+                        'clock_in' => null,
+                        'clock_out' => null,
+                        'hours_completed' => 0
+                    ];
+                }
+            } elseif ($filterType === 'weekly') {
+                // Get reference date from request (the date selected by user)
+                $referenceDate = $request->input('date');
+                try {
+                    if (!empty($referenceDate)) {
+                        $ref = Carbon::parse($referenceDate);
+                    } else {
+                        $ref = Carbon::now();
+                    }
+                } catch (\Exception $e) {
+                    $ref = Carbon::now();
+                }
+    
+                // Calculate week start (Monday) and end (Sunday) based on reference date
+                $startOfWeek = $ref->copy()->startOfWeek(Carbon::MONDAY); // Start from Monday
+                $endOfWeek = $ref->copy()->endOfWeek(Carbon::SUNDAY); // End on Sunday
+    
+                \Log::info('Attendance Overview - Weekly: Querying from ' . $startOfWeek->format('Y-m-d') . ' to ' . $endOfWeek->format('Y-m-d') . ', Employee ID: ' . $employeeId);
+    
+                // Query all attendance records for the entire week
+                $attendances = AttendanceEmployee::where('employee_id', $employeeId)
+                    ->whereBetween('date', [$startOfWeek->format('Y-m-d'), $endOfWeek->format('Y-m-d')])
+                    ->orderBy('date', 'asc')
+                    ->get();
+    
+                $hoursCompleted = 0;
+                $daysWorked = 0;
+    
+                // Calculate total hours by adding all clock_in and clock_out entries
+                foreach ($attendances as $attendance) {
+                    if ($attendance->clock_in && $attendance->clock_in != '00:00:00') {
+                        if ($attendance->clock_out && $attendance->clock_out != '00:00:00') {
+                            // Both clock_in and clock_out exist
+                            $clockInTime = Carbon::parse($attendance->date . ' ' . $attendance->clock_in);
+                            $clockOutTime = Carbon::parse($attendance->date . ' ' . $attendance->clock_out);
+                            
+                            // Handle overnight shifts
+                            if ($clockOutTime->lt($clockInTime)) {
+                                $clockOutTime->addDay();
+                            }
+                            
+                            $minutes = $clockInTime->diffInMinutes($clockOutTime);
+                            $hours = $minutes / 60;
+                            $hoursCompleted += $hours;
+                            $daysWorked++;
+                        } else {
+                            // Only clock_in exists - if today, calculate to now
+                            $attendanceDate = Carbon::parse($attendance->date);
+                            if ($attendanceDate->isToday()) {
+                                $clockInTime = Carbon::parse($attendance->date . ' ' . $attendance->clock_in);
+                                $now = Carbon::now();
+                                $minutes = $clockInTime->diffInMinutes($now);
+                                $hours = $minutes / 60;
+                                $hoursCompleted += $hours;
+                                $daysWorked++;
+                            }
+                        }
+                    }
+                }
+    
+                // Count working days in week (exclude Sundays)
+                $workingDays = 0;
+                $current = $startOfWeek->copy();
+                while ($current <= $endOfWeek) {
+                    if ($current->dayOfWeek !== Carbon::SUNDAY) {
+                        $workingDays++;
+                    }
+                    $current->addDay();
+                }
+    
+                // Expected total hours for the week (working days * 9 hours per day)
+                $totalHours = $workingDays * 9;
+    
+                // Get today's attendance for real-time calculation
+                $todayAttendance = AttendanceEmployee::where('employee_id', $employeeId)
+                    ->where('date', Carbon::today()->format('Y-m-d'))
+                    ->first();
+                
+                $todayHours = 0;
+                $todayClockIn = null;
+                $todayClockOut = null;
+                
+                if ($todayAttendance && $todayAttendance->clock_in && $todayAttendance->clock_in != '00:00:00') {
+                    $todayClockIn = Carbon::parse($todayAttendance->date . ' ' . $todayAttendance->clock_in)->format('h:i A');
+                    if ($todayAttendance->clock_out && $todayAttendance->clock_out != '00:00:00') {
+                        $todayClockOut = Carbon::parse($todayAttendance->date . ' ' . $todayAttendance->clock_out)->format('h:i A');
+                        $clockInTime = Carbon::parse($todayAttendance->date . ' ' . $todayAttendance->clock_in);
+                        $clockOutTime = Carbon::parse($todayAttendance->date . ' ' . $todayAttendance->clock_out);
+                        if ($clockOutTime->lt($clockInTime)) {
+                            $clockOutTime->addDay();
+                        }
+                        $todayHours = $clockInTime->diffInMinutes($clockOutTime) / 60;
+                    }
+                }
+                
+                $data = [
+                    'hours_completed' => round($hoursCompleted, 2),
+                    'total_hours' => $totalHours,
+                    'days_worked' => $daysWorked,
+                    'percentage' => $totalHours > 0 ? round(($hoursCompleted / $totalHours) * 100, 1) : 0,
+                    'week_start' => $startOfWeek->format('M d, Y'),
+                    'week_end' => $endOfWeek->format('M d, Y'),
+                    'clock_in' => $todayClockIn,
+                    'clock_out' => $todayClockOut,
+                    'today_hours' => round($todayHours, 2)
+                ];
+            } elseif ($filterType === 'monthly') {
+                // Get month from request (format: YYYY-MM)
+                $requestMonth = $request->input('month');
+                if (empty($requestMonth)) {
+                    $month = Carbon::now()->startOfMonth();
+                    \Log::info('Attendance Overview - Monthly: No month provided, using current month');
+                } else {
+                    try {
+                        // $requestMonth expected like "2025-12" (from input type month)
+                        $month = Carbon::parse($requestMonth . '-01');
+                        \Log::info('Attendance Overview - Monthly: Selected month: ' . $month->format('Y-m') . ', Employee ID: ' . $employeeId);
+                    } catch (\Exception $e) {
+                        \Log::error('Attendance Overview - Monthly: Invalid month format: ' . $requestMonth);
+                        $month = Carbon::now()->startOfMonth();
+                    }
+                }
+    
+                $startOfMonth = $month->copy()->startOfMonth();
+                $endOfMonth = $month->copy()->endOfMonth();
+    
+                \Log::info('Attendance Overview - Monthly: Querying from ' . $startOfMonth->format('Y-m-d') . ' to ' . $endOfMonth->format('Y-m-d'));
+    
+                // Query all attendance records for the entire month
+                $attendances = AttendanceEmployee::where('employee_id', $employeeId)
+                    ->whereBetween('date', [$startOfMonth->format('Y-m-d'), $endOfMonth->format('Y-m-d')])
+                    ->orderBy('date', 'asc')
+                    ->get();
+    
+                $hoursCompleted = 0;
+                $daysWorked = 0;
+    
+                // Calculate total working hours for the month by adding all clock_in and clock_out entries
+                foreach ($attendances as $attendance) {
+                    if ($attendance->clock_in && $attendance->clock_in != '00:00:00') {
+                        if ($attendance->clock_out && $attendance->clock_out != '00:00:00') {
+                            // Both clock_in and clock_out exist
+                            $clockInTime = Carbon::parse($attendance->date . ' ' . $attendance->clock_in);
+                            $clockOutTime = Carbon::parse($attendance->date . ' ' . $attendance->clock_out);
+                            
+                            // Handle overnight shifts
+                            if ($clockOutTime->lt($clockInTime)) {
+                                $clockOutTime->addDay();
+                            }
+                            
+                            $minutes = $clockInTime->diffInMinutes($clockOutTime);
+                            $hours = $minutes / 60;
+                            $hoursCompleted += $hours;
+                            $daysWorked++;
+                        } else {
+                            // Only clock_in exists - if today, calculate to now
+                            $attendanceDate = Carbon::parse($attendance->date);
+                            if ($attendanceDate->isToday()) {
+                                $clockInTime = Carbon::parse($attendance->date . ' ' . $attendance->clock_in);
+                                $now = Carbon::now();
+                                $minutes = $clockInTime->diffInMinutes($now);
+                                $hours = $minutes / 60;
+                                $hoursCompleted += $hours;
+                                $daysWorked++;
+                            }
+                        }
+                    }
+                }
+    
+                // Calculate total expected hours (working days in month * 9 hours)
+                // Exclude Sundays
+                $workingDays = 0;
+                $current = $startOfMonth->copy();
+                while ($current <= $endOfMonth) {
+                    if ($current->dayOfWeek !== Carbon::SUNDAY) {
+                        $workingDays++;
+                    }
+                    $current->addDay();
+                }
+    
+                // Expected total hours for the month (working days * 9 hours per day)
+                $totalHours = $workingDays * 9;
+    
+                // Get today's attendance for real-time calculation
+                $todayAttendance = AttendanceEmployee::where('employee_id', $employeeId)
+                    ->where('date', Carbon::today()->format('Y-m-d'))
+                    ->first();
+                
+                $todayHours = 0;
+                $todayClockIn = null;
+                $todayClockOut = null;
+                
+                if ($todayAttendance && $todayAttendance->clock_in && $todayAttendance->clock_in != '00:00:00') {
+                    $todayClockIn = Carbon::parse($todayAttendance->date . ' ' . $todayAttendance->clock_in)->format('h:i A');
+                    if ($todayAttendance->clock_out && $todayAttendance->clock_out != '00:00:00') {
+                        $todayClockOut = Carbon::parse($todayAttendance->date . ' ' . $todayAttendance->clock_out)->format('h:i A');
+                        $clockInTime = Carbon::parse($todayAttendance->date . ' ' . $todayAttendance->clock_in);
+                        $clockOutTime = Carbon::parse($todayAttendance->date . ' ' . $todayAttendance->clock_out);
+                        if ($clockOutTime->lt($clockInTime)) {
+                            $clockOutTime->addDay();
+                        }
+                        $todayHours = $clockInTime->diffInMinutes($clockOutTime) / 60;
+                    }
+                }
+                
+                $data = [
+                    'hours_completed' => round($hoursCompleted, 2),
+                    'total_hours' => $totalHours,
+                    'days_worked' => $daysWorked,
+                    'percentage' => $totalHours > 0 ? round(($hoursCompleted / $totalHours) * 100, 1) : 0,
+                    'month_name' => $month->format('F Y'),
+                    'clock_in' => $todayClockIn,
+                    'clock_out' => $todayClockOut,
+                    'today_hours' => round($todayHours, 2)
+                ];
+            }
+    
+            return response()->json([
+                'success' => true,
+                'data' => $data
+            ]);
+        } catch (\Exception $e) {
+            \Log::error('Attendance Overview Exception: ' . $e->getMessage());
+            \Log::error('Stack trace: ' . $e->getTraceAsString());
+            return response()->json([
+                'success' => false,
+                'message' => 'Error fetching attendance data: ' . $e->getMessage()
+            ]);
+        }
+    }
+    
+    /**
+     * Process missing punch-outs and apply half-day logic
+     * 
+     * This method processes all past attendance records where employees forgot to punch out.
+     * Logic:
+     * - First missing punch-out in a month → No action (allowed once per month)
+     * - Second and subsequent missing punch-outs → Apply Half Day (4.5 hours from punch in)
+     * 
+     * @param Request $request
+     * @return \Illuminate\Http\JsonResponse|\Illuminate\Http\RedirectResponse
+     */
+    public function processMissingPunchOuts(Request $request)
+    {
+        try {
+            $today = Carbon::today()->format('Y-m-d');
+            
+            // Find all attendance records where:
+            // 1. Date is in the past (before today)
+            // 2. clock_in exists and is not '00:00:00'
+            // 3. clock_out is missing ('00:00:00' or null)
+            $missingPunchOuts = AttendanceEmployee::where('date', '<', $today)
+                ->where('clock_in', '!=', '00:00:00')
+                ->where(function($query) {
+                    $query->where('clock_out', '00:00:00')
+                          ->orWhereNull('clock_out');
+                })
+                ->orderBy('employee_id')
+                ->orderBy('date', 'asc')
+                ->get();
+            
+            if ($missingPunchOuts->isEmpty()) {
+                if ($request->ajax() || $request->wantsJson()) {
+                    return response()->json([
+                        'success' => true,
+                        'message' => 'No missing punch-outs found to process.',
+                        'processed' => 0
+                    ]);
+                }
+                return redirect()->back()->with('success', __('No missing punch-outs found to process.'));
+            }
+            
+            // Group by employee and month
+            $groupedByEmployeeMonth = [];
+            foreach ($missingPunchOuts as $attendance) {
+                $monthKey = Carbon::parse($attendance->date)->format('Y-m');
+                $key = $attendance->employee_id . '_' . $monthKey;
+                
+                if (!isset($groupedByEmployeeMonth[$key])) {
+                    $groupedByEmployeeMonth[$key] = [
+                        'employee_id' => $attendance->employee_id,
+                        'month' => $monthKey,
+                        'records' => []
+                    ];
+                }
+                
+                $groupedByEmployeeMonth[$key]['records'][] = $attendance;
+            }
+            
+            $processedCount = 0;
+            $skippedCount = 0;
+            
+            // Process each employee-month group
+            foreach ($groupedByEmployeeMonth as $group) {
+                $records = $group['records'];
+                
+                // Sort records by date to process chronologically
+                usort($records, function($a, $b) {
+                    return strcmp($a->date, $b->date);
+                });
+                
+                // Process records in chronological order
+                foreach ($records as $index => $attendance) {
+                    // First missing punch-out in the month (index 0) → Skip
+                    if ($index === 0) {
+                        $skippedCount++;
+                        continue;
+                    }
+                    
+                    // Second and subsequent missing punch-outs → Apply Half Day
+                    try {
+                        // Parse clock_in time
+                        $clockInTime = Carbon::parse($attendance->date . ' ' . $attendance->clock_in);
+                        
+                        // Add 4.5 hours (4 hours 30 minutes) to clock_in
+                        $calculatedClockOut = $clockInTime->copy()->addHours(4)->addMinutes(30);
+                        
+                        // If calculated time goes past midnight (next day), cap it at end of day (23:59:59)
+                        $endOfDay = Carbon::parse($attendance->date . ' 23:59:59');
+                        if ($calculatedClockOut->gt($endOfDay)) {
+                            $calculatedClockOut = $endOfDay;
+                        }
+                        
+                        // Format as H:i:s
+                        $clockOutTime = $calculatedClockOut->format('H:i:s');
+                        
+                        // Update attendance record
+                        $attendance->clock_out = $clockOutTime;
+                        $attendance->status = AttendanceEmployee::STATUS_HALF_DAY;
+                        
+                        // Calculate early leaving (if applicable)
+                        $endTime = Utility::getValByName('company_end_time');
+                        if ($endTime) {
+                            $expectedEndTime = Carbon::parse($attendance->date . ' ' . $endTime);
+                            if ($calculatedClockOut->lt($expectedEndTime)) {
+                                $totalEarlyLeavingSeconds = $expectedEndTime->diffInSeconds($calculatedClockOut);
+                                $hours = floor($totalEarlyLeavingSeconds / 3600);
+                                $mins = floor(($totalEarlyLeavingSeconds % 3600) / 60);
+                                $secs = $totalEarlyLeavingSeconds % 60;
+                                $attendance->early_leaving = sprintf('%02d:%02d:%02d', $hours, $mins, $secs);
+                            } else {
+                                $attendance->early_leaving = '00:00:00';
+                            }
+                        }
+                        
+                        // Set overtime to 00:00:00 (no overtime for half day)
+                        $attendance->overtime = '00:00:00';
+                        
+                        $attendance->save();
+                        $processedCount++;
+                        
+                    } catch (\Exception $e) {
+                        \Log::error('Error processing missing punch-out for attendance ID ' . $attendance->id . ': ' . $e->getMessage());
+                        continue;
+                    }
+                }
+            }
+            
+            $message = sprintf(
+                'Processed %d missing punch-out(s). Skipped %d first occurrence(s) in their respective months.',
+                $processedCount,
+                $skippedCount
+            );
+            
+            if ($request->ajax() || $request->wantsJson()) {
+                return response()->json([
+                    'success' => true,
+                    'message' => $message,
+                    'processed' => $processedCount,
+                    'skipped' => $skippedCount
+                ]);
+            }
+            
+            return redirect()->back()->with('success', __($message));
+            
+        } catch (\Exception $e) {
+            \Log::error('Error in processMissingPunchOuts: ' . $e->getMessage());
+            \Log::error('Stack trace: ' . $e->getTraceAsString());
+            
+            $errorMessage = 'Error processing missing punch-outs: ' . $e->getMessage();
+            
+            if ($request->ajax() || $request->wantsJson()) {
+                return response()->json([
+                    'success' => false,
+                    'message' => $errorMessage
+                ], 500);
+            }
+            
+            return redirect()->back()->with('error', __($errorMessage));
+        }
+    }
+    
     
    
 }

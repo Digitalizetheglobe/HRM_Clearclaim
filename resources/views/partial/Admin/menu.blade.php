@@ -1,13 +1,61 @@
     @php
 
     $logo = \App\Models\Utility::get_file('uploads/logo/');
-    $company_logo = \App\Models\Utility::GetLogo();
     $users = \Auth::user();
     $profile = \App\Models\Utility::get_file('uploads/avatar/');
     $currantLang = $users->currentLanguage();
     $emailTemplate = App\Models\EmailTemplate::getemailTemplate();
     $lang = Auth::user()->lang;
     $userType = auth()->user()->type;
+
+    // Get storage setting to determine if we should use asset() or get_file()
+    $settings = \App\Models\Utility::settings();
+    $storage_setting = isset($settings['storage_setting']) ? $settings['storage_setting'] : 'local';
+    
+    // Get company logo directly from database to ensure we get the actual stored value
+    // Check dark layout setting first to determine which logo to use
+    $is_dark_layout = isset($settings['cust_darklayout']) && $settings['cust_darklayout'] == 'on';
+    $creatorId = \Auth::user()->creatorId();
+    $userId = \Auth::user()->id;
+    
+    if ($is_dark_layout) {
+        // Query database directly for light logo - try creatorId first, then userId
+        $logo_setting = \DB::table('settings')
+            ->where('name', 'company_logo_light')
+            ->where(function($query) use ($creatorId, $userId) {
+                $query->where('created_by', $creatorId)
+                      ->orWhere('created_by', $userId);
+            })
+            ->value('value');
+        $company_logo = !empty($logo_setting) ? $logo_setting : 'logo-light.png';
+    } else {
+        // Query database directly for dark logo - try creatorId first, then userId as fallback
+        $logo_setting = \DB::table('settings')
+            ->where('name', 'company_logo')
+            ->where('created_by', $creatorId)
+            ->value('value');
+        
+        // If not found with creatorId, try userId
+        if (empty($logo_setting)) {
+            $logo_setting = \DB::table('settings')
+                ->where('name', 'company_logo')
+                ->where('created_by', $userId)
+                ->value('value');
+        }
+        
+        // Use the stored logo if found, otherwise use default
+        $company_logo = !empty($logo_setting) ? $logo_setting : 'logo-dark.png';
+    }
+    
+    // For local storage, use asset() for proper path resolution
+    // This ensures the logo path works correctly with the storage link
+    if ($storage_setting == 'local') {
+        $logo_path = asset('storage/uploads/logo/');
+    } else {
+        // For cloud storage (S3, Wasabi), use the URL from get_file()
+        // Ensure it ends with a slash for proper concatenation
+        $logo_path = rtrim($logo, '/') . '/';
+    }
 
 @endphp
 
@@ -25,13 +73,15 @@
     <div class="m-header main-logo">
     <a href="{{ route('dashboard') }}" class="b-brand">
             <!-- ========   change your logo hear   ============ -->
-            @if(!empty($company_logo))
-                <img src="{{ $logo . $company_logo }}?v={{ time() }}"
-                    alt="{{ config('app.name', 'HRMGo') }}" class="logo logo-lg" style="height: 75px;">
-            @else
-                <img src="{{ asset('storage/uploads/logo/logo-dark.png') }}?v={{ time() }}"
-                    alt="{{ config('app.name', 'HRMGo') }}" class="logo logo-lg" style="height: 75px;">
-            @endif
+            @php
+                // Ensure logo_path ends with a slash and construct full path
+                $final_logo_path = rtrim($logo_path, '/') . '/' . $company_logo;
+            @endphp
+            <img src="{{ $final_logo_path }}?v={{ time() }}"
+                alt="{{ config('app.name', 'HRMGo') }}" 
+                class="logo logo-lg" 
+                style="height: 75px;"
+                onerror="console.error('Logo failed to load: {{ $final_logo_path }}'); this.onerror=null; this.src='{{ asset('storage/uploads/logo/logo-dark.png') }}?v={{ time() }}';">
         </a>
     </div>
     <div class="navbar-content">
@@ -217,6 +267,15 @@
                 <span class="dash-micon text-white text-[30px] shadow-none" style="background: none;">
                 <i class="fas fa-clipboard-list text-white text-[30px]"></i></span>
                     <span class="dash-mtext">{{ __('Notice') }}</span>
+                </a>
+            </li>
+
+             <!-- Expenses & Reimbursement -->
+            <li class="dash-item {{ Request::segment(1) == 'expenses' ? 'active' : '' }}">
+                <a href="{{ route('expenses.index') }}" class="dash-link text-white hover:text-white hover:bg-[#001a3b] text-lg flex items-center space-x-2">
+                <span class="dash-micon text-white text-[30px] shadow-none" style="background: none;">
+                <i class="fas fa-receipt text-white text-[30px]"></i></span>
+                    <span class="dash-mtext">{{ __('Expenses') }}</span>
                 </a>
             </li>
 

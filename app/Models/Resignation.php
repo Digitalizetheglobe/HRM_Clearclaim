@@ -3,6 +3,8 @@
 namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
+use App\Models\Employee;
+use App\Models\User;
 
 class Resignation extends Model
 {
@@ -24,6 +26,6 @@ class Resignation extends Model
 
     public function employee()
     {
-        return $this->hasOne('App\Models\Employee', 'id', 'employee_id');
+        return $this->belongsTo(Employee::class, 'employee_id');
     }
 }

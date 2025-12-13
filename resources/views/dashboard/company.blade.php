@@ -37,19 +37,19 @@
     position: relative;
     pointer-events: none;
     opacity: 0.7;
-}
+    }
 
-.loading:after {
-    content: "";
-    position: absolute;
-    top: 0;
-    left: 0;
-    right: 0;
-    bottom: 0;
-    background: rgba(255, 255, 255, 0.7) url('{{ asset("assets/img/loading.gif") }}') no-repeat center;
-    background-size: 50px 50px;
-    z-index: 1000;
-}
+    .loading:after {
+        content: "";
+        position: absolute;
+        top: 0;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        background: rgba(255, 255, 255, 0.7) url('{{ asset("assets/img/loading.gif") }}') no-repeat center;
+        background-size: 50px 50px;
+        z-index: 1000;
+    }
 
 </style>
 <div>
@@ -62,25 +62,43 @@
 
     @if (Auth::user()->type == 'company' || Auth::user()->type == 'hr' || Auth::user()->type == 'Director')
 
-        <div class="d-flex justify-content-between align-items-center w-100" style="margin-bottom: 50px;">
-            <div>
-                <h3 class="mb-0">{{ __('Dashboard') }}</h3>
-            </div>
-
-            <div class="d-flex align-items-center">
-                <div class="btn-group me-2 z-1">
-                    <button type="button" class="btn btn-danger dropdown-toggle" data-bs-toggle="dropdown" aria-expanded="false" id="dateFilterButton">
-                        Today
-                    </button>
-                    <ul class="dropdown-menu">
-                        <li><a class="dropdown-item" href="#" data-value="today">Today</a></li>
-                        <li><a class="dropdown-item" href="#" data-value="yesterday">Yesterday</a></li>
-                        <li><a class="dropdown-item" href="#" data-value="custom">Select Date</a></li>
-                    </ul>
+        <!-- Welcome Section -->
+        <div class="col-12 mb-3">
+            <div class="row align-items-top">
+                <div class="col-md-8">
+                    @php
+                        $hour = date('H');
+                        if ($hour < 12) {
+                            $greeting = 'Good morning';
+                        } elseif ($hour < 17) {
+                            $greeting = 'Good afternoon';
+                        } else {
+                            $greeting = 'Good evening';
+                        }
+                        // Get full name
+                        $userName = Auth::user()->name ?? 'User';
+                        
+                    @endphp
+                    <h2 class="mb-2" style="font-size: 25px; font-weight: bold; color:rgb(0, 190, 92);">{{ $greeting }}, {{ $userName }}!</h2>
                 </div>
-                <input type="date" class="form-control" id="customDatePicker" style="display: none; width: 150px;">
+                <div class="col-md-4 d-flex justify-content-end">
+                    <div class="btn-group me-2 z-1">
+                        <button type="button" class="btn btn-danger dropdown-toggle" data-bs-toggle="dropdown" aria-expanded="false" id="dateFilterButton">
+                            Today
+                        </button>
+                        <ul class="dropdown-menu">
+                            <li><a class="dropdown-item" href="#" data-value="today">Today</a></li>
+                            <li><a class="dropdown-item" href="#" data-value="yesterday">Yesterday</a></li>
+                            <li><a class="dropdown-item" href="#" data-value="custom">Select Date</a></li>
+                        </ul>
+                    </div>
+                    <input type="date" class="form-control" id="customDatePicker" style="display: none; width: 150px;">
+
+                </div>
             </div>
         </div>
+
+
             <!-- Employee specific content -->
         
 
@@ -394,9 +412,19 @@
                                 @if(count($allEvents) > 0)
                                     <div class="list-group">
                                         @foreach($allEvents as $event)
+                                            @php
+                                                // Extract first name from title (e.g., "Dipali Sevakram Tayade's Anniversary" -> "Dipali's Anniversary")
+                                                $title = $event['title'];
+                                                if (strpos($title, "'s") !== false) {
+                                                    $namePart = explode("'s", $title)[0];
+                                                    $eventType = explode("'s", $title)[1] ?? '';
+                                                    $firstName = explode(' ', $namePart)[0];
+                                                    $title = $firstName . "'s" . $eventType;
+                                                }
+                                            @endphp
                                             <span class="list-group-item list-group-item-action flex-column align-items-start">
                                                 <div class="d-flex w-100 justify-content-between">
-                                                    <h6 class="mb-1">{{ $event['title'] }}</h6>
+                                                    <h6 class="mb-1">{{ $title }}</h6>
                                                     <small>{{ \Carbon\Carbon::parse($event['start'])->format('D, M d') }}</small>
                                                 </div>
                                                 <div class="d-flex justify-content-between align-items-center">
@@ -818,6 +846,36 @@
                     return '--';
                 }
             }
+        });
+    </script>
+
+    <script>
+        // Update current time display
+        document.addEventListener("DOMContentLoaded", function () {
+            let currentTimeElement = document.getElementById("currentDateTime");
+            
+            function updateTimeDisplay() {
+                if (currentTimeElement) {
+                    let now = new Date();
+                    let day = now.getDate();
+                    let monthNames = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sept', 'Oct', 'Nov', 'Dec'];
+                    let month = monthNames[now.getMonth()];
+                    let year = now.getFullYear();
+                    let hours = now.getHours();
+                    let minutes = now.getMinutes();
+                    let seconds = now.getSeconds();
+                    let ampm = hours >= 12 ? 'PM' : 'AM';
+                    hours = hours % 12;
+                    hours = hours ? hours : 12;
+                    minutes = minutes < 10 ? '0' + minutes : minutes;
+                    seconds = seconds < 10 ? '0' + seconds : seconds;
+                    currentTimeElement.textContent = `${month} ${day}, ${year}, ${hours}:${minutes}:${seconds} ${ampm}`;
+                }
+            }
+
+            // Initialize time display and update every second
+            updateTimeDisplay();
+            setInterval(updateTimeDisplay, 1000);
         });
     </script>
 @endpush
