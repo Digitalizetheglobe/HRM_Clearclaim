@@ -16,9 +16,13 @@ class Kernel extends ConsoleKernel
 
     protected $commands = [
         \App\Console\Commands\AllocateMonthlyLeaves::class,
+        \App\Console\Commands\CreditMonthlyLeave::class,
+        \App\Console\Commands\FixLoanAmounts::class,
         \App\Console\Commands\MarkAbsentees::class,
-
+        \App\Console\Commands\RecalculateLoanAmounts::class,
+        \App\Console\Commands\RepairEducationDocuments::class,
     ];
+
     
     protected function schedule(Schedule $schedule)
     {
