@@ -45,7 +45,17 @@ class Kernel extends ConsoleKernel
     protected function commands()
     {
         
-        $this->load(__DIR__.'/Commands');
+        // Load commands from both possible casings to avoid Linux case-sensitivity issues
+        // when projects were developed/deployed from case-insensitive filesystems.
+        $commandsDir = __DIR__ . '/Commands';
+        $commandsDirLower = __DIR__ . '/commands';
+
+        if (is_dir($commandsDir)) {
+            $this->load($commandsDir);
+        }
+        if (is_dir($commandsDirLower)) {
+            $this->load($commandsDirLower);
+        }
 
         require base_path('routes/console.php');
     }
