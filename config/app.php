@@ -205,6 +205,11 @@ return [
         Obydul\LaraSkrill\LaraSkrillServiceProvider::class,
         /* End */
 
+        /*
+         * Legacy form facade (replaces laravelcollective/html)
+         */
+        App\Providers\LegacyFormServiceProvider::class,
+
     ],
 
     /*
@@ -224,6 +229,7 @@ return [
         'Utility' => App\Models\Utility::class,
         'Excel' => Maatwebsite\Excel\Facades\Excel::class,
         'Chatify' => Chatify\Facades\ChatifyMessenger::class,
+        'Form' => App\Facades\Form::class,
     ])->toArray(),
 
 ];
