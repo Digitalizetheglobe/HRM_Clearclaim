@@ -245,6 +245,18 @@
             @endif
         @endif
 
+            <!-- Onboarding -->
+            @if(\Auth::user()->type == 'company' || Gate::check('Manage Employee'))
+                <li class="dash-item {{ Request::segment(1) == 'onboarding' ? 'active' : '' }}">
+                    <a href="{{ route('onboarding.index') }}"
+                        class="dash-link text-white hover:text-white hover:bg-[#001a3b] text-lg flex items-center space-x-2">
+                        <span class="dash-micon text-white text-[30px] shadow-none" style="background: none;">
+                            <i class="ti ti-user-plus text-white text-[30px]"></i>
+                        </span>
+                        <span class="dash-mtext">{{ __('On-Boarding Steps') }}</span>
+                    </a>
+                </li>
+            @endif
 
             <!-- employee-->
 

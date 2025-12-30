@@ -24,15 +24,68 @@ class LeaveController extends Controller
     {
 
         if (\Auth::user()->can('Manage Leave')) {
+            $leaveBalance = null;
+            
             if (\Auth::user()->type == 'employee') {
                 $user     = \Auth::user();
                 $employee = Employee::where('user_id', '=', $user->id)->first();
                 $leaves = LocalLeave::where('employee_id', '=', $employee->id)->get();
+                
+                // Calculate leave balance for employee
+                if ($employee) {
+                    $leave_type = $this->getDefaultLeaveType();
+                    $proRataLeaves = $this->calculateProRataLeaves($employee->id);
+                    $now = now();
+                    
+                    // Monthly limit: 2 paid leaves per month
+                    $monthlyLimit = 2;
+                    
+                    // This month paid leaves used (approved)
+                    $thisMonthPaidLeaves = LocalLeave::where('employee_id', $employee->id)
+                        ->where('leave_type_id', $leave_type->id)
+                        ->where('is_paid', true)
+                        ->where('status', 'Approved')
+                        ->whereYear('start_date', $now->year)
+                        ->whereMonth('start_date', $now->month)
+                        ->sum('total_leave_days');
+                    
+                    // This month total leaves used (paid + LWP, approved)
+                    $thisMonthTotalLeaves = LocalLeave::where('employee_id', $employee->id)
+                        ->where('leave_type_id', $leave_type->id)
+                        ->where('status', 'Approved')
+                        ->whereYear('start_date', $now->year)
+                        ->whereMonth('start_date', $now->month)
+                        ->sum('total_leave_days');
+                    
+                    // Remaining paid leaves for this month
+                    $remainingPaidLeaves = max(0, $monthlyLimit - $thisMonthPaidLeaves);
+                    
+                    // Yearly total leaves used (approved)
+                    $date = Utility::AnnualLeaveCycle();
+                    $yearlyUsed = LocalLeave::where('employee_id', $employee->id)
+                        ->where('leave_type_id', $leave_type->id)
+                        ->where('status', 'Approved')
+                        ->whereBetween('created_at', [$date['start_date'], $date['end_date']])
+                        ->sum('total_leave_days');
+                    
+                    // Yearly remaining leaves
+                    $yearlyRemaining = $proRataLeaves - $yearlyUsed;
+                    
+                    $leaveBalance = [
+                        'total_year_leaves' => $proRataLeaves,
+                        'monthly_limit' => $monthlyLimit,
+                        'this_month_paid_used' => $thisMonthPaidLeaves,
+                        'this_month_total_used' => $thisMonthTotalLeaves,
+                        'remaining_paid_this_month' => $remainingPaidLeaves,
+                        'yearly_used' => $yearlyUsed,
+                        'yearly_remaining' => $yearlyRemaining > 0 ? $yearlyRemaining : 0
+                    ];
+                }
             } else {
                 $leaves = LocalLeave::where('created_by', '=', \Auth::user()->creatorId())->with(['employees', 'leaveType'])->get();
             }
 
-            return view('leave.index', compact('leaves'));
+            return view('leave.index', compact('leaves', 'leaveBalance'));
         } else {
             return redirect()->back()->with('error', __('Permission denied.'));
         }
@@ -46,105 +99,239 @@ class LeaveController extends Controller
         } else {
             $employees = Employee::where('created_by', '=', \Auth::user()->creatorId())->get()->pluck('name', 'id');
         }
-
-        $leavetypes = LeaveType::where('created_by', '=', \Auth::user()->creatorId())->get();
         
-        return view('leave.create', compact('employees', 'leavetypes'));
+        // Check monthly paid leaves for employee
+        $monthlyLeaveInfo = null;
+        if (Auth::user()->type == 'employee' && $employees) {
+            $leave_type = $this->getDefaultLeaveType();
+            $now = now();
+            $monthlyPaidLeavesUsed = LocalLeave::where('employee_id', $employees->id)
+                ->where('leave_type_id', $leave_type->id)
+                ->where('is_paid', true)
+                ->where('status', 'Approved')
+                ->whereYear('start_date', $now->year)
+                ->whereMonth('start_date', $now->month)
+                ->sum('total_leave_days');
+            
+            $monthlyLimit = 2;
+            $monthlyLeaveInfo = [
+                'used' => $monthlyPaidLeavesUsed,
+                'limit' => $monthlyLimit,
+                'remaining' => max(0, $monthlyLimit - $monthlyPaidLeavesUsed),
+                'exceeded' => $monthlyPaidLeavesUsed >= $monthlyLimit
+            ];
+        }
+        
+        return view('leave.create', compact('employees', 'monthlyLeaveInfo'));
     } else {
         return response()->json(['error' => __('Permission denied.')], 401);
     }
-}  
+}
+
+    /**
+     * Get or create default leave type for the company
+     */
+    private function getDefaultLeaveType()
+    {
+        $creatorId = \Auth::user()->creatorId();
+        $defaultLeaveType = LeaveType::where('created_by', $creatorId)
+            ->where('title', 'General Leave')
+            ->first();
+            
+        if (!$defaultLeaveType) {
+            $defaultLeaveType = new LeaveType();
+            $defaultLeaveType->title = 'General Leave';
+            $defaultLeaveType->days = 15; // 15 leaves per year
+            $defaultLeaveType->created_by = $creatorId;
+            $defaultLeaveType->save();
+        }
+        
+        return $defaultLeaveType;
+    }
+
+    /**
+     * Calculate pro-rata leave entitlement based on employee joining date
+     * 15 leaves per year = 1.25 leaves per month
+     * If employee joins in month 4, they get (12 - 4 + 1) = 9 months * 1.25 = 11.25 leaves
+     */
+    private function calculateProRataLeaves($employeeId, $year = null)
+    {
+        $employee = Employee::find($employeeId);
+        if (!$employee || !$employee->company_doj) {
+            // If no joining date, assume full year entitlement
+            return 15;
+        }
+
+        $year = $year ?? date('Y');
+        $joinDate = \Carbon\Carbon::parse($employee->company_doj);
+        $yearStart = \Carbon\Carbon::create($year, 1, 1)->startOfDay();
+        $yearEnd = \Carbon\Carbon::create($year, 12, 31)->endOfDay();
+
+        // If employee joined before the year, they get full entitlement
+        if ($joinDate->lt($yearStart)) {
+            return 15;
+        }
+
+        // If employee joined after the year, they get no entitlement
+        if ($joinDate->gt($yearEnd)) {
+            return 0;
+        }
+
+        // Get the joining month (1-12)
+        $joinMonth = $joinDate->month;
+        
+        // Calculate remaining months from joining month to end of year
+        // If joined in month 4, remaining months = 12 - 4 + 1 = 9 months (April to December inclusive)
+        $remainingMonths = 12 - $joinMonth + 1;
+        
+        // Calculate pro-rata leaves: remaining months * 1.25
+        $proRataLeaves = $remainingMonths * 1.25;
+        
+        return round($proRataLeaves, 2);
+    }
+
+    /**
+     * Count paid leaves used by employee in current year
+     */
+    private function getPaidLeavesUsed($employeeId, $year = null)
+    {
+        $year = $year ?? date('Y');
+        $date = Utility::AnnualLeaveCycle();
+        
+        $paidLeaves = LocalLeave::where('employee_id', $employeeId)
+            ->where('is_paid', true)
+            ->where('status', 'Approved')
+            ->whereBetween('created_at', [$date['start_date'], $date['end_date']])
+            ->sum('total_leave_days');
+            
+        return $paidLeaves;
+    }
 
     public function store(Request $request)
 {
     if (\Auth::user()->can('Create Leave')) {
         $validator = \Validator::make($request->all(), [
             'employee_id' => 'required',
-            'leave_type_id' => 'required',
+            'leave_duration' => 'required|in:Full Day,Half Day',
             'start_date' => 'required',
             'end_date' => 'required',
             'leave_reason' => 'required',
         ]);
 
+        // Validate leave_session for Half Day
+        if ($request->leave_duration == 'Half Day') {
+            $validator->after(function ($validator) use ($request) {
+                if (empty($request->leave_session) || !in_array($request->leave_session, ['First Half', 'Second Half'])) {
+                    $validator->errors()->add('leave_session', __('Please select a session for Half Day leave.'));
+                }
+            });
+        }
+
         if ($validator->fails()) {
             return redirect()->back()->with('error', $validator->errors()->first());
         }
 
-        // Calculate total leave days first
-        $startDate = new \DateTime($request->start_date);
-        $endDate = new \DateTime($request->end_date);
-        $endDate->add(new \DateInterval('P1D')); // Include end date in calculation
-        $total_leave_days = $startDate->diff($endDate)->days;
+        // Calculate total leave days based on duration
+        $leaveDuration = $request->leave_duration;
+        if ($leaveDuration == 'Half Day') {
+            $total_leave_days = 0.5;
+            // For half day, start and end date should be the same
+            $request->merge(['end_date' => $request->start_date]);
+        } else {
+            $startDate = new \DateTime($request->start_date);
+            $endDate = new \DateTime($request->end_date);
+            $endDate->add(new \DateInterval('P1D')); // Include end date in calculation
+            $total_leave_days = $startDate->diff($endDate)->days;
+        }
 
-        $leave_type = LeaveType::find($request->leave_type_id);
-        $isCasualLeave = $leave_type->unlimited; // Check if it's an unlimited casual leave
+        // Get default leave type
+        $leave_type = $this->getDefaultLeaveType();
 
-        // For Casual Leave, skip the available days check
-        if (!$isCasualLeave) {
-            // Check monthly balance if applicable
-            $now = now();
-            $balance = EmployeeLeaveBalance::where('employee_id', $request->employee_id)
-                ->where('leave_type_id', $leave_type->id)
-                ->where('year', $now->year)
-                ->where('month', $now->month)
-                ->first();
-                
-            if ($balance) {
-                if ($total_leave_days > $balance->available_days) {
-                    return redirect()->back()->with('error', __('You only have '.$balance->available_days.' days available for '.$leave_type->title.' this month.'));
-                }
-            } else {
-                // If no monthly balance is allocated, fall back to annual check
-                $date = Utility::AnnualLeaveCycle();
-
-                if (\Auth::user()->type == 'employee') {
-                    $leaves_used = LocalLeave::where('employee_id', '=', $request->employee_id)
-                        ->where('leave_type_id', $leave_type->id)
-                        ->where('status', 'Approved')
-                        ->whereBetween('created_at', [$date['start_date'], $date['end_date']])
-                        ->sum('total_leave_days');
-
-                    $leaves_pending = LocalLeave::where('employee_id', '=', $request->employee_id)
-                        ->where('leave_type_id', $leave_type->id)
-                        ->where('status', 'Pending')
-                        ->whereBetween('created_at', [$date['start_date'], $date['end_date']])
-                        ->sum('total_leave_days');
-                } else {
-                    $leaves_used = LocalLeave::where('employee_id', '=', $request->employee_id)
-                        ->where('leave_type_id', $leave_type->id)
-                        ->where('status', 'Approved')
-                        ->whereBetween('created_at', [$date['start_date'], $date['end_date']])
-                        ->sum('total_leave_days');
-
-                    $leaves_pending = LocalLeave::where('employee_id', '=', $request->employee_id)
-                        ->where('leave_type_id', $leave_type->id)
-                        ->where('status', 'Pending')
-                        ->whereBetween('created_at', [$date['start_date'], $date['end_date']])
-                        ->sum('total_leave_days');
-                }
-
-                $return = $leave_type->days - $leaves_used;
-                
-                // Check if requested days exceed available days
-                if ($total_leave_days > $return) {
-                    return redirect()->back()->with('error', __('You cannot take more than '.$return.' days for '.$leave_type->title));
-                }
-
-                if (!empty($leaves_pending) && $leaves_pending + $total_leave_days > $return) {
-                    return redirect()->back()->with('error', __('Multiple leave entry is pending.'));
-                }
+        // Calculate pro-rata leave entitlement (15 leaves per year = 1.25 per month)
+        $proRataLeaves = $this->calculateProRataLeaves($request->employee_id);
+        
+        // Check monthly balance if applicable
+        $now = now();
+        $balance = EmployeeLeaveBalance::where('employee_id', $request->employee_id)
+            ->where('leave_type_id', $leave_type->id)
+            ->where('year', $now->year)
+            ->where('month', $now->month)
+            ->first();
+            
+        if ($balance) {
+            if ($total_leave_days > $balance->available_days) {
+                return redirect()->back()->with('error', __('You only have '.$balance->available_days.' days available this month.'));
             }
+        } else {
+            // If no monthly balance is allocated, use pro-rata calculation
+            $date = Utility::AnnualLeaveCycle();
+
+            $leaves_used = LocalLeave::where('employee_id', '=', $request->employee_id)
+                ->where('leave_type_id', $leave_type->id)
+                ->where('status', 'Approved')
+                ->whereBetween('created_at', [$date['start_date'], $date['end_date']])
+                ->sum('total_leave_days');
+
+            $leaves_pending = LocalLeave::where('employee_id', '=', $request->employee_id)
+                ->where('leave_type_id', $leave_type->id)
+                ->where('status', 'Pending')
+                ->whereBetween('created_at', [$date['start_date'], $date['end_date']])
+                ->sum('total_leave_days');
+
+            // Use pro-rata leaves (15 per year, calculated based on joining date)
+            $return = $proRataLeaves - $leaves_used;
+            
+            // Check if requested days exceed available days
+            if ($total_leave_days > $return) {
+                return redirect()->back()->with('error', __('You cannot take more than '.$return.' days. Your pro-rata entitlement is '.$proRataLeaves.' days.'));
+            }
+
+            if (!empty($leaves_pending) && $leaves_pending + $total_leave_days > $return) {
+                return redirect()->back()->with('error', __('Multiple leave entry is pending.'));
+            }
+        }
+
+        // Check monthly paid leaves limit (only 2 paid leaves per month allowed)
+        $now = now();
+        $monthlyPaidLeavesUsed = LocalLeave::where('employee_id', $request->employee_id)
+            ->where('leave_type_id', $leave_type->id)
+            ->where('is_paid', true)
+            ->where('status', 'Approved')
+            ->whereYear('start_date', $now->year)
+            ->whereMonth('start_date', $now->month)
+            ->sum('total_leave_days');
+        
+        $isPaidLeave = true; // Default to paid
+        $monthlyLimit = 2; // 2 paid leaves per month
+        
+        // If employee has used 2 or more paid leaves this month, mark as LOP
+        if ($monthlyPaidLeavesUsed >= $monthlyLimit) {
+            $isPaidLeave = false;
+        } else {
+            // Check if this leave would exceed 2 paid leaves this month
+            if ($monthlyPaidLeavesUsed + $total_leave_days > $monthlyLimit) {
+                $isPaidLeave = false;
+            }
+        }
+        
+        // If trying to apply paid leave but limit exceeded, return error
+        if ($isPaidLeave == false && $monthlyPaidLeavesUsed >= $monthlyLimit) {
+            return redirect()->back()->with('error', __('You have already used '.$monthlyPaidLeavesUsed.' paid leaves this month. Maximum 2 paid leaves allowed per month. Please select Leave Without Pay (LWP).'));
         }
 
         $leave = new LocalLeave();
         $leave->employee_id = $request->employee_id;
-        $leave->leave_type_id = $request->leave_type_id;
+        $leave->leave_type_id = $leave_type->id; // Use default leave type
         $leave->applied_on = date('Y-m-d');
         $leave->start_date = $request->start_date;
         $leave->end_date = $request->end_date;
         $leave->total_leave_days = $total_leave_days;
+        $leave->leave_duration = $request->leave_duration;
+        $leave->leave_session = $request->leave_session ?? null;
+        $leave->is_paid = $isPaidLeave;
+        $leave->is_lop = !$isPaidLeave;
         $leave->leave_reason = $request->leave_reason;
-        $leave->remark = $request->remark;
+        $leave->remark = $request->remark ?? null;
         $leave->status = 'Pending';
         $leave->created_by = \Auth::user()->creatorId();
         $leave->save();
@@ -153,8 +340,7 @@ class LeaveController extends Controller
         if ($request->get('synchronize_type') == 'google_calender') {
             $type = 'leave';
             $request1 = new GoogleEvent();
-            $request1->title = !empty(\Auth::user()->getLeaveType($leave->leave_type_id)) ? 
-                \Auth::user()->getLeaveType($leave->leave_type_id)->title : '';
+            $request1->title = 'Leave';
             $request1->start_date = $request->start_date;
             $request1->end_date = $request->end_date;
             Utility::addCalendarData($request1, $type);
@@ -162,7 +348,6 @@ class LeaveController extends Controller
 
         // Send notifications to company and HR users
         $employee = Employee::find($request->employee_id);
-        $leaveType = LeaveType::find($request->leave_type_id);
         
         // Get all company and HR users
         $companyAndHrUsers = User::where('created_by', '=', \Auth::user()->creatorId())
@@ -179,7 +364,7 @@ class LeaveController extends Controller
         foreach ($companyAndHrUsers as $user) {
             $notificationData = [
                 'leave_id' => $leave->id,
-                'message' => $employee->name . ' has applied for ' . $leaveType->title . ' from ' . 
+                'message' => $employee->name . ' has applied for leave from ' . 
                             \Auth::user()->dateFormat($leave->start_date) . ' to ' . 
                             \Auth::user()->dateFormat($leave->end_date),
                 'status' => 'Pending',
@@ -211,12 +396,7 @@ class LeaveController extends Controller
                     $employees = Employee::where('created_by', '=', \Auth::user()->creatorId())->get()->pluck('name', 'id');
                 }
 
-                // $employees = Employee::where('created_by', '=', \Auth::user()->creatorId())->get()->pluck('name', 'id');
-
-                // $leavetypes = LeaveType::where('created_by', '=', \Auth::user()->creatorId())->get()->pluck('title', 'id');
-                $leavetypes      = LeaveType::where('created_by', '=', \Auth::user()->creatorId())->get();
-
-                return view('leave.edit', compact('leave', 'employees', 'leavetypes'));
+                return view('leave.edit', compact('leave', 'employees'));
             } else {
                 return response()->json(['error' => __('Permission denied.')], 401);
             }
@@ -234,69 +414,120 @@ class LeaveController extends Controller
                     $request->all(),
                     [
                         'employee_id' => 'required',
-                        'leave_type_id' => 'required',
+                        'leave_duration' => 'required|in:Full Day,Half Day',
                         'start_date' => 'required',
                         'end_date' => 'required',
                         'leave_reason' => 'required',
-                        'remark' => 'required',
                     ]
                 );
+
+                // Validate leave_session for Half Day
+                if ($request->leave_duration == 'Half Day') {
+                    $validator->after(function ($validator) use ($request) {
+                        if (empty($request->leave_session) || !in_array($request->leave_session, ['First Half', 'Second Half'])) {
+                            $validator->errors()->add('leave_session', __('Please select a session for Half Day leave.'));
+                        }
+                    });
+                }
+
                 if ($validator->fails()) {
                     $messages = $validator->getMessageBag();
-
                     return redirect()->back()->with('error', $messages->first());
                 }
-                $leave_type = LeaveType::find($request->leave_type_id);
-                $employee = Employee::where('employee_id', '=', \Auth::user()->creatorId())->first();
 
-                $startDate = new \DateTime($request->start_date);
-                $endDate = new \DateTime($request->end_date);
-                $endDate->add(new \DateInterval('P1D'));
-                // $total_leave_days = !empty($startDate->diff($endDate)) ? $startDate->diff($endDate)->days : 0;
-                $date = Utility::AnnualLeaveCycle();
+                // Get default leave type
+                $leave_type = $this->getDefaultLeaveType();
+                $employeeId = \Auth::user()->type == 'employee' 
+                    ? Employee::where('user_id', '=', \Auth::user()->id)->first()->id 
+                    : $request->employee_id;
 
-                if (\Auth::user()->type == 'employee') {
-                    // Leave day
-                    $leaves_used   = LocalLeave::whereNotIn('id', [$leave->id])->where('employee_id', '=', $employee->id)->where('leave_type_id', $leave_type->id)->where('status', 'Approved')->whereBetween('created_at', [$date['start_date'],$date['end_date']])->sum('total_leave_days');
-
-                    $leaves_pending  = LocalLeave::whereNotIn('id', [$leave->id])->where('employee_id', '=', $employee->id)->where('leave_type_id', $leave_type->id)->where('status', 'Pending')->whereBetween('created_at', [$date['start_date'],$date['end_date']])->sum('total_leave_days');
+                // Calculate total leave days based on duration
+                $leaveDuration = $request->leave_duration;
+                if ($leaveDuration == 'Half Day') {
+                    $total_leave_days = 0.5;
+                    $request->merge(['end_date' => $request->start_date]);
                 } else {
-                    // Leave day
-                    $leaves_used   = LocalLeave::whereNotIn('id', [$leave->id])->where('employee_id', '=', $request->employee_id)->where('leave_type_id', $leave_type->id)->where('status', 'Approved')->whereBetween('created_at', [$date['start_date'],$date['end_date']])->sum('total_leave_days');
-
-                    $leaves_pending  = LocalLeave::whereNotIn('id', [$leave->id])->where('employee_id', '=', $request->employee_id)->where('leave_type_id', $leave_type->id)->where('status', 'Pending')->whereBetween('created_at', [$date['start_date'],$date['end_date']])->sum('total_leave_days');
+                    $startDate = new \DateTime($request->start_date);
+                    $endDate = new \DateTime($request->end_date);
+                    $endDate->add(new \DateInterval('P1D'));
+                    $total_leave_days = $startDate->diff($endDate)->days;
                 }
 
-                $total_leave_days = !empty($startDate->diff($endDate)) ? $startDate->diff($endDate)->days : 0;
+                // Calculate pro-rata leave entitlement
+                $proRataLeaves = $this->calculateProRataLeaves($employeeId);
+                
+                $date = Utility::AnnualLeaveCycle();
 
-                $return = $leave_type->days - $leaves_used;
+                // Leave day calculations (excluding current leave)
+                $leaves_used = LocalLeave::whereNotIn('id', [$leave->id])
+                    ->where('employee_id', '=', $employeeId)
+                    ->where('leave_type_id', $leave_type->id)
+                    ->where('status', 'Approved')
+                    ->whereBetween('created_at', [$date['start_date'], $date['end_date']])
+                    ->sum('total_leave_days');
+
+                $leaves_pending = LocalLeave::whereNotIn('id', [$leave->id])
+                    ->where('employee_id', '=', $employeeId)
+                    ->where('leave_type_id', $leave_type->id)
+                    ->where('status', 'Pending')
+                    ->whereBetween('created_at', [$date['start_date'], $date['end_date']])
+                    ->sum('total_leave_days');
+
+                // Use pro-rata leaves (15 per year, calculated based on joining date)
+                $return = $proRataLeaves - $leaves_used;
+
                 if ($total_leave_days > $return) {
-                    return redirect()->back()->with('error', __('You are not eligible for leave.'));
+                    return redirect()->back()->with('error', __('You are not eligible for leave. Your pro-rata entitlement is '.$proRataLeaves.' days.'));
                 }
 
                 if (!empty($leaves_pending) && $leaves_pending + $total_leave_days > $return) {
                     return redirect()->back()->with('error', __('Multiple leave entry is pending.'));
                 }
 
-                if ($leave_type->days >= $total_leave_days) {
+                // Check monthly paid leaves limit (only 2 paid leaves per month allowed)
+                $now = now();
+                $monthlyPaidLeavesUsed = LocalLeave::whereNotIn('id', [$leave->id])
+                    ->where('employee_id', $employeeId)
+                    ->where('leave_type_id', $leave_type->id)
+                    ->where('is_paid', true)
+                    ->where('status', 'Approved')
+                    ->whereYear('start_date', $now->year)
+                    ->whereMonth('start_date', $now->month)
+                    ->sum('total_leave_days');
+
+                $monthlyLimit = 2;
+                $isPaidLeave = true;
+                if ($monthlyPaidLeavesUsed >= $monthlyLimit) {
+                    $isPaidLeave = false;
+                } else {
+                    if ($monthlyPaidLeavesUsed + $total_leave_days > $monthlyLimit) {
+                        $isPaidLeave = false;
+                    }
+                }
+
+                if ($proRataLeaves >= $total_leave_days) {
                     if (\Auth::user()->type == 'employee') {
+                        $employee = Employee::where('user_id', '=', \Auth::user()->id)->first();
                         $leave->employee_id = $employee->id;
                     } else {
-                        $leave->employee_id      = $request->employee_id;
+                        $leave->employee_id = $request->employee_id;
                     }
-                    $leave->leave_type_id    = $request->leave_type_id;
-                    $leave->start_date       = $request->start_date;
-                    $leave->end_date         = $request->end_date;
+                    $leave->leave_type_id = $leave_type->id; // Use default leave type
+                    $leave->start_date = $request->start_date;
+                    $leave->end_date = $request->end_date;
                     $leave->total_leave_days = $total_leave_days;
-                    $leave->leave_reason     = $request->leave_reason;
-                    $leave->remark           = $request->remark;
-                    // $leave->status           = $request->status;
+                    $leave->leave_duration = $request->leave_duration;
+                    $leave->leave_session = $request->leave_session ?? null;
+                    $leave->is_paid = $isPaidLeave;
+                    $leave->is_lop = !$isPaidLeave;
+                    $leave->leave_reason = $request->leave_reason;
+                    $leave->remark = $request->remark ?? null;
 
                     $leave->save();
 
                     return redirect()->route('leave.index')->with('success', __('Leave successfully updated.'));
                 } else {
-                    return redirect()->back()->with('error', __('Leave type ' . $leave_type->name . ' is provide maximum ' . $leave_type->days . "  days please make sure your selected days is under " . $leave_type->days . ' days.'));
+                    return redirect()->back()->with('error', __('You cannot take more than '.$proRataLeaves.' days. Your pro-rata entitlement is '.$proRataLeaves.' days.'));
                 }
             } else {
                 return redirect()->back()->with('error', __('Permission denied.'));
@@ -333,20 +564,44 @@ class LeaveController extends Controller
     {
         $leave     = LocalLeave::find($id);
         $employee  = Employee::find($leave->employee_id);
-        $leavetype = LeaveType::find($leave->leave_type_id);
 
-
-
-        return view('leave.action', compact('employee', 'leavetype', 'leave'));
+        return view('leave.action', compact('employee', 'leave'));
     }
 
     public function changeaction(Request $request)
     {
-         $leave = LocalLeave::find($request->leave_id);
+        $leave = LocalLeave::find($request->leave_id);
         $leave->status = $request->status;
         
         if ($leave->status == 'Approved') {
             $total_leave_days = $leave->total_leave_days;
+            
+            // Check monthly paid leaves limit (only 2 paid leaves per month allowed)
+            $now = now();
+            $monthlyPaidLeavesUsed = LocalLeave::whereNotIn('id', [$leave->id])
+                ->where('employee_id', $leave->employee_id)
+                ->where('leave_type_id', $leave->leave_type_id)
+                ->where('is_paid', true)
+                ->where('status', 'Approved')
+                ->whereYear('start_date', $now->year)
+                ->whereMonth('start_date', $now->month)
+                ->sum('total_leave_days');
+
+            $monthlyLimit = 2;
+            // Determine if this leave should be paid or LOP
+            $isPaidLeave = true;
+            if ($monthlyPaidLeavesUsed >= $monthlyLimit) {
+                $isPaidLeave = false;
+            } else {
+                // Check if this leave would exceed 2 paid leaves this month
+                if ($monthlyPaidLeavesUsed + $total_leave_days > $monthlyLimit) {
+                    $isPaidLeave = false;
+                }
+            }
+
+            // Update paid/LOP status
+            $leave->is_paid = $isPaidLeave;
+            $leave->is_lop = !$isPaidLeave;
             
             $now = now();
             $balance = EmployeeLeaveBalance::where('employee_id', $leave->employee_id)

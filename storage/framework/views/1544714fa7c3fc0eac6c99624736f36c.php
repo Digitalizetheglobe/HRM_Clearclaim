@@ -36,6 +36,70 @@
 
 <?php $__env->startSection('content'); ?>
 
+    <?php if(\Auth::user()->type == 'employee' && isset($leaveBalance)): ?>
+        <div class="row mb-4">
+            <div class="col-xl-12">
+                <div class="card">
+                    <div class="card-header">
+                        <h5 class="mb-0"><?php echo e(__('Leave Balance Summary')); ?></h5>
+                    </div>
+                    <div class="card-body">
+                        <div class="row">
+                            <div class="col-md-3">
+                                <div class="card bg-primary text-white">
+                                    <div class="card-body">
+                                        <h6 class="text-white mb-2"><?php echo e(__('Total Year Leaves')); ?></h6>
+                                        <h3 class="mb-0"><?php echo e(number_format($leaveBalance['total_year_leaves'], 2)); ?></h3>
+                                        <small class="text-white-50"><?php echo e(__('Pro-rata entitlement')); ?></small>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="col-md-3">
+                                <div class="card bg-info text-white">
+                                    <div class="card-body">
+                                        <h6 class="text-white mb-2"><?php echo e(__('This Month Leaves')); ?></h6>
+                                        <h3 class="mb-0"><?php echo e(number_format($leaveBalance['monthly_limit'], 2)); ?></h3>
+                                        <small class="text-white-50"><?php echo e(__('Monthly limit (paid)')); ?></small>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="col-md-3">
+                                <div class="card bg-warning text-white">
+                                    <div class="card-body">
+                                        <h6 class="text-white mb-2"><?php echo e(__('Total Monthly Used')); ?></h6>
+                                        <h3 class="mb-0"><?php echo e(number_format($leaveBalance['this_month_paid_used'], 2)); ?></h3>
+                                        <small class="text-white-50">
+                                            <?php echo e(__('Used: ')); ?><?php echo e(number_format($leaveBalance['this_month_paid_used'], 2)); ?> / 
+                                            <?php echo e(number_format($leaveBalance['monthly_limit'], 2)); ?> | 
+                                            <?php echo e(__('Remaining: ')); ?><?php echo e(number_format($leaveBalance['remaining_paid_this_month'], 2)); ?>
+
+                                        </small>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="col-md-3">
+                                <div class="card bg-success text-white">
+                                    <div class="card-body">
+                                        <h6 class="text-white mb-2"><?php echo e(__('Yearly Remaining')); ?></h6>
+                                        <h3 class="mb-0"><?php echo e(number_format($leaveBalance['yearly_remaining'], 2)); ?></h3>
+                                        <small class="text-white-50"><?php echo e(__('Available balance')); ?></small>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        <?php if($leaveBalance['this_month_paid_used'] >= $leaveBalance['monthly_limit']): ?>
+                            <div class="alert alert-warning mt-3 mb-0">
+                                <i class="ti ti-alert-triangle"></i> 
+                                <strong><?php echo e(__('Notice:')); ?></strong> 
+                                <?php echo e(__('You have used all '.$leaveBalance['monthly_limit'].' paid leaves for this month. Any additional leaves will be Leave Without Pay (LWP).')); ?>
+
+                            </div>
+                        <?php endif; ?>
+                    </div>
+                </div>
+            </div>
+        </div>
+    <?php endif; ?>
 
     <div class="row">
         <div class="col-xl-12">
@@ -49,13 +113,13 @@
                                     <?php if(\Auth::user()->type != 'employee'): ?>
                                         <th><?php echo e(__('Employee')); ?></th>
                                     <?php endif; ?>
-                                    <th><?php echo e(__('Leave Type')); ?></th>
                                     <th><?php echo e(__('Applied On')); ?></th>
                                     <th><?php echo e(__('Start Date')); ?></th>
                                     <th><?php echo e(__('End Date')); ?></th>
+                                    <th><?php echo e(__('Duration')); ?></th>
                                     <th><?php echo e(__('Total Days')); ?></th>
                                     <th><?php echo e(__('Leave Reason')); ?></th>
-                                    <th><?php echo e(__('status')); ?></th>
+                                    <th><?php echo e(__('Status')); ?></th>
                                     <?php if(\Auth::user()->type != 'employee'): ?>
                                         <th width="200px"><?php echo e(__('Action')); ?></th>
                                     <?php endif; ?>    
@@ -69,12 +133,16 @@
 
                                             </td>
                                         <?php endif; ?>
-                                        <td><?php echo e(!empty($leave->leave_type_id) ? $leave->leaveType->title : ''); ?>
-
-                                        </td>
                                         <td><?php echo e(\Auth::user()->dateFormat($leave->applied_on)); ?></td>
                                         <td><?php echo e(\Auth::user()->dateFormat($leave->start_date)); ?></td>
                                         <td><?php echo e(\Auth::user()->dateFormat($leave->end_date)); ?></td>
+                                        <td>
+                                            <?php echo e($leave->leave_duration ?? 'Full Day'); ?>
+
+                                            <?php if(($leave->leave_duration ?? '') == 'Half Day' && !empty($leave->leave_session)): ?>
+                                                <br><small class="text-muted">(<?php echo e($leave->leave_session); ?>)</small>
+                                            <?php endif; ?>
+                                        </td>
                                         <td><?php echo e($leave->total_leave_days); ?></td>
                                         <!-- <td><?php echo e($leave->leave_reason); ?></td> -->
                                         <td><?php echo breakAfterWords($leave->leave_reason); ?></td>
@@ -90,6 +158,7 @@
                                                     <?php echo e($leave->status); ?></div>
                                             <?php endif; ?>
                                         </td>
+
                                         <?php if(\Auth::user()->type != 'employee'): ?>
                                             <td class="Action">
 

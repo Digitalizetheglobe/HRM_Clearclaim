@@ -38,6 +38,7 @@ use App\Http\Controllers\AllowanceController;
 use App\Http\Controllers\PaySlipController;
 use App\Http\Controllers\ResignationController;
 use App\Http\Controllers\OffboardingController;
+use App\Http\Controllers\OnboardingController;
 use App\Http\Controllers\TravelController;
 use App\Http\Controllers\PromotionController;
 use App\Http\Controllers\TransferController;
@@ -175,6 +176,12 @@ Route::group(['middleware' => ['auth']], function () {
     Route::post('offboarding/{id}/step/{step}', [OffboardingController::class, 'updateStep'])->name('offboarding.update-step');
     Route::get('offboarding/resignation/{resignationId}/create', [OffboardingController::class, 'createFromResignation'])->name('offboarding.create-from-resignation');
     Route::get('offboarding/termination/{terminationId}/create', [OffboardingController::class, 'createFromTermination'])->name('offboarding.create-from-termination');
+
+    // Onboarding Routes
+    Route::get('onboarding', [OnboardingController::class, 'index'])->name('onboarding.index');
+    Route::post('onboarding/order', [OnboardingController::class, 'order'])->name('onboarding.order');
+    Route::get('onboarding/{id}/step/{step}', [OnboardingController::class, 'showStep'])->name('onboarding.step');
+    Route::post('onboarding/{id}/step/{step}', [OnboardingController::class, 'updateStep'])->name('onboarding.update-step');
 
 });
 

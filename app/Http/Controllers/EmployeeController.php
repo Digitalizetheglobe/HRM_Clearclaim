@@ -242,6 +242,24 @@
                     'approval_status' => 'pending', // Set initial status to pending
                 ]);
 
+                // Auto-create onboarding process for new employee
+                try {
+                    $firstStage = \App\Models\OnboardingStage::where('created_by', \Auth::user()->creatorId())
+                        ->orderBy('order', 'asc')
+                        ->first();
+                    
+                    if ($firstStage) {
+                        \App\Models\OnboardingProcess::create([
+                            'employee_id' => $employee->id,
+                            'stage' => $firstStage->id,
+                            'created_by' => \Auth::user()->creatorId(),
+                        ]);
+                    }
+                } catch (\Exception $e) {
+                    // Log error but don't fail employee creation
+                    \Log::error('Failed to create onboarding process: ' . $e->getMessage());
+                }
+
                 return redirect()->route('employee.index')->with('success', __('Employee successfully created.'));
             } else {
                 return redirect()->back()->with('error', __('Permission denied.'));

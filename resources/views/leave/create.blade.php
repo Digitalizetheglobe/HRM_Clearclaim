@@ -27,38 +27,63 @@
     @else
         {!! Form::hidden('employee_id', !empty($employees) ? $employees->id : 0, ['id' => 'employee_id']) !!}
     @endif
-    
-    {{-- Leave Type Selection --}}
+
+    {{-- Monthly Leave Limit Warning --}}
+    @if(isset($monthlyLeaveInfo) && $monthlyLeaveInfo['exceeded'])
+        <div class="alert alert-warning">
+            <i class="ti ti-alert-triangle"></i> 
+            <strong>{{ __('Monthly Leave Limit Reached!') }}</strong><br>
+            {{ __('You have already used '.$monthlyLeaveInfo['used'].' paid leaves this month. Maximum 2 paid leaves allowed per month.') }}<br>
+            {{ __('Any additional leaves must be applied as Leave Without Pay (LWP).') }}
+        </div>
+    @elseif(isset($monthlyLeaveInfo) && $monthlyLeaveInfo['remaining'] <= 0.5)
+        <div class="alert alert-info">
+            <i class="ti ti-info-circle"></i> 
+            <strong>{{ __('Monthly Leave Limit Notice') }}</strong><br>
+            {{ __('You have used '.$monthlyLeaveInfo['used'].' paid leaves this month. Only '.$monthlyLeaveInfo['remaining'].' paid leave(s) remaining.') }}
+        </div>
+    @endif
+
+    {{-- Leave Duration Selection --}}
     <div class="row">
         <div class="col-md-12">
             <div class="form-group">
-                {{ Form::label('leave_type_id', __('Leave Type'), ['class' => 'col-form-label']) }}<span class="text-danger pl-1">*</span>
-                <select name="leave_type_id" id="leave_type_id" class="form-control select">
-                    <option value="">{{ __('Select Leave Type') }}</option>
-                    @foreach ($leavetypes as $leave)
-                        <option value="{{ $leave->id }}">
-                            {{ $leave->title }}
-                            @if($leave->days > 0)
-                                ({{ $leave->getUsedLeaves(Auth::user()->type == 'employee' ? null : null) }}/{{ $leave->days }})
-                            @endif
-                        </option>
-                    @endforeach
+                {{ Form::label('leave_duration', __('Leave Duration'), ['class' => 'col-form-label']) }}<span class="text-danger pl-1">*</span>
+                <select name="leave_duration" id="leave_duration" class="form-control select" required>
+                    <option value="">{{ __('Select Leave Duration') }}</option>
+                    <option value="Full Day">{{ __('Full Day') }}</option>
+                    <option value="Half Day">{{ __('Half Day') }}</option>
                 </select>
             </div>
         </div>
     </div>
-    {{-- Start and End Date --}}
-    <div class="row">
+
+    {{-- Leave Session (only for Half Day) --}}
+    <div class="row" id="leave_session_row" style="display: none;">
+        <div class="col-md-12">
+            <div class="form-group">
+                {{ Form::label('leave_session', __('Leave Session'), ['class' => 'col-form-label']) }}<span class="text-danger pl-1">*</span>
+                <select name="leave_session" id="leave_session" class="form-control select">
+                    <option value="">{{ __('Select Session') }}</option>
+                    <option value="First Half">{{ __('First Half') }}</option>
+                    <option value="Second Half">{{ __('Second Half') }}</option>
+                </select>
+            </div>
+        </div>
+    </div>
+
+    {{-- Start and End Date (only show when duration is selected) --}}
+    <div class="row" id="date_row" style="display: none;">
         <div class="col-md-6">
             <div class="form-group">
-                {{ Form::label('start_date', __('Start Date'), ['class' => 'col-form-label']) }}
-                {{ Form::text('start_date', null, ['class' => 'form-control d_week current_date', 'autocomplete' => 'off', 'id' => 'start_date']) }}
+                {{ Form::label('start_date', __('Start Date'), ['class' => 'col-form-label']) }}<span class="text-danger pl-1">*</span>
+                {{ Form::text('start_date', null, ['class' => 'form-control d_week current_date', 'autocomplete' => 'off', 'id' => 'start_date', 'required' => 'required']) }}
             </div>
         </div>
         <div class="col-md-6">
             <div class="form-group">
-                {{ Form::label('end_date', __('End Date'), ['class' => 'col-form-label']) }}
-                {{ Form::text('end_date', null, ['class' => 'form-control d_week current_date', 'autocomplete' => 'off', 'id' => 'end_date']) }}
+                {{ Form::label('end_date', __('End Date'), ['class' => 'col-form-label']) }}<span class="text-danger pl-1">*</span>
+                {{ Form::text('end_date', null, ['class' => 'form-control d_week current_date', 'autocomplete' => 'off', 'id' => 'end_date', 'required' => 'required']) }}
             </div>
         </div>
     </div>
@@ -67,25 +92,8 @@
     <div class="row">
         <div class="col-md-12">
             <div class="form-group">
-                {{ Form::label('leave_reason', __('Leave Reason'), ['class' => 'col-form-label']) }}
+                {{ Form::label('leave_reason', __('Leave Reason'), ['class' => 'col-form-label']) }}<span class="text-danger pl-1">*</span>
                 {{ Form::textarea('leave_reason', null, ['class' => 'form-control', 'required' => 'required', 'placeholder' => __('Leave Reason'), 'rows' => '3']) }}
-            </div>
-        </div>
-    </div>
-
-    {{-- Remarks and AI Grammar Check --}}
-    <div class="row">
-        <div class="col-md-12">
-            <div class="form-group">
-                {{ Form::label('remark', __('Remark'), ['class' => 'col-form-label']) }}
-                @if ($plan->enable_chatgpt == 'on')
-                    <a href="#" data-size="md" class="btn btn-primary btn-icon btn-sm" data-ajax-popup-over="true"
-                        id="grammarCheck" data-url="{{ route('grammar', ['grammar']) }}" data-bs-placement="top"
-                        data-title="{{ __('Grammar check with AI') }}">
-                        <i class="ti ti-rotate"></i> <span>{{ __('Grammar check with AI') }}</span>
-                    </a>
-                @endif
-                {{ Form::textarea('remark', null, ['class' => 'form-control grammer_textarea', 'required' => 'required', 'placeholder' => __('Leave Remark'), 'rows' => '3']) }}
             </div>
         </div>
     </div>
@@ -136,38 +144,66 @@
     });
 
 
+    // Show/hide date fields and session based on leave duration
+    $(document).on('change', '#leave_duration', function() {
+        var leaveDuration = $(this).val();
+        
+        if (leaveDuration) {
+            // Show date fields when duration is selected
+            $('#date_row').show();
+            $('#start_date').prop('required', true);
+            $('#end_date').prop('required', true);
+            
+            if (leaveDuration === 'Half Day') {
+                // Show session field for half day
+                $('#leave_session_row').show();
+                $('#leave_session').prop('required', true);
+                // For half day, start and end date should be the same
+                if ($('#start_date').val()) {
+                    $('#end_date').val($('#start_date').val());
+                }
+                $('#end_date').prop('readonly', true);
+            } else {
+                // Hide session field for full day
+                $('#leave_session_row').hide();
+                $('#leave_session').prop('required', false);
+                $('#leave_session').val('');
+                $('#end_date').prop('readonly', false);
+            }
+        } else {
+            // Hide everything if no duration selected
+            $('#date_row').hide();
+            $('#leave_session_row').hide();
+            $('#start_date').prop('required', false);
+            $('#end_date').prop('required', false);
+            $('#leave_session').prop('required', false);
+        }
+    });
+
+    // When start date changes for half day, update end date
+    $(document).on('change', '#start_date', function() {
+        if ($('#leave_duration').val() === 'Half Day') {
+            $('#end_date').val($(this).val());
+        }
+    });
+
     // Add this to your @push('script-page') section
 $(document).on('change', '#start_date, #end_date', function() {
     var startDate = new Date($('#start_date').val());
     var endDate = new Date($('#end_date').val());
+    var leaveDuration = $('#leave_duration').val();
     
     if (startDate && endDate) {
         // Calculate difference in days
         var diffTime = Math.abs(endDate - startDate);
         var diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24)) + 1;
         
-        $('#total_leave_days').val(diffDays);
-        
-        // Get selected leave type
-        var leaveTypeId = $('#leave_type_id').val();
-        if (leaveTypeId) {
-            // You might need to load leave type limits via AJAX or store them in data attributes
-            $.ajax({
-                url: '{{ route('get.leave.type.details') }}',
-                type: 'POST',
-                data: {
-                    "leave_type_id": leaveTypeId,
-                    "_token": "{{ csrf_token() }}",
-                },
-                success: function(data) {
-                    if (diffDays > data.days) {
-                        alert('You cannot take more than ' + data.days + ' days for this leave type');
-                        $('#end_date').val('');
-                        $('#total_leave_days').val('');
-                    }
-                }
-            });
+        // For half day, it's 0.5 days
+        if (leaveDuration === 'Half Day') {
+            diffDays = 0.5;
         }
+        
+        $('#total_leave_days').val(diffDays);
     }
 });
 </script>

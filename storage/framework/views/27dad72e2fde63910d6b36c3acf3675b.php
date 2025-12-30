@@ -242,6 +242,18 @@
             <?php endif; ?>
         <?php endif; ?>
 
+            <!-- Onboarding -->
+            <?php if(\Auth::user()->type == 'company' || Gate::check('Manage Employee')): ?>
+                <li class="dash-item <?php echo e(Request::segment(1) == 'onboarding' ? 'active' : ''); ?>">
+                    <a href="<?php echo e(route('onboarding.index')); ?>"
+                        class="dash-link text-white hover:text-white hover:bg-[#001a3b] text-lg flex items-center space-x-2">
+                        <span class="dash-micon text-white text-[30px] shadow-none" style="background: none;">
+                            <i class="ti ti-user-plus text-white text-[30px]"></i>
+                        </span>
+                        <span class="dash-mtext"><?php echo e(__('On-Boarding Steps')); ?></span>
+                    </a>
+                </li>
+            <?php endif; ?>
 
             <!-- employee-->
 
