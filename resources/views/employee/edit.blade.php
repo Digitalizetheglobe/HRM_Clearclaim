@@ -397,7 +397,6 @@
                                                             class="btn btn-sm btn-primary">
                                                                 <i class="ti ti-download"></i> View Document
                                                             </a>
-                                                            <img id="{{ 'blah' . $key }}" src="{{ asset(str_replace('public/', '', $employeeDoc->document_value)) }}" width="50%" />
                                                         </div>
                                                     @else
                                                         <img id="{{ 'blah' . $key }}" src="" width="50%" />

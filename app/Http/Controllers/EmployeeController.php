@@ -784,6 +784,28 @@
             return view('employee.template.ExpCertificatepdf', compact('experience_certificate', 'employees'));
         }
 
+        public function customAppointmentLetterPdf($id)
+        {
+            $employees = Employee::where('id', $id)->where('created_by', \Auth::user()->creatorId())->first();
+            
+            if (!$employees) {
+                return redirect()->back()->with('error', __('Employee not found.'));
+            }
+            
+            return view('employee.template.custom_appointment_letter_pdf', compact('employees'));
+        }
+
+        public function customAppointmentLetterDoc($id)
+        {
+            $employees = Employee::where('id', $id)->where('created_by', \Auth::user()->creatorId())->first();
+            
+            if (!$employees) {
+                return redirect()->back()->with('error', __('Employee not found.'));
+            }
+            
+            return view('employee.template.custom_appointment_letter_doc', compact('employees'));
+        }
+
         public function ExpCertificateDoc($id)
         {
             $currantLang = \Cookie::get('LANGUAGE');

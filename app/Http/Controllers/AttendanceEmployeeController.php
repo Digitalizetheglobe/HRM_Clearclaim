@@ -91,6 +91,10 @@ class AttendanceEmployeeController extends Controller
                     $employee->where('department_id', $request->department);
                 }
 
+                if (!empty($request->employee)) {
+                    $employee->where('id', $request->employee);
+                }
+
                 $employee = $employee->get()->pluck('id');
 
                 $attendanceEmployee = AttendanceEmployee::whereIn('employee_id', $employee)
@@ -1264,20 +1268,25 @@ class AttendanceEmployeeController extends Controller
                 $query = AttendanceEmployee::whereIn('employee_id', $employee);
             }
             
-            // Apply date filters
+            // Apply date filters - match exactly what index method does
             if ($request->type == 'monthly' && !empty($request->month)) {
                 $month = date('m', strtotime($request->month));
                 $year = date('Y', strtotime($request->month));
                 $start_date = date($year . '-' . $month . '-01');
                 $end_date = date('Y-m-t', strtotime('01-' . $month . '-' . $year));
+                $query->whereBetween('date', [$start_date, $end_date]);
+            } elseif ($request->type == 'daily' && !empty($request->date)) {
+                $start_date = $request->date;
+                $end_date = $request->date;
+                $query->where('date', $request->date);
             } else {
+                // Default to current month
                 $month = date('m');
                 $year = date('Y');
                 $start_date = date($year . '-' . $month . '-01');
                 $end_date = date('Y-m-t', strtotime('01-' . $month . '-' . $year));
+                $query->whereBetween('date', [$start_date, $end_date]);
             }
-            
-            $query->whereBetween('date', [$start_date, $end_date]);
 
             $attendances = $query->orderBy('date', 'asc')
                                 ->orderBy('clock_in', 'asc')
@@ -1299,45 +1308,146 @@ class AttendanceEmployeeController extends Controller
                                 ->with('user')
                                 ->get();
 
+            // Check if single employee is selected - use enhanced export format
+            $isSingleEmployee = !empty($request->employee) && count($employeeIds) == 1;
+            
             // Group attendance by employee and date
             $attendanceData = [];
+            $totalMinutesByEmployee = [];
+            $totalWorkingDaysByEmployee = [];
+            $standardMinutesPerDay = 9 * 60; // 540 minutes
+            
             foreach ($attendances as $attendance) {
+                $clockIn = $attendance->clock_in;
+                $clockOut = $attendance->clock_out;
+                $workedHours = $this->calculateWorkedHours($clockIn, $clockOut);
+                
+                // Calculate minutes for enhanced format
+                $dayMinutes = 0;
+                if ($clockIn != '00:00:00' && $clockOut != '00:00:00') {
+                    try {
+                        $date = $attendance->date;
+                        $inTime = \Carbon\Carbon::parse($date . ' ' . $clockIn);
+                        $outTime = \Carbon\Carbon::parse($date . ' ' . $clockOut);
+                        
+                        if ($outTime->lt($inTime)) {
+                            $outTime->addDay();
+                        }
+                        
+                        $dayMinutes = $outTime->diffInMinutes($inTime);
+                        if (!isset($totalMinutesByEmployee[$attendance->employee_id])) {
+                            $totalMinutesByEmployee[$attendance->employee_id] = 0;
+                            $totalWorkingDaysByEmployee[$attendance->employee_id] = 0;
+                        }
+                        $totalMinutesByEmployee[$attendance->employee_id] += $dayMinutes;
+                        $totalWorkingDaysByEmployee[$attendance->employee_id]++;
+                    } catch (\Exception $e) {
+                        $dayMinutes = 0;
+                    }
+                }
+                
                 $attendanceData[$attendance->employee_id][$attendance->date] = [
                     'status' => $attendance->status,
-                    'clock_in' => $attendance->clock_in,
-                    'clock_out' => $attendance->clock_out,
-                    'total' => $this->calculateWorkedHours($attendance->clock_in, $attendance->clock_out)
+                    'clock_in' => $clockIn,
+                    'clock_out' => $clockOut,
+                    'total' => $workedHours,
+                    'minutes' => $dayMinutes
+                ];
+            }
+            
+            // Calculate summary data for single employee export
+            $summaryData = [];
+            if ($isSingleEmployee && count($employees) > 0) {
+                $employee = $employees->first();
+                $totalMinutes = $totalMinutesByEmployee[$employee->id] ?? 0;
+                $totalWorkingDays = $totalWorkingDaysByEmployee[$employee->id] ?? 0;
+                
+                $totalHours = floor($totalMinutes / 60);
+                $totalMins = $totalMinutes % 60;
+                $totalHoursFormatted = $totalHours . 'h ' . $totalMins . 'm';
+                
+                $totalMonthDays = count($dates);
+                $requiredMinutes = $totalMonthDays * $standardMinutesPerDay;
+                $requiredHours = floor($requiredMinutes / 60);
+                $requiredMins = $requiredMinutes % 60;
+                $requiredHoursFormatted = $requiredHours . 'h ' . $requiredMins . 'm';
+                
+                $diffMinutes = $totalMinutes - $requiredMinutes;
+                $extraShortHours = '';
+                if ($diffMinutes != 0) {
+                    $sign = $diffMinutes > 0 ? '+' : '-';
+                    $absMinutes = abs($diffMinutes);
+                    $diffHours = floor($absMinutes / 60);
+                    $diffMins = $absMinutes % 60;
+                    if ($diffMins > 0) {
+                        $extraShortHours = $sign . $diffHours . 'h ' . $diffMins . 'm';
+                    } else {
+                        $extraShortHours = $sign . $diffHours . 'h';
+                    }
+                } else {
+                    $extraShortHours = '0h';
+                }
+                
+                $summaryData = [
+                    'totalHoursFormatted' => $totalHoursFormatted,
+                    'requiredHoursFormatted' => $requiredHoursFormatted,
+                    'extraShortHours' => $extraShortHours,
+                    'totalWorkingDays' => $totalWorkingDays
                 ];
             }
 
             // Generate Excel file
             $fileName = 'attendance_' . date('Y-m-d') . '.xlsx';
+            if ($isSingleEmployee && count($employees) > 0) {
+                $employeeName = str_replace(' ', '_', $employees->first()->name);
+                $monthYear = \Carbon\Carbon::parse($start_date)->format('M_Y');
+                $fileName = 'attendance_' . $employeeName . '_' . $monthYear . '.xlsx';
+            }
             
-            return \Excel::download(new class($dates, $employees, $attendanceData, $start_date, $end_date) implements \Maatwebsite\Excel\Concerns\FromView, \Maatwebsite\Excel\Concerns\WithStyles {
+            return \Excel::download(new class($dates, $employees, $attendanceData, $start_date, $end_date, $isSingleEmployee, $summaryData) implements \Maatwebsite\Excel\Concerns\FromView, \Maatwebsite\Excel\Concerns\WithStyles {
                 private $dates;
                 private $employees;
                 private $attendanceData;
                 private $start_date;
                 private $end_date;
+                private $isSingleEmployee;
+                private $summaryData;
 
-                public function __construct($dates, $employees, $attendanceData, $start_date, $end_date)
+                public function __construct($dates, $employees, $attendanceData, $start_date, $end_date, $isSingleEmployee, $summaryData)
                 {
                     $this->dates = $dates;
                     $this->employees = $employees;
                     $this->attendanceData = $attendanceData;
                     $this->start_date = $start_date;
                     $this->end_date = $end_date;
+                    $this->isSingleEmployee = $isSingleEmployee;
+                    $this->summaryData = $summaryData;
                 }
 
                 public function view(): \Illuminate\View\View
                 {
-                    return view('attendance.export', [
-                        'dates' => $this->dates,
-                        'employees' => $this->employees,
-                        'attendanceData' => $this->attendanceData,
-                        'start_date' => $this->start_date,
-                        'end_date' => $this->end_date
-                    ]);
+                    // Use enhanced export for single employee, regular export for multiple
+                    if ($this->isSingleEmployee && !empty($this->summaryData)) {
+                        return view('attendance.export_employee', [
+                            'dates' => $this->dates,
+                            'employees' => $this->employees,
+                            'attendanceData' => $this->attendanceData,
+                            'start_date' => $this->start_date,
+                            'end_date' => $this->end_date,
+                            'totalHoursFormatted' => $this->summaryData['totalHoursFormatted'],
+                            'requiredHoursFormatted' => $this->summaryData['requiredHoursFormatted'],
+                            'extraShortHours' => $this->summaryData['extraShortHours'],
+                            'totalWorkingDays' => $this->summaryData['totalWorkingDays']
+                        ]);
+                    } else {
+                        return view('attendance.export', [
+                            'dates' => $this->dates,
+                            'employees' => $this->employees,
+                            'attendanceData' => $this->attendanceData,
+                            'start_date' => $this->start_date,
+                            'end_date' => $this->end_date
+                        ]);
+                    }
                 }
 
                 public function styles(\PhpOffice\PhpSpreadsheet\Worksheet\Worksheet $sheet)
@@ -1345,6 +1455,201 @@ class AttendanceEmployeeController extends Controller
                     // Apply borders to all cells
                     $lastColumn = count($this->dates) + 1;
                     $lastRow = (count($this->employees) * 50) + 2;
+                    
+                    $sheet->getStyle('A1:' . \PhpOffice\PhpSpreadsheet\Cell\Coordinate::stringFromColumnIndex($lastColumn) . $lastRow)
+                        ->getBorders()
+                        ->getAllBorders()
+                        ->setBorderStyle(\PhpOffice\PhpSpreadsheet\Style\Border::BORDER_THIN);
+                    
+                    // Center align all cells
+                    $sheet->getStyle('A1:' . \PhpOffice\PhpSpreadsheet\Cell\Coordinate::stringFromColumnIndex($lastColumn) . $lastRow)
+                        ->getAlignment()
+                        ->setHorizontal(\PhpOffice\PhpSpreadsheet\Style\Alignment::HORIZONTAL_CENTER);
+                }
+            }, $fileName);
+        } else {
+            return redirect()->back()->with('error', __('Permission denied.'));
+        }
+    }
+
+    public function exportEmployee(Request $request, $employeeId)
+    {
+        if (\Auth::user()->can('Manage Attendance') || \Auth::user()->type == 'employee') {
+            // For employees, they can only export their own attendance
+            if (\Auth::user()->type == 'employee') {
+                $emp = !empty(\Auth::user()->employee) ? \Auth::user()->employee->id : 0;
+                if ($emp != $employeeId) {
+                    return redirect()->back()->with('error', __('Permission denied.'));
+                }
+                $employee = Employee::where('id', $employeeId)->first();
+            } else {
+                // Verify employee belongs to the creator
+                $employee = Employee::where('id', $employeeId)
+                    ->where('created_by', \Auth::user()->creatorId())
+                    ->first();
+            }
+            
+            if (!$employee) {
+                return redirect()->back()->with('error', __('Employee not found.'));
+            }
+            
+            // Get attendance for this specific employee
+            $query = AttendanceEmployee::where('employee_id', $employeeId);
+            
+            // Apply date filters from request
+            if ($request->type == 'monthly' && !empty($request->month)) {
+                $month = date('m', strtotime($request->month));
+                $year = date('Y', strtotime($request->month));
+                $start_date = date($year . '-' . $month . '-01');
+                $end_date = date('Y-m-t', strtotime('01-' . $month . '-' . $year));
+            } elseif ($request->type == 'daily' && !empty($request->date)) {
+                $start_date = $request->date;
+                $end_date = $request->date;
+            } else {
+                $month = date('m');
+                $year = date('Y');
+                $start_date = date($year . '-' . $month . '-01');
+                $end_date = date('Y-m-t', strtotime('01-' . $month . '-' . $year));
+            }
+            
+            $query->whereBetween('date', [$start_date, $end_date]);
+            
+            $attendances = $query->orderBy('date', 'asc')
+                                ->orderBy('clock_in', 'asc')
+                                ->get();
+            
+            // Get all dates in the selected period
+            $dates = [];
+            $current = \Carbon\Carbon::parse($start_date);
+            $end = \Carbon\Carbon::parse($end_date);
+            
+            while ($current <= $end) {
+                $dates[] = $current->format('Y-m-d');
+                $current->addDay();
+            }
+            
+            // Get the employee
+            $employees = collect([$employee]);
+            
+            // Group attendance by date and calculate totals
+            $attendanceData = [];
+            $totalMinutes = 0;
+            $totalWorkingDays = 0;
+            $standardHoursPerDay = 9; // 9 hours per day
+            $standardMinutesPerDay = $standardHoursPerDay * 60; // 540 minutes
+            
+            foreach ($attendances as $attendance) {
+                $clockIn = $attendance->clock_in;
+                $clockOut = $attendance->clock_out;
+                $workedHours = $this->calculateWorkedHours($clockIn, $clockOut);
+                
+                // Calculate minutes worked for this day
+                $dayMinutes = 0;
+                if ($clockIn != '00:00:00' && $clockOut != '00:00:00') {
+                    try {
+                        $date = $attendance->date;
+                        $inTime = \Carbon\Carbon::parse($date . ' ' . $clockIn);
+                        $outTime = \Carbon\Carbon::parse($date . ' ' . $clockOut);
+                        
+                        if ($outTime->lt($inTime)) {
+                            $outTime->addDay();
+                        }
+                        
+                        $dayMinutes = $outTime->diffInMinutes($inTime);
+                        $totalMinutes += $dayMinutes;
+                        $totalWorkingDays++;
+                    } catch (\Exception $e) {
+                        $dayMinutes = 0;
+                    }
+                }
+                
+                $attendanceData[$attendance->employee_id][$attendance->date] = [
+                    'status' => $attendance->status,
+                    'clock_in' => $clockIn,
+                    'clock_out' => $clockOut,
+                    'total' => $workedHours,
+                    'minutes' => $dayMinutes
+                ];
+            }
+            
+            // Calculate monthly totals
+            $totalHours = floor($totalMinutes / 60);
+            $totalMins = $totalMinutes % 60;
+            $totalHoursFormatted = $totalHours . 'h ' . $totalMins . 'm';
+            
+            // Calculate required hours (total month days * 9 hours)
+            $totalMonthDays = count($dates);
+            $requiredMinutes = $totalMonthDays * $standardMinutesPerDay;
+            $requiredHours = floor($requiredMinutes / 60);
+            $requiredMins = $requiredMinutes % 60;
+            $requiredHoursFormatted = $requiredHours . 'h ' . $requiredMins . 'm';
+            
+            // Calculate extra/short hours
+            $diffMinutes = $totalMinutes - $requiredMinutes;
+            $extraShortHours = '';
+            if ($diffMinutes != 0) {
+                $sign = $diffMinutes > 0 ? '+' : '-';
+                $absMinutes = abs($diffMinutes);
+                $diffHours = floor($absMinutes / 60);
+                $diffMins = $absMinutes % 60;
+                if ($diffMins > 0) {
+                    $extraShortHours = $sign . $diffHours . 'h ' . $diffMins . 'm';
+                } else {
+                    $extraShortHours = $sign . $diffHours . 'h';
+                }
+            } else {
+                $extraShortHours = '0h';
+            }
+            
+            // Generate Excel file with employee name in filename
+            $employeeName = str_replace(' ', '_', $employee->name);
+            $monthYear = \Carbon\Carbon::parse($start_date)->format('M_Y');
+            $fileName = 'attendance_' . $employeeName . '_' . $monthYear . '.xlsx';
+            
+            return \Excel::download(new class($dates, $employees, $attendanceData, $start_date, $end_date, $totalHoursFormatted, $requiredHoursFormatted, $extraShortHours, $totalWorkingDays) implements \Maatwebsite\Excel\Concerns\FromView, \Maatwebsite\Excel\Concerns\WithStyles {
+                private $dates;
+                private $employees;
+                private $attendanceData;
+                private $start_date;
+                private $end_date;
+                private $totalHoursFormatted;
+                private $requiredHoursFormatted;
+                private $extraShortHours;
+                private $totalWorkingDays;
+                
+                public function __construct($dates, $employees, $attendanceData, $start_date, $end_date, $totalHoursFormatted, $requiredHoursFormatted, $extraShortHours, $totalWorkingDays)
+                {
+                    $this->dates = $dates;
+                    $this->employees = $employees;
+                    $this->attendanceData = $attendanceData;
+                    $this->start_date = $start_date;
+                    $this->end_date = $end_date;
+                    $this->totalHoursFormatted = $totalHoursFormatted;
+                    $this->requiredHoursFormatted = $requiredHoursFormatted;
+                    $this->extraShortHours = $extraShortHours;
+                    $this->totalWorkingDays = $totalWorkingDays;
+                }
+                
+                public function view(): \Illuminate\View\View
+                {
+                    return view('attendance.export_employee', [
+                        'dates' => $this->dates,
+                        'employees' => $this->employees,
+                        'attendanceData' => $this->attendanceData,
+                        'start_date' => $this->start_date,
+                        'end_date' => $this->end_date,
+                        'totalHoursFormatted' => $this->totalHoursFormatted,
+                        'requiredHoursFormatted' => $this->requiredHoursFormatted,
+                        'extraShortHours' => $this->extraShortHours,
+                        'totalWorkingDays' => $this->totalWorkingDays
+                    ]);
+                }
+                
+                public function styles(\PhpOffice\PhpSpreadsheet\Worksheet\Worksheet $sheet)
+                {
+                    // Apply borders to all cells
+                    $lastColumn = count($this->dates) + 1;
+                    $lastRow = (count($this->employees) * 10) + 15; // Adjusted for summary rows
                     
                     $sheet->getStyle('A1:' . \PhpOffice\PhpSpreadsheet\Cell\Coordinate::stringFromColumnIndex($lastColumn) . $lastRow)
                         ->getBorders()

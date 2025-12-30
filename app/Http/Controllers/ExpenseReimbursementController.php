@@ -12,6 +12,7 @@ use App\Models\Utility;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Storage;
+use Illuminate\Support\Facades\Log;
 use Carbon\Carbon;
 
 class ExpenseReimbursementController extends Controller
@@ -21,14 +22,36 @@ class ExpenseReimbursementController extends Controller
      */
     private function findHRDepartment($companyId)
     {
-        return Department::where('created_by', $companyId)
+        // More flexible matching for HR department names
+        $hrDepartment = Department::where('created_by', $companyId)
             ->where(function($q) {
                 $q->whereRaw('LOWER(name) LIKE ?', ['%human resource%'])
+                  ->orWhereRaw('LOWER(name) LIKE ?', ['%humanresource%'])  // No space
                   ->orWhereRaw('LOWER(name) LIKE ?', ['%hr%'])
                   ->orWhereRaw('LOWER(name) = ?', ['human resource'])
-                  ->orWhereRaw('LOWER(name) = ?', ['hr']);
+                  ->orWhereRaw('LOWER(name) = ?', ['humanresource'])
+                  ->orWhereRaw('LOWER(name) = ?', ['hr'])
+                  ->orWhereRaw('LOWER(name) LIKE ?', ['%human resources%'])  // Plural
+                  ->orWhereRaw('LOWER(name) LIKE ?', ['%humanresources%']);  // Plural no space
             })
             ->first();
+        
+        // Log all departments for this company to help debug
+        if (!$hrDepartment) {
+            $allDepartments = Department::where('created_by', $companyId)->get(['id', 'name']);
+            Log::warning('HR Department not found. Available departments:', [
+                'company_id' => $companyId,
+                'departments' => $allDepartments->toArray(),
+            ]);
+        } else {
+            Log::debug('HR Department found', [
+                'company_id' => $companyId,
+                'hr_department_id' => $hrDepartment->id,
+                'hr_department_name' => $hrDepartment->name,
+            ]);
+        }
+        
+        return $hrDepartment;
     }
     
     /**
@@ -52,15 +75,31 @@ class ExpenseReimbursementController extends Controller
     private function isHREmployee($employee, $companyId)
     {
         if (!$employee) {
+            Log::debug('isHREmployee: No employee record found', ['company_id' => $companyId]);
             return false;
         }
         
         $hrDepartment = $this->findHRDepartment($companyId);
         if (!$hrDepartment) {
+            Log::debug('isHREmployee: HR Department not found', [
+                'company_id' => $companyId,
+                'employee_id' => $employee->id,
+                'employee_department_id' => $employee->department_id,
+            ]);
             return false;
         }
         
-        return $employee->department_id == $hrDepartment->id;
+        $isMatch = $employee->department_id == $hrDepartment->id;
+        
+        Log::debug('isHREmployee: Department check', [
+            'employee_id' => $employee->id,
+            'employee_department_id' => $employee->department_id,
+            'hr_department_id' => $hrDepartment->id,
+            'hr_department_name' => $hrDepartment->name,
+            'is_match' => $isMatch,
+        ]);
+        
+        return $isMatch;
     }
     
     /**
@@ -124,6 +163,11 @@ class ExpenseReimbursementController extends Controller
 
     /**
      * HR/Admin/Finance: View expenses management
+     * 
+     * WORKFLOW:
+     * 1. Employee submits expense → status: 'pending_hr'
+     * 2. HR department employees approve → status: 'pending_finance'
+     * 3. Finance department employees process payment → status: 'paid'
      */
     public function hrIndex()
     {
@@ -137,9 +181,9 @@ class ExpenseReimbursementController extends Controller
         $isHREmployee = $this->isHREmployee($currentEmployee, $companyId);
         $isFinanceEmployee = $this->isFinanceEmployee($currentEmployee, $companyId);
         
-        // Get expenses where either:
-        // 1. Expense created_by matches company ID, OR
-        // 2. Employee's created_by matches company ID (through relationship)
+        // STEP 1: Get expenses pending HR approval (status: 'pending_hr')
+        // These are shown to HR department employees and Admin
+        // These expenses are submitted by employees and waiting for HR approval
         $pending = EmployeeExpense::where('status', 'pending_hr')
             ->where(function($query) use ($companyId) {
                 $query->where('created_by', $companyId)
@@ -151,7 +195,9 @@ class ExpenseReimbursementController extends Controller
             ->orderBy('submitted_at', 'desc')
             ->get();
 
-        // Finance pending (HR approved, waiting for payment)
+        // STEP 2: Get expenses pending Finance processing (status: 'pending_finance')
+        // These are shown to Finance department employees and Admin
+        // These expenses have been approved by HR and are waiting for payment processing
         $financePending = EmployeeExpense::where('status', 'pending_finance')
             ->where(function($query) use ($companyId) {
                 $query->where('created_by', $companyId)
@@ -284,6 +330,8 @@ class ExpenseReimbursementController extends Controller
             }
         }
 
+        // STEP 1: Employee submits expense → Status set to 'pending_hr'
+        // This expense will now appear in HR department's "Pending Approvals" list
         EmployeeExpense::create([
             'employee_id' => $employee->id,
             'category_id' => $request->category_id,
@@ -292,11 +340,11 @@ class ExpenseReimbursementController extends Controller
             'description' => $request->description,
             'receipt_file' => !empty($receiptFiles) ? $receiptFiles : null,
             'submitted_at' => now(),
-            'status' => 'pending_hr',
+            'status' => 'pending_hr', // Initial status: waiting for HR approval
             'created_by' => Auth::user()->creatorId(),
         ]);
 
-        return redirect()->route('expenses.index')->with('success', __('Expense request submitted successfully.'));
+        return redirect()->route('expenses.index')->with('success', __('Expense request submitted successfully. It will be reviewed by Human Resources department.'));
     }
 
     /**
@@ -316,25 +364,55 @@ class ExpenseReimbursementController extends Controller
             ->with(['employee', 'category', 'hr', 'finance'])
             ->findOrFail($id);
 
-        // Check if employee viewing their own expense
-        if ($user->type == 'employee') {
-            $employee = Employee::where('user_id', $user->id)->first();
+        // Check if user is Company/Admin
+        $isAdmin = in_array($user->type, ['company', 'super admin']);
+        
+        // Get employee record
+        $employee = Employee::where('user_id', $user->id)->first();
+        
+        // Check if user is HR or Finance employee
+        $isHREmployee = $this->isHREmployee($employee, $companyId);
+        $isFinanceEmployee = $this->isFinanceEmployee($employee, $companyId);
+        
+        // If user is Admin, HR, or Finance employee, they can view any expense
+        if ($isAdmin || $isHREmployee || $isFinanceEmployee) {
+            return view('expenses.hr.show', compact('expense'));
+        }
+        
+        // Regular employee: can only view their own expenses
+        if ($user->type == 'employee' && $employee) {
             if ($expense->employee_id != $employee->id) {
-                return redirect()->back()->with('error', __('Permission denied.'));
+                return redirect()->back()->with('error', __('Permission denied. You can only view your own expenses.'));
             }
             return view('expenses.employee.show', compact('expense'));
         }
 
-        // HR/Admin/Finance view
-        return view('expenses.hr.show', compact('expense'));
+        // Default: Permission denied
+        return redirect()->back()->with('error', __('Permission denied.'));
     }
 
     /**
      * HR/Admin: Approve expense
+     * 
+     * STEP 2: HR approves expense → Status changes from 'pending_hr' to 'pending_finance'
+     * After approval, the expense moves to Finance department for payment processing
      */
     public function approve(Request $request, $id)
     {
+        // Log immediately when method is called
+        Log::info('=== EXPENSE APPROVE METHOD CALLED ===', [
+            'expense_id' => $id,
+            'request_method' => $request->method(),
+            'request_url' => $request->fullUrl(),
+        ]);
+        
         $user = Auth::user();
+        
+        if (!$user) {
+            Log::error('No authenticated user found');
+            return redirect()->back()->with('error', __('You must be logged in to perform this action.'));
+        }
+        
         $companyId = $user->creatorId();
         
         // Check if user is Company/Admin
@@ -342,30 +420,84 @@ class ExpenseReimbursementController extends Controller
         
         // Check if user is HR department employee
         $employee = Employee::where('user_id', $user->id)->first();
+        
+        // Log all employee records for this user to help debug
+        $allEmployees = Employee::where('user_id', $user->id)->get(['id', 'name', 'department_id', 'user_id']);
+        Log::info('All Employee Records for User', [
+            'user_id' => $user->id,
+            'user_name' => $user->name,
+            'employees' => $allEmployees->toArray(),
+        ]);
+        
+        if (!$employee) {
+            Log::error('No employee record found for user', [
+                'user_id' => $user->id,
+                'user_name' => $user->name,
+            ]);
+            return redirect()->back()->with('error', __('Employee profile not found. Please ensure you have an employee record.'));
+        }
+        
+        // Log the employee's department details
+        $employeeDepartment = $employee->department_id ? Department::find($employee->department_id) : null;
+        Log::info('Employee Department Details', [
+            'employee_id' => $employee->id,
+            'employee_name' => $employee->name,
+            'employee_department_id' => $employee->department_id,
+            'employee_department_name' => $employeeDepartment ? $employeeDepartment->name : 'Not Found',
+        ]);
+        
         $isHREmployee = $this->isHREmployee($employee, $companyId);
         
-        // Only HR employees or Admin can approve
+        // Debug logging to help diagnose permission issues
+        Log::info('Expense Approval Attempt', [
+            'user_id' => $user->id,
+            'user_type' => $user->type,
+            'user_name' => $user->name,
+            'company_id' => $companyId,
+            'employee_id' => $employee ? $employee->id : null,
+            'employee_department_id' => $employee ? $employee->department_id : null,
+            'is_admin' => $isAdmin,
+            'is_hr_employee' => $isHREmployee,
+            'expense_id' => $id,
+        ]);
+        
+        // Only HR employees or Admin can approve expenses
         if (!$isAdmin && !$isHREmployee) {
+            // Additional debug info for permission denied
+            $hrDepartment = $this->findHRDepartment($companyId);
+            Log::warning('Expense Approval Permission Denied', [
+                'user_id' => $user->id,
+                'user_type' => $user->type,
+                'employee_id' => $employee ? $employee->id : null,
+                'employee_department_id' => $employee ? $employee->department_id : null,
+                'hr_department_id' => $hrDepartment ? $hrDepartment->id : null,
+                'hr_department_name' => $hrDepartment ? $hrDepartment->name : null,
+                'company_id' => $companyId,
+            ]);
+            
             return redirect()->back()->with('error', __('Permission denied. Only Human Resource department employees or Admin can approve expenses.'));
         }
         
+        // Only expenses with status 'pending_hr' can be approved
+        // This ensures the workflow: Employee → HR → Finance
         $expense = EmployeeExpense::where(function($query) use ($companyId) {
                 $query->where('created_by', $companyId)
                       ->orWhereHas('employee', function($q) use ($companyId) {
                           $q->where('created_by', $companyId);
                       });
             })
-            ->where('status', 'pending_hr')
+            ->where('status', 'pending_hr') // Only pending HR expenses can be approved
             ->findOrFail($id);
         
+        // STEP 2: Change status to 'pending_finance' - expense now goes to Finance department
         $expense->update([
-            'status' => 'pending_finance',
+            'status' => 'pending_finance', // Status changed: now waiting for Finance processing
             'hr_id' => Auth::id(),
             'hr_remark' => $request->remark,
             'hr_approved_at' => now(),
         ]);
 
-        return redirect()->route('expenses.index')->with('success', __('Expense approved successfully.'));
+        return redirect()->route('expenses.index')->with('success', __('Expense approved successfully. It has been forwarded to Finance department for payment processing.'));
     }
 
     /**
@@ -409,6 +541,9 @@ class ExpenseReimbursementController extends Controller
 
     /**
      * Finance: Mark as paid
+     * 
+     * STEP 3: Finance processes payment → Status changes from 'pending_finance' to 'paid'
+     * Only expenses that have been approved by HR (status: 'pending_finance') can be processed
      */
     public function markPaid(Request $request, $id)
     {
@@ -438,12 +573,14 @@ class ExpenseReimbursementController extends Controller
         
         $isFinanceEmployee = $this->isFinanceEmployee($employee, $companyId);
         
-        // Only Finance employees or Admin can mark as paid
+        // Only Finance employees or Admin can process payments
         if (!$isAdmin && !$isFinanceEmployee) {
             return redirect()->back()->with('error', __('Permission denied. Only Finance department employees or Admin can process payments.'));
         }
         
-        $expense = EmployeeExpense::where('status', 'pending_finance')
+        // Only expenses with status 'pending_finance' (approved by HR) can be processed
+        // This ensures the workflow: Employee → HR → Finance
+        $expense = EmployeeExpense::where('status', 'pending_finance') // Only HR-approved expenses can be processed
             ->where(function($query) use ($companyId) {
                 $query->where('created_by', $companyId)
                       ->orWhereHas('employee', function($q) use ($companyId) {
@@ -467,15 +604,16 @@ class ExpenseReimbursementController extends Controller
             }
         }
 
+        // STEP 3: Change status to 'paid' - expense is now fully processed
         $expense->update([
-            'status' => 'paid',
+            'status' => 'paid', // Final status: payment completed
             'finance_id' => Auth::id(),
             'paid_date' => $request->paid_date,
             'payment_mode' => $request->payment_mode,
             'payment_proof' => $paymentProof,
         ]);
 
-        return redirect()->route('expenses.index')->with('success', __('Payment marked as completed.'));
+        return redirect()->route('expenses.index')->with('success', __('Payment marked as completed. The employee has been reimbursed.'));
     }
 
     /**

@@ -37,6 +37,7 @@ use App\Http\Controllers\HolidayController;
 use App\Http\Controllers\AllowanceController;
 use App\Http\Controllers\PaySlipController;
 use App\Http\Controllers\ResignationController;
+use App\Http\Controllers\OffboardingController;
 use App\Http\Controllers\TravelController;
 use App\Http\Controllers\PromotionController;
 use App\Http\Controllers\TransferController;
@@ -166,6 +167,14 @@ Route::group(['middleware' => ['auth']], function () {
     Route::resource('resignation', ResignationController::class);
     Route::post('resignation/{id}/approve', [ResignationController::class, 'approve'])->name('resignation.approve');
     Route::get('resignation/{id}/review', [ResignationController::class, 'review'])->name('resignation.review');
+
+    // Offboarding Routes
+    Route::get('offboarding', [OffboardingController::class, 'index'])->name('offboarding.index');
+    Route::post('offboarding/order', [OffboardingController::class, 'order'])->name('offboarding.order');
+    Route::get('offboarding/{id}/step/{step}', [OffboardingController::class, 'showStep'])->name('offboarding.step');
+    Route::post('offboarding/{id}/step/{step}', [OffboardingController::class, 'updateStep'])->name('offboarding.update-step');
+    Route::get('offboarding/resignation/{resignationId}/create', [OffboardingController::class, 'createFromResignation'])->name('offboarding.create-from-resignation');
+    Route::get('offboarding/termination/{terminationId}/create', [OffboardingController::class, 'createFromTermination'])->name('offboarding.create-from-termination');
 
 });
 
@@ -1215,6 +1224,7 @@ Route::group(['middleware' => ['verified']], function () {
     Route::post('import/attendance', [AttendanceEmployeeController::class, 'import'])->name('attendance.import');
 
     Route::get('attendance/export', [AttendanceEmployeeController::class, 'export'])->name('attendance.export');
+    Route::get('attendance/export/{employeeId}', [AttendanceEmployeeController::class, 'exportEmployee'])->name('attendance.export.employee');
     
 
         // Route::resource('timesheet', TimeSheetController::class)->middleware(
@@ -1998,6 +2008,10 @@ Route::group(['middleware' => ['verified']], function () {
     Route::get('setting/joiningletter/', [SettingsController::class, 'index'])->name('get.joiningletter.language');
     Route::get('employee/pdf/{id}', [EmployeeController::class, 'joiningletterPdf'])->name('joiningletter.download.pdf');
     Route::get('employee/doc/{id}', [EmployeeController::class, 'joiningletterDoc'])->name('joininglatter.download.doc');
+    
+    //Custom Appointment Letter (separate from Company Settings)
+    Route::get('employee/custom-appointment-letter/pdf/{id}', [EmployeeController::class, 'customAppointmentLetterPdf'])->name('custom.appointment.letter.download.pdf');
+    Route::get('employee/custom-appointment-letter/doc/{id}', [EmployeeController::class, 'customAppointmentLetterDoc'])->name('custom.appointment.letter.download.doc');
 
     //Experience Certificate
     Route::post('setting/exp/{lang?}', [SettingsController::class, 'experienceCertificateupdate'])->name('experiencecertificate.update');

@@ -28,6 +28,37 @@
         });
 
         $('input[name="type"]:radio:checked').trigger('change');
+
+        // Validation function
+        function validateAndSubmit() {
+            var type = $('input[name="type"]:checked').val();
+            
+            if (type == 'monthly') {
+                var month = $('input[name="month"]').val();
+                if (!month) {
+                    alert('Please select a month!');
+                    return false;
+                }
+            } else if (type == 'daily') {
+                var date = $('input[name="date"]').val();
+                if (!date) {
+                    alert('Please select a date!');
+                    return false;
+                }
+            }
+            
+            document.getElementById('attendanceemployee_filter').submit();
+            return false;
+        }
+
+        // Initialize on page load
+        $(document).ready(function() {
+            // Load employees if department is already selected
+            var departmentId = $('#department_id').val();
+            if (departmentId && departmentId != '') {
+                getEmployee(departmentId);
+            }
+        });
     </script>
 
     <script>
@@ -37,12 +68,13 @@
         });
         $(document).on('change', 'select[name=branch]', function() {
             var branch_id = $(this).val();
-
             getDepartment(branch_id);
+            // Reset department and employee when branch changes
+            $('#department_id').val('').trigger('change');
+            $('#employee_id').val('').trigger('change');
         });
 
         function getDepartment(bid) {
-
             $.ajax({
                 url: '<?php echo e(route('monthly.getdepartment')); ?>',
                 type: 'POST',
@@ -51,21 +83,41 @@
                     "_token": "<?php echo e(csrf_token()); ?>",
                 },
                 success: function(data) {
-
-                    $('.department_id').empty();
-                    var emp_selct = `<select class="form-control department_id" name="department_id" id="choices-multiple"
-                                            placeholder="Select Department" >
-                                            </select>`;
-                    $('.department_div').html(emp_selct);
-
-                    $('.department_id').append('<option value=""> <?php echo e(__('Select Department')); ?> </option>');
+                    $('#department_id').empty();
+                    $('#department_id').append('<option value=""><?php echo e(__('All')); ?></option>');
                     $.each(data, function(key, value) {
-                        $('.department_id').append('<option value="' + key + '">' + value +
-                            '</option>');
+                        $('#department_id').append('<option value="' + key + '">' + value + '</option>');
                     });
-                    new Choices('#choices-multiple', {
-                        removeItemButton: true,
+                }
+            });
+        }
+
+        // Get employees based on department selection
+        $(document).on('change', '#department_id', function() {
+            var department_id = $(this).val();
+            getEmployee(department_id);
+        });
+
+        function getEmployee(department_id) {
+            $.ajax({
+                url: '<?php echo e(route('monthly.getemployee')); ?>',
+                type: 'POST',
+                data: {
+                    "department_id": department_id || '',
+                    "_token": "<?php echo e(csrf_token()); ?>",
+                },
+                success: function(data) {
+                    $('#employee_id').empty();
+                    $('#employee_id').append('<option value=""><?php echo e(__('All')); ?></option>');
+                    $.each(data, function(key, value) {
+                        $('#employee_id').append('<option value="' + key + '">' + value + '</option>');
                     });
+                    // Reset export button state
+                    $('#exportEmployeeBtn').prop('disabled', true);
+                },
+                error: function() {
+                    $('#employee_id').empty();
+                    $('#employee_id').append('<option value=""><?php echo e(__('Error loading employees')); ?></option>');
                 }
             });
         }
@@ -162,114 +214,87 @@
                     <div class="card-body">
                         <?php echo e(Form::open(['route' => ['attendanceemployee.index'], 'method' => 'get', 'id' => 'attendanceemployee_filter'])); ?>
 
-                        <div class="row align-items-center justify-content-end">
-                            <div class="col-xl-10">
-                                <div class="row">
+                        <div class="row align-items-end g-2">
+                            <div class="col-auto">
+                                <label class="form-label d-block mb-2"><?php echo e(__('Type')); ?></label>
+                                <div class="form-check form-check-inline mb-0">
+                                    <input type="radio" id="monthly" value="monthly" name="type"
+                                        class="form-check-input"
+                                        <?php echo e(isset($_GET['type']) && $_GET['type'] == 'monthly' ? 'checked' : 'checked'); ?>>
+                                    <label class="form-check-label" for="monthly"><?php echo e(__('Monthly')); ?></label>
+                                </div>
+                                <div class="form-check form-check-inline mb-0">
+                                    <input type="radio" id="daily" value="daily" name="type"
+                                        class="form-check-input"
+                                        <?php echo e(isset($_GET['type']) && $_GET['type'] == 'daily' ? 'checked' : ''); ?>>
+                                    <label class="form-check-label" for="daily"><?php echo e(__('Daily')); ?></label>
+                                </div>
+                            </div>
 
-                                    <div class="col-3">
-                                        <label class="form-label"><?php echo e(__('Type')); ?></label> <br>
+                            <div class="col-auto month">
+                                <div class="btn-box">
+                                    <?php echo e(Form::label('month', __('Month'), ['class' => 'form-label'])); ?>
 
-                                        <div class="form-check form-check-inline form-group">
-                                            <input type="radio" id="monthly" value="monthly" name="type"
-                                                class="form-check-input"
-                                                <?php echo e(isset($_GET['type']) && $_GET['type'] == 'monthly' ? 'checked' : 'checked'); ?>>
-                                            <label class="form-check-label" for="monthly"><?php echo e(__('Monthly')); ?></label>
-                                        </div>
-                                        <div class="form-check form-check-inline form-group">
-                                            <input type="radio" id="daily" value="daily" name="type"
-                                                class="form-check-input"
-                                                <?php echo e(isset($_GET['type']) && $_GET['type'] == 'daily' ? 'checked' : ''); ?>>
-                                            <label class="form-check-label" for="daily"><?php echo e(__('Daily')); ?></label>
-                                        </div>
-
-                                    </div>
-
-                                    <div class="col-xl-3 col-lg-3 col-md-6 col-sm-12 col-12 month">
-                                        <div class="btn-box">
-                                            <?php echo e(Form::label('month', __('Month'), ['class' => 'form-label'])); ?>
-
-                                            <?php echo e(Form::month('month', isset($_GET['month']) ? $_GET['month'] : date('Y-m'), ['class' => 'month-btn form-control month-btn'])); ?>
-
-                                        </div>
-                                    </div>
-                                    <div class="col-xl-3 col-lg-3 col-md-6 col-sm-12 col-12 date">
-                                        <div class="btn-box">
-                                            <?php echo e(Form::label('date', __('Date'), ['class' => 'form-label'])); ?>
-
-                                            <?php echo e(Form::date('date', isset($_GET['date']) ? $_GET['date'] : '', ['class' => 'form-control month-btn'])); ?>
-
-                                        </div>
-                                    </div>
-                                    <?php if(\Auth::user()->type != 'employee'): ?>
-                                        <div class="col-xl-3 col-lg-3 col-md-6 col-sm-12 col-12">
-                                            <div class="btn-box">
-                                                <?php echo e(Form::label('branch', __('Branch'), ['class' => 'form-label'])); ?>
-
-                                                <?php echo e(Form::select('branch', $branch, isset($_GET['branch']) ? $_GET['branch'] : '', ['class' => 'form-control select branch_id', 'id' => 'branch_id'])); ?>
-
-                                            </div>
-                                        </div>
-                                        <div class="col-xl-3 col-lg-3 col-md-6 col-sm-12 col-12">
-                                            <div class="btn-box">
-                                                <?php echo e(Form::label('department', __('department'), ['class' => 'form-label'])); ?>
-
-                                                <?php echo e(Form::select('department', $department, isset($_GET['department']) ? $_GET['department'] : '', ['class' => 'form-control select department_id', 'id' => 'department_id'])); ?>
-
-                                            </div>
-
-                                            
-                                            
-
-                                        </div>
-                                        
-                                    <?php endif; ?>
+                                    <?php echo e(Form::month('month', isset($_GET['month']) ? $_GET['month'] : date('Y-m'), ['class' => 'form-control', 'required' => true, 'style' => 'min-width: 150px;'])); ?>
 
                                 </div>
                             </div>
-                            <div class="col-auto mt-4">
-                                <div class="row">
-                                    <div class="col-auto">
+                            <div class="col-auto date" style="display: none;">
+                                <div class="btn-box">
+                                    <?php echo e(Form::label('date', __('Date'), ['class' => 'form-label'])); ?>
 
-                                        <a href="#" class="btn btn-sm btn-primary"
-                                            onclick="document.getElementById('attendanceemployee_filter').submit(); return false;"
-                                            data-bs-toggle="tooltip" title="<?php echo e(__('Apply')); ?>"
-                                            data-original-title="<?php echo e(__('apply')); ?>">
-                                            <span class="btn-inner--icon"><i class="ti ti-search"></i></span>
-                                        </a>
+                                    <?php echo e(Form::date('date', isset($_GET['date']) ? $_GET['date'] : '', ['class' => 'form-control', 'required' => true, 'style' => 'min-width: 150px;'])); ?>
 
-                                        <a href="<?php echo e(route('attendanceemployee.index')); ?>" class="btn btn-sm btn-danger "
-                                            data-bs-toggle="tooltip" title="<?php echo e(__('Reset')); ?>"
-                                            data-original-title="<?php echo e(__('Reset')); ?>">
-                                            <span class="btn-inner--icon"><i
-                                                    class="ti ti-trash-off text-white-off "></i></span>
-                                        </a>
+                                </div>
+                            </div>
+                            <?php if(\Auth::user()->type != 'employee'): ?>
+                                <div class="col-auto">
+                                    <div class="btn-box">
+                                        <?php echo e(Form::label('branch', __('Branch'), ['class' => 'form-label'])); ?>
 
-                                        <a href="#" data-url="<?php echo e(route('attendance.file.import')); ?>"
-                                            data-ajax-popup="true" data-title="<?php echo e(__('Import  Attendance CSV File')); ?>"
-                                            data-bs-toggle="tooltip" title="" class="btn btn-sm btn-primary"
-                                            data-bs-original-title="<?php echo e(__('Import')); ?>">
-                                            <i class="ti ti-file"></i>
-                                        </a>
+                                        <?php echo e(Form::select('branch', $branch, isset($_GET['branch']) ? $_GET['branch'] : '', ['class' => 'form-control select', 'id' => 'branch_id', 'placeholder' => __('Select Branch'), 'style' => 'min-width: 120px;'])); ?>
 
-                                        <a href="<?php echo e(route('attendance.export', request()->query())); ?>" class="btn btn-sm btn-primary" 
-                                            data-bs-toggle="tooltip" title="<?php echo e(__('Export')); ?>" 
-                                            data-bs-original-title="<?php echo e(__('Export')); ?>">
-                                            <i class="ti ti-download"></i>
-                                        </a>
-
-                                        <?php if(\Auth::user()->type != 'employee'): ?>
-                                            <button type="button" class="btn btn-sm btn-warning" 
-                                                id="processMissingPunchOutsBtn"
-                                                onclick="return processMissingPunchOuts();"
-                                                data-bs-toggle="tooltip" 
-                                                title="<?php echo e(__('Process Missing Punch Outs')); ?>" 
-                                                data-bs-original-title="<?php echo e(__('Process Missing Punch Outs')); ?>">
-                                                <i class="ti ti-clock"></i> <?php echo e(__('Process Missing Punch Outs')); ?>
-
-                                            </button>
-                                        <?php endif; ?>
                                     </div>
+                                </div>
+                                <div class="col-auto">
+                                    <div class="btn-box">
+                                        <?php echo e(Form::label('department', __('Department'), ['class' => 'form-label'])); ?>
 
+                                        <?php echo e(Form::select('department', $department, isset($_GET['department']) ? $_GET['department'] : '', ['class' => 'form-control select', 'id' => 'department_id', 'placeholder' => __('Select Department'), 'style' => 'min-width: 150px;'])); ?>
+
+                                    </div>
+                                </div>
+                                <div class="col-auto">
+                                    <div class="btn-box">
+                                        <?php echo e(Form::label('employee', __('Employee'), ['class' => 'form-label'])); ?>
+
+                                        <?php echo e(Form::select('employee', $employees ?? [], isset($_GET['employee']) ? $_GET['employee'] : '', ['class' => 'form-control select', 'id' => 'employee_id', 'placeholder' => __('Select Employee'), 'style' => 'min-width: 180px;'])); ?>
+
+                                    </div>
+                                </div>
+                            <?php endif; ?>
+
+                            <div class="col-auto ms-auto">
+                                <label class="form-label d-block mb-2">&nbsp;</label>
+                                <div class="d-flex gap-2">
+                                    <a href="#" class="btn btn-sm btn-primary"
+                                        onclick="return validateAndSubmit();"
+                                        data-bs-toggle="tooltip" title="<?php echo e(__('Apply')); ?>"
+                                        data-original-title="<?php echo e(__('apply')); ?>">
+                                        <i class="ti ti-search"></i>
+                                    </a>
+
+                                    <a href="<?php echo e(route('attendanceemployee.index')); ?>" class="btn btn-sm btn-danger"
+                                        data-bs-toggle="tooltip" title="<?php echo e(__('Reset')); ?>"
+                                        data-original-title="<?php echo e(__('Reset')); ?>">
+                                        <i class="ti ti-trash-off"></i>
+                                    </a>
+
+                                    <a href="<?php echo e(route('attendance.export', request()->query())); ?>" class="btn btn-sm btn-primary" 
+                                        data-bs-toggle="tooltip" title="<?php echo e(__('Export Current View')); ?>" 
+                                        data-bs-original-title="<?php echo e(__('Export Current View')); ?>">
+                                        <i class="ti ti-download"></i>
+                                    </a>
                                 </div>
                             </div>
                         </div>
@@ -296,7 +321,7 @@
                                     <th><?php echo e(__('Clock-Out Time')); ?></th>
                                     <th><?php echo e(__('Total Hours')); ?></th>
                                     <th><?php echo e(__('Difference')); ?></th>
-                                    <?php if(Gate::check('Edit Attendance') || Gate::check('Delete Attendance')): ?>
+                                    <?php if(Gate::check('Edit Attendance') || Gate::check('Delete Attendance') || Gate::check('Manage Attendance')): ?>
                                         <th width="200px"><?php echo e(__('Action')); ?></th>
                                     <?php endif; ?>
                                 </tr>
@@ -377,20 +402,28 @@
                                         </td>
                                         <td><?php echo e($totalHoursFormatted); ?></td>
                                         <td><?php echo e($differenceFormatted); ?></td>
-                                        <?php if(Gate::check('Edit Attendance') || Gate::check('Delete Attendance')): ?>
+                                        <?php if(Gate::check('Edit Attendance') || Gate::check('Delete Attendance') || Gate::check('Manage Attendance')): ?>
                                             <td class="Action">
                                                 <div class="d-flex align-items-center justify-content-start">
+ 
                                                     <?php if (app(\Illuminate\Contracts\Auth\Access\Gate::class)->check('Edit Attendance')): ?>
-                                                        <div class="action-btn bg-info ms-2">
-                                                            <a href="#" class="btn btn-sm d-flex align-items-center justify-content-center"
-                                                                data-size="lg"
-                                                                data-url="<?php echo e(URL::to('attendanceemployee/' . $attendance->id . '/edit')); ?>"
-                                                                data-ajax-popup="true" data-size="md" data-bs-toggle="tooltip"
-                                                                title="" data-title="<?php echo e(__('Edit Attendance')); ?>"
-                                                                data-bs-original-title="<?php echo e(__('Edit')); ?>">
-                                                                <i class="ti ti-pencil text-white"></i>
-                                                            </a>
-                                                        </div>
+                                                        <?php
+                                                            $today = \Carbon\Carbon::today()->format('Y-m-d');
+                                                            $attendanceDate = \Carbon\Carbon::parse($attendance->date)->format('Y-m-d');
+                                                            $isToday = ($attendanceDate == $today);
+                                                        ?>
+                                                        <?php if($isToday): ?>
+                                                            <div class="action-btn bg-info ms-2">
+                                                                <a href="#" class="btn btn-sm d-flex align-items-center justify-content-center"
+                                                                    data-size="lg"
+                                                                    data-url="<?php echo e(URL::to('attendanceemployee/' . $attendance->id . '/edit')); ?>"
+                                                                    data-ajax-popup="true" data-size="md" data-bs-toggle="tooltip"
+                                                                    title="" data-title="<?php echo e(__('Edit Attendance')); ?>"
+                                                                    data-bs-original-title="<?php echo e(__('Edit')); ?>">
+                                                                    <i class="ti ti-pencil text-white"></i>
+                                                                </a>
+                                                            </div>
+                                                        <?php endif; ?>
                                                     <?php endif; ?>
 
 

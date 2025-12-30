@@ -86,30 +86,59 @@ class ResignationController extends Controller
 
             $resignation->save();
 
+            // Automatically create offboarding process
+            try {
+                // Check if process already exists
+                $existingProcess = \App\Models\OffboardingProcess::where('resignation_id', $resignation->id)
+                    ->where('created_by', \Auth::user()->creatorId())
+                    ->first();
+                
+                if (!$existingProcess) {
+                    $firstStage = \App\Models\OffboardingStage::where('created_by', \Auth::user()->creatorId())
+                        ->orderBy('order', 'asc')
+                        ->first();
+                    
+                    if ($firstStage) {
+                        \App\Models\OffboardingProcess::create([
+                            'employee_id' => $resignation->employee_id,
+                            'resignation_id' => $resignation->id,
+                            'stage' => $firstStage->id,
+                            'created_by' => \Auth::user()->creatorId(),
+                        ]);
+                    } else {
+                        \Log::warning('Offboarding stage not found for user: ' . \Auth::user()->creatorId());
+                    }
+                }
+            } catch (\Exception $e) {
+                \Log::error('Error creating offboarding process: ' . $e->getMessage());
+                // Don't fail the resignation creation, but log the error
+            }
+
             $setings = Utility::settings();
             if($setings['employee_resignation'] == 1)
             {
-                $employee           = Employee::find($resignation->employee_id);
-                 $uArr = [
-                'assign_user'=>$employee->name,
-                'resignation_date'  =>$request->notice_date,
-                'notice_date' =>$request->resignation_date,
-             ];
+                try {
+                    $employee           = Employee::find($resignation->employee_id);
+                    $uArr = [
+                        'assign_user'=>$employee->name,
+                        'resignation_date'  =>$request->notice_date,
+                        'notice_date' =>$request->resignation_date,
+                    ];
 
-             $resp = Utility::sendEmailTemplate('employee_resignation', [$employee->email], $uArr);
-             return redirect()->route('resignation.index')->with('success', __('Resignation  successfully created.'). ((!empty($resp) && $resp['is_success'] == false && !empty($resp['error'])) ? '<br> <span class="text-danger">' . $resp['error'] . '</span>' : ''));
-            
-            
-                $user           = User::find($employee->created_by);
-                 $uArr = [
-                'assign_user'=>$user->name,
-                'resignation_date'  =>$request->notice_date,
-                'notice_date' =>$request->resignation_date,
-             ];
+                    $resp = Utility::sendEmailTemplate('employee_resignation', [$employee->email], $uArr);
+                    
+                    $user           = User::find($employee->created_by);
+                    $uArr = [
+                        'assign_user'=>$user->name,
+                        'resignation_date'  =>$request->notice_date,
+                        'notice_date' =>$request->resignation_date,
+                    ];
 
-                $resp = Utility::sendEmailTemplate('employee_resignation', [$user->email], $uArr);
-                 return redirect()->route('resignation.index')->with('success', __('Resignation  successfully created.'). ((!empty($resp) && $resp['is_success'] == false && !empty($resp['error'])) ? '<br> <span class="text-danger">' . $resp['error'] . '</span>' : ''));
-            
+                    $resp = Utility::sendEmailTemplate('employee_resignation', [$user->email], $uArr);
+                } catch (\Exception $e) {
+                    // Log email error but don't fail the resignation creation
+                    \Log::warning('Failed to send resignation email: ' . $e->getMessage());
+                }
             }
 
             return redirect()->route('resignation.index')->with('success', __('Resignation  successfully created.'));
@@ -247,11 +276,52 @@ class ResignationController extends Controller
                 'approved_at' => now(),
             ]);
 
-            // Send approval email
-            SendResignationApprovalEmail::dispatch($resignation, $resignation->employee->email)
-                ->onQueue('emails');
-            return redirect()->route('resignation.index')
-                ->with('success', __('Resignation approved successfully.'));
+            // Update offboarding process to move directly to Access Removal Checklist (step 2, order 2)
+            try {
+                $offboardingProcess = \App\Models\OffboardingProcess::where('resignation_id', $resignation->id)
+                    ->where('created_by', \Auth::user()->creatorId())
+                    ->first();
+                
+                if ($offboardingProcess) {
+                    // Get Access Removal Checklist stage (order 2)
+                    $accessRemovalStage = \App\Models\OffboardingStage::where('created_by', \Auth::user()->creatorId())
+                        ->where('order', 2)
+                        ->first();
+                    
+                    if ($accessRemovalStage) {
+                        $offboardingProcess->stage = $accessRemovalStage->id;
+                        $offboardingProcess->save();
+                    }
+                } else {
+                    // If process doesn't exist, create it and move to step 2
+                    $accessRemovalStage = \App\Models\OffboardingStage::where('created_by', \Auth::user()->creatorId())
+                        ->where('order', 2)
+                        ->first();
+                    
+                    if ($accessRemovalStage) {
+                        \App\Models\OffboardingProcess::create([
+                            'employee_id' => $resignation->employee_id,
+                            'resignation_id' => $resignation->id,
+                            'stage' => $accessRemovalStage->id,
+                            'created_by' => \Auth::user()->creatorId(),
+                        ]);
+                    }
+                }
+            } catch (\Exception $e) {
+                // Silently fail if offboarding stages don't exist yet
+            }
+
+             // Send approval email (non-blocking - don't fail if email fails)
+             try {
+                 SendResignationApprovalEmail::dispatch($resignation, $resignation->employee->email)
+                     ->onQueue('emails');
+             } catch (\Exception $e) {
+                 // Log email error but don't fail the approval
+                 \Log::warning('Failed to queue resignation approval email: ' . $e->getMessage());
+             }
+             
+             return redirect()->route('resignation.index')
+                 ->with('success', __('Resignation approved successfully.'));
         }
         return redirect()->back()->with('error', __('Permission denied.'));
     }

@@ -61,15 +61,15 @@
                 <li class="dropdown dash-h-item drp-language d-inline">
                     <a class="dash-head-link dropdown-toggle arrow-none me-0 btn btn-sm btn-info" data-bs-toggle="dropdown" href="#"
                         role="button" aria-haspopup="false" aria-expanded="false">
-                        <span class="drp-text hide-mob text-white"> {{ __('Offer Letter') }}
+                        <span class="drp-text hide-mob text-white"> {{ __('Appointment Letter') }}
                             <i class="ti ti-chevron-down drp-arrow nocolor hide-mob"></i>
                     </a>
                     <div class="dropdown-menu dash-h-dropdown">
-                        <a href="{{ route('joiningletter.download.pdf', $employee->id) }}" class=" btn-icon dropdown-item"
+                        <a href="{{ route('custom.appointment.letter.download.pdf', $employee->id) }}" class=" btn-icon dropdown-item"
                             data-bs-toggle="tooltip" data-bs-placement="top" target="_blanks"><i
                                 class="ti ti-download ">&nbsp;</i>{{ __('PDF') }}</a>
 
-                        <a href="{{ route('joininglatter.download.doc', $employee->id) }}" class=" btn-icon dropdown-item"
+                        <a href="{{ route('custom.appointment.letter.download.doc', $employee->id) }}" class=" btn-icon dropdown-item"
                             data-bs-toggle="tooltip" data-bs-placement="top" target="_blanks"><i
                                 class="ti ti-download ">&nbsp;</i>{{ __('DOC') }}</a>
                     </div>

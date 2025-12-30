@@ -105,13 +105,17 @@
                     $companyId = $user->creatorId();
                     $isAdmin = in_array($user->type, ['company', 'super admin']);
                     
-                    // Find HR Department
+                    // Find HR Department (matching controller logic)
                     $hrDepartment = \App\Models\Department::where('created_by', $companyId)
                         ->where(function($q) {
                             $q->whereRaw('LOWER(name) LIKE ?', ['%human resource%'])
+                              ->orWhereRaw('LOWER(name) LIKE ?', ['%humanresource%'])  // No space
                               ->orWhereRaw('LOWER(name) LIKE ?', ['%hr%'])
                               ->orWhereRaw('LOWER(name) = ?', ['human resource'])
-                              ->orWhereRaw('LOWER(name) = ?', ['hr']);
+                              ->orWhereRaw('LOWER(name) = ?', ['humanresource'])
+                              ->orWhereRaw('LOWER(name) = ?', ['hr'])
+                              ->orWhereRaw('LOWER(name) LIKE ?', ['%human resources%'])  // Plural
+                              ->orWhereRaw('LOWER(name) LIKE ?', ['%humanresources%']);  // Plural no space
                         })
                         ->first();
                     $isHREmployee = $employee && $hrDepartment && $employee->department_id == $hrDepartment->id;

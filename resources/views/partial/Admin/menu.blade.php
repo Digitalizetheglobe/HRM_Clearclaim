@@ -61,10 +61,10 @@
 
 @if (isset($setting['cust_theme_bg']) && $setting['cust_theme_bg'] == 'on')
 <nav class="dash-sidebar light-sidebar transprent-bg" 
-    style="background: linear-gradient(to bottom, #000, #575757); height: 750px;">
+    style="background: linear-gradient(to bottom, #000, #575757);">
     
     @else
-        <nav class="dash-sidebar light-sidebar" style="background: linear-gradient(to bottom, #000, #050505); height: 715px;">
+        <nav class="dash-sidebar light-sidebar" style="background: linear-gradient(to bottom, #000, #050505);">
 @endif
 
 {{-- <nav class="dash-sidebar light-sidebar {{ isset($cust_theme_bg) && $cust_theme_bg == 'on' ? 'transprent-bg' : '' }}"> --}}
@@ -290,13 +290,19 @@
                 </li> -->
 
                 <li
-                    class="dash-item dash-hasmenu {{ Request::segment(1) == 'setsalary' ? 'dash-trigger active' : '' }}">
+                    class="dash-item dash-hasmenu {{ Request::segment(1) == 'setsalary' || Request::segment(1) == 'offboarding' || Request::segment(1) == 'resignation' || Request::segment(1) == 'termination' ? 'dash-trigger active' : '' }}">
                     <a href="#!" class="dash-link text-white hover:text-white hover:bg-[#001a3b] text-lg flex items-center space-x-2"><span class="dash-micon text-white text-[30px] shadow-none" style="background: none;">
                             <i class="fas fa-user-slash text-white text-[30px]"></i>
                           </span><span
                             class="dash-mtext">{{ __('Offboard ') }}</span><span class="dash-arrow"><i
                                 data-feather="chevron-right"></i></span></a>
                     <ul class="dash-submenu">
+                        @if(\Auth::user()->type == 'company' || Gate::check('Manage Resignation'))
+                            <li class="dash-item {{ Request::segment(1) == 'offboarding' ? 'active' : '' }}">
+                                <a class="dash-link text-white hover:text-white hover:bg-[#001a3b] text-lg"
+                                    href="{{ route('offboarding.index') }}">{{ __('Off-Boarding Steps') }}</a>
+                            </li>
+                        @endif
                         <li class="dash-item">
                             <a class="dash-link text-white hover:text-white hover:bg-[#001a3b] text-lg"
                                 href="{{ route('resignation.index') }}">{{ __('Resignation ') }}</a>
@@ -391,19 +397,17 @@
                     <ul class="dash-submenu">
 
                        <li class="dash-item {{ Request::segment(1) == 'attendance-calendar' ? ' active' : '' }}">
-                            <a class="dash-link text-white hover:text-white hover:bg-[#001a3b] text-lg" href="{{ route('attendance.calendar') }}">{{ __('Attendance Calendar') }}</a>
+                            <a class="dash-link text-white hover:bg-[#001a3b] text-lg" href="{{ route('attendance.calendar') }}">{{ __('Attendance Calendar') }}</a>
                         </li>
 
-                        @can('Manage Report')
-                                        
-                                        <li class="dash-item">
-                                            <a class="dash-link text-white hover:text-white hover:bg-[#001a3b] text-lg" 
-                                            href="{{ route('report.monthly.attendance') }}">
-                                            {{ __('Monthly Attendance') }}
-                                            </a>
-                                        </li>
-                                        
-                                    @endcan
+                        @can('Manage Report')      
+                            <li class="dash-item">
+                                 <a class="dash-link text-white hover:text-white hover:bg-[#001a3b] text-lg" 
+                                href="{{ route('report.monthly.attendance') }}">
+                                {{ __('Monthly Attendance') }}
+                                </a>
+                            </li>                                      
+                        @endcan
 
                         @can('Manage Attendance')
                             <li class="dash-item">

@@ -6,6 +6,7 @@ use App\Models\Employee;
 use App\Mail\TerminationSend;
 use App\Models\Termination;
 use App\Models\TerminationType;
+use App\Models\Resignation;
 use App\Models\Utility;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
@@ -39,7 +40,47 @@ class TerminationController extends Controller
     {
         if(\Auth::user()->can('Create Termination'))
         {
-            $employees        = Employee::where('created_by', \Auth::user()->creatorId())->get()->pluck('name', 'id');
+            // Get employees who have resignations (from resignations table)
+            $resignationEmployeeIds = Resignation::where('created_by', \Auth::user()->creatorId())
+                ->pluck('employee_id')
+                ->unique()
+                ->toArray();
+            
+            // Also get employees who are in offboarding step 1 (Resignation / Initiated Exit)
+            $firstStage = \App\Models\OffboardingStage::where('created_by', \Auth::user()->creatorId())
+                ->where('order', 1)
+                ->first();
+            
+            $offboardingEmployeeIds = [];
+            if ($firstStage) {
+                $offboardingEmployeeIds = \App\Models\OffboardingProcess::where('created_by', \Auth::user()->creatorId())
+                    ->where('stage', $firstStage->id)
+                    ->whereNotNull('resignation_id')
+                    ->pluck('employee_id')
+                    ->unique()
+                    ->toArray();
+            }
+            
+            // Combine both lists (employees with resignations OR in step 1)
+            $employeeIds = array_unique(array_merge($resignationEmployeeIds, $offboardingEmployeeIds));
+            
+            // Exclude employees who are already terminated
+            $terminatedEmployeeIds = Termination::where('created_by', \Auth::user()->creatorId())
+                ->pluck('employee_id')
+                ->toArray();
+            
+            $employeeIds = array_diff($employeeIds, $terminatedEmployeeIds);
+            
+            // Get employees list
+            if (!empty($employeeIds)) {
+                $employees = Employee::where('created_by', \Auth::user()->creatorId())
+                    ->whereIn('id', $employeeIds)
+                    ->get()
+                    ->pluck('name', 'id');
+            } else {
+                $employees = collect([]);
+            }
+            
             $terminationtypes = TerminationType::where('created_by', '=', \Auth::user()->creatorId())->get()->pluck('name', 'id');
 
             return view('termination.create', compact('employees', 'terminationtypes'));
@@ -59,8 +100,7 @@ class TerminationController extends Controller
                 $request->all(), [
                                    'employee_id' => 'required',
                                    'termination_type' => 'required',
-                                   'notice_date' => 'required',
-                                   'termination_date' => 'required|after_or_equal:notice_date',
+                                   'termination_date' => 'required',
                                ]
             );
 
@@ -74,11 +114,60 @@ class TerminationController extends Controller
             $termination                   = new Termination();
             $termination->employee_id      = $request->employee_id;
             $termination->termination_type = $request->termination_type;
-            $termination->notice_date      = $request->notice_date;
+            // Get notice_date from resignation if exists
+            $resignation = Resignation::where('employee_id', $request->employee_id)
+                ->where('created_by', \Auth::user()->creatorId())
+                ->orderBy('created_at', 'desc')
+                ->first();
+            $termination->notice_date      = $resignation ? $resignation->notice_date : $request->termination_date;
             $termination->termination_date = $request->termination_date;
             $termination->description      = $request->description;
             $termination->created_by       = \Auth::user()->creatorId();
             $termination->save();
+
+            // Update existing offboarding process instead of creating new one
+            try {
+                $offboardingProcess = \App\Models\OffboardingProcess::where('employee_id', $termination->employee_id)
+                    ->where('created_by', \Auth::user()->creatorId())
+                    ->whereNotNull('resignation_id')
+                    ->first();
+                
+                if ($offboardingProcess) {
+                    // Update the process with termination_id
+                    $offboardingProcess->termination_id = $termination->id;
+                    
+                    // Move to HR Uploads/Downloads step (order 6)
+                    $hrUploadsStage = \App\Models\OffboardingStage::where('created_by', \Auth::user()->creatorId())
+                        ->where('order', 6)
+                        ->first();
+                    
+                    if ($hrUploadsStage) {
+                        $offboardingProcess->stage = $hrUploadsStage->id;
+                        $offboardingProcess->termination_completed_by = \Auth::user()->id;
+                        $offboardingProcess->termination_completed_at = now();
+                    }
+                    
+                    $offboardingProcess->save();
+                } else {
+                    // If no process exists, create one (shouldn't happen, but handle it)
+                    $hrUploadsStage = \App\Models\OffboardingStage::where('created_by', \Auth::user()->creatorId())
+                        ->where('order', 6)
+                        ->first();
+                    
+                    if ($hrUploadsStage) {
+                        \App\Models\OffboardingProcess::create([
+                            'employee_id' => $termination->employee_id,
+                            'termination_id' => $termination->id,
+                            'stage' => $hrUploadsStage->id,
+                            'created_by' => \Auth::user()->creatorId(),
+                            'termination_completed_by' => \Auth::user()->id,
+                            'termination_completed_at' => now(),
+                        ]);
+                    }
+                }
+            } catch (\Exception $e) {
+                \Log::error('Error updating offboarding process: ' . $e->getMessage());
+            }
 
             $employee = Employee::find($request->employee_id);
             if ($employee && $employee->user) {
@@ -123,7 +212,39 @@ class TerminationController extends Controller
     {
         if(\Auth::user()->can('Edit Termination'))
         {
-            $employees        = Employee::where('created_by', \Auth::user()->creatorId())->get()->pluck('name', 'id');
+            // Get employees who have resignations in offboarding step 1
+            $firstStage = \App\Models\OffboardingStage::where('created_by', \Auth::user()->creatorId())
+                ->where('order', 1)
+                ->first();
+            
+            $employeeIds = [];
+            if ($firstStage) {
+                $processes = \App\Models\OffboardingProcess::where('created_by', \Auth::user()->creatorId())
+                    ->where('stage', $firstStage->id)
+                    ->whereNotNull('resignation_id')
+                    ->pluck('employee_id')
+                    ->toArray();
+                
+                $employeeIds = array_unique($processes);
+            }
+            
+            // Include the current termination's employee
+            $employeeIds[] = $termination->employee_id;
+            $employeeIds = array_unique($employeeIds);
+            
+            // Get employees list
+            if (!empty($employeeIds)) {
+                $employees = Employee::where('created_by', \Auth::user()->creatorId())
+                    ->whereIn('id', $employeeIds)
+                    ->get()
+                    ->pluck('name', 'id');
+            } else {
+                $employees = Employee::where('created_by', \Auth::user()->creatorId())
+                    ->where('id', $termination->employee_id)
+                    ->get()
+                    ->pluck('name', 'id');
+            }
+            
             $terminationtypes = TerminationType::where('created_by', '=', \Auth::user()->creatorId())->get()->pluck('name', 'id');
             if($termination->created_by == \Auth::user()->creatorId())
             {
@@ -151,7 +272,6 @@ class TerminationController extends Controller
                     $request->all(), [
                                        'employee_id' => 'required',
                                        'termination_type' => 'required',
-                                       'notice_date' => 'required',
                                        'termination_date' => 'required',
                                    ]
                 );
@@ -166,10 +286,45 @@ class TerminationController extends Controller
 
                 $termination->employee_id      = $request->employee_id;
                 $termination->termination_type = $request->termination_type;
-                $termination->notice_date      = $request->notice_date;
+                // Get notice_date from resignation if exists, otherwise keep existing
+                if (!$termination->notice_date) {
+                    $resignation = Resignation::where('employee_id', $termination->employee_id)
+                        ->where('created_by', \Auth::user()->creatorId())
+                        ->orderBy('created_at', 'desc')
+                        ->first();
+                    $termination->notice_date = $resignation ? $resignation->notice_date : $request->termination_date;
+                }
                 $termination->termination_date = $request->termination_date;
                 $termination->description      = $request->description;
                 $termination->save();
+                
+                // Update offboarding process if exists (don't create new one)
+                try {
+                    $offboardingProcess = \App\Models\OffboardingProcess::where('employee_id', $termination->employee_id)
+                        ->where('created_by', \Auth::user()->creatorId())
+                        ->whereNotNull('resignation_id')
+                        ->first();
+                    
+                    if ($offboardingProcess) {
+                        // Update the process with termination_id
+                        $offboardingProcess->termination_id = $termination->id;
+                        
+                        // Move to HR Uploads/Downloads step (order 6) if not already there
+                        $hrUploadsStage = \App\Models\OffboardingStage::where('created_by', \Auth::user()->creatorId())
+                            ->where('order', 6)
+                            ->first();
+                        
+                        if ($hrUploadsStage && $offboardingProcess->stage != $hrUploadsStage->id) {
+                            $offboardingProcess->stage = $hrUploadsStage->id;
+                            $offboardingProcess->termination_completed_by = \Auth::user()->id;
+                            $offboardingProcess->termination_completed_at = now();
+                        }
+                        
+                        $offboardingProcess->save();
+                    }
+                } catch (\Exception $e) {
+                    \Log::error('Error updating offboarding process: ' . $e->getMessage());
+                }
 
                 $employee = Employee::find($request->employee_id);
                 if ($employee && $employee->user) {

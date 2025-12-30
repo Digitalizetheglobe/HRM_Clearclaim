@@ -18,17 +18,14 @@ return new class extends Migration
             $table->decimal('amount', 15, 2);
             $table->date('expense_date');
             $table->text('description')->nullable();
-            $table->text('receipt_file')->nullable(); // JSON array for multiple files
+            $table->json('receipt_file')->nullable(); // JSON array for multiple files
             $table->timestamp('submitted_at')->nullable();
             $table->enum('status', [
-                'pending_manager',
-                'rejected_manager',
                 'pending_hr',
                 'rejected_hr',
-                'approved_hr',
                 'pending_finance',
                 'paid'
-            ])->default('pending_manager');
+            ])->default('pending_hr');
             $table->integer('manager_id')->nullable();
             $table->text('manager_remark')->nullable();
             $table->timestamp('manager_approved_at')->nullable();

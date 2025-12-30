@@ -61,10 +61,10 @@
 
 <?php if(isset($setting['cust_theme_bg']) && $setting['cust_theme_bg'] == 'on'): ?>
 <nav class="dash-sidebar light-sidebar transprent-bg" 
-    style="background: linear-gradient(to bottom, #000, #575757); height: 750px;">
+    style="background: linear-gradient(to bottom, #000, #575757);">
     
     <?php else: ?>
-        <nav class="dash-sidebar light-sidebar" style="background: linear-gradient(to bottom, #000, #050505); height: 715px;">
+        <nav class="dash-sidebar light-sidebar" style="background: linear-gradient(to bottom, #000, #050505);">
 <?php endif; ?>
 
 
@@ -287,13 +287,19 @@
                 </li> -->
 
                 <li
-                    class="dash-item dash-hasmenu <?php echo e(Request::segment(1) == 'setsalary' ? 'dash-trigger active' : ''); ?>">
+                    class="dash-item dash-hasmenu <?php echo e(Request::segment(1) == 'setsalary' || Request::segment(1) == 'offboarding' || Request::segment(1) == 'resignation' || Request::segment(1) == 'termination' ? 'dash-trigger active' : ''); ?>">
                     <a href="#!" class="dash-link text-white hover:text-white hover:bg-[#001a3b] text-lg flex items-center space-x-2"><span class="dash-micon text-white text-[30px] shadow-none" style="background: none;">
                             <i class="fas fa-user-slash text-white text-[30px]"></i>
                           </span><span
                             class="dash-mtext"><?php echo e(__('Offboard ')); ?></span><span class="dash-arrow"><i
                                 data-feather="chevron-right"></i></span></a>
                     <ul class="dash-submenu">
+                        <?php if(\Auth::user()->type == 'company' || Gate::check('Manage Resignation')): ?>
+                            <li class="dash-item <?php echo e(Request::segment(1) == 'offboarding' ? 'active' : ''); ?>">
+                                <a class="dash-link text-white hover:text-white hover:bg-[#001a3b] text-lg"
+                                    href="<?php echo e(route('offboarding.index')); ?>"><?php echo e(__('Off-Boarding Steps')); ?></a>
+                            </li>
+                        <?php endif; ?>
                         <li class="dash-item">
                             <a class="dash-link text-white hover:text-white hover:bg-[#001a3b] text-lg"
                                 href="<?php echo e(route('resignation.index')); ?>"><?php echo e(__('Resignation ')); ?></a>
@@ -389,20 +395,18 @@
                     <ul class="dash-submenu">
 
                        <li class="dash-item <?php echo e(Request::segment(1) == 'attendance-calendar' ? ' active' : ''); ?>">
-                            <a class="dash-link text-white hover:text-white hover:bg-[#001a3b] text-lg" href="<?php echo e(route('attendance.calendar')); ?>"><?php echo e(__('Attendance Calendar')); ?></a>
+                            <a class="dash-link text-white hover:bg-[#001a3b] text-lg" href="<?php echo e(route('attendance.calendar')); ?>"><?php echo e(__('Attendance Calendar')); ?></a>
                         </li>
 
-                        <?php if (app(\Illuminate\Contracts\Auth\Access\Gate::class)->check('Manage Report')): ?>
-                                        
-                                        <li class="dash-item">
-                                            <a class="dash-link text-white hover:text-white hover:bg-[#001a3b] text-lg" 
-                                            href="<?php echo e(route('report.monthly.attendance')); ?>">
-                                            <?php echo e(__('Monthly Attendance')); ?>
+                        <?php if (app(\Illuminate\Contracts\Auth\Access\Gate::class)->check('Manage Report')): ?>      
+                            <li class="dash-item">
+                                 <a class="dash-link text-white hover:text-white hover:bg-[#001a3b] text-lg" 
+                                href="<?php echo e(route('report.monthly.attendance')); ?>">
+                                <?php echo e(__('Monthly Attendance')); ?>
 
-                                            </a>
-                                        </li>
-                                        
-                                    <?php endif; ?>
+                                </a>
+                            </li>                                      
+                        <?php endif; ?>
 
                         <?php if (app(\Illuminate\Contracts\Auth\Access\Gate::class)->check('Manage Attendance')): ?>
                             <li class="dash-item">

@@ -1,4 +1,3 @@
-
 <?php if($employee->approval_status === 'approved' && \Auth::user()->type === 'employee'): ?>
     <div class="alert alert-warning">
         <strong><?php echo e(__('Notice')); ?>:</strong> 
@@ -452,7 +451,6 @@ unset($__errorArgs, $__bag); ?>"
                                                             class="btn btn-sm btn-primary">
                                                                 <i class="ti ti-download"></i> View Document
                                                             </a>
-                                                            <img id="<?php echo e('blah' . $key); ?>" src="<?php echo e(asset(str_replace('public/', '', $employeeDoc->document_value))); ?>" width="50%" />
                                                         </div>
                                                     <?php else: ?>
                                                         <img id="<?php echo e('blah' . $key); ?>" src="" width="50%" />

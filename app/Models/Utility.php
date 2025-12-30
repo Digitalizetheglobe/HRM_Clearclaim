@@ -1558,15 +1558,12 @@ class Utility extends Model
                     $name = $name;
 
                     if ($settings['storage_setting'] == 'local') {
-
-
-
-                        \Storage::disk()->putFileAs(
+                        // Use 'public' disk to ensure files are accessible via public storage link
+                        \Storage::disk('public')->putFileAs(
                             $path,
                             $request->file($key_name)[$data_key],
                             $name
                         );
-
 
                         $path = $name;
                     } else if ($settings['storage_setting'] == 'wasabi') {
@@ -1642,7 +1639,11 @@ class Utility extends Model
             // For local storage, use 'public' disk to access storage/app/public
             $disk = ($settings['storage_setting'] == 'local') ? 'public' : $settings['storage_setting'];
             
-            return \Storage::disk($disk)->url($path);
+            // Get the base URL for the public disk
+            $baseUrl = \Storage::disk($disk)->url('');
+            
+            // Return the full URL
+            return rtrim($baseUrl, '/') . '/' . ltrim($path, '/');
         } catch (\Throwable $th) {
             return '';
         }

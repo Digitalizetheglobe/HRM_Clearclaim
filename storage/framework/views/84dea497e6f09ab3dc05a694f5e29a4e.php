@@ -63,16 +63,16 @@
                 <li class="dropdown dash-h-item drp-language d-inline">
                     <a class="dash-head-link dropdown-toggle arrow-none me-0 btn btn-sm btn-info" data-bs-toggle="dropdown" href="#"
                         role="button" aria-haspopup="false" aria-expanded="false">
-                        <span class="drp-text hide-mob text-white"> <?php echo e(__('Offer Letter')); ?>
+                        <span class="drp-text hide-mob text-white"> <?php echo e(__('Appointment Letter')); ?>
 
                             <i class="ti ti-chevron-down drp-arrow nocolor hide-mob"></i>
                     </a>
                     <div class="dropdown-menu dash-h-dropdown">
-                        <a href="<?php echo e(route('joiningletter.download.pdf', $employee->id)); ?>" class=" btn-icon dropdown-item"
+                        <a href="<?php echo e(route('custom.appointment.letter.download.pdf', $employee->id)); ?>" class=" btn-icon dropdown-item"
                             data-bs-toggle="tooltip" data-bs-placement="top" target="_blanks"><i
                                 class="ti ti-download ">&nbsp;</i><?php echo e(__('PDF')); ?></a>
 
-                        <a href="<?php echo e(route('joininglatter.download.doc', $employee->id)); ?>" class=" btn-icon dropdown-item"
+                        <a href="<?php echo e(route('custom.appointment.letter.download.doc', $employee->id)); ?>" class=" btn-icon dropdown-item"
                             data-bs-toggle="tooltip" data-bs-placement="top" target="_blanks"><i
                                 class="ti ti-download ">&nbsp;</i><?php echo e(__('DOC')); ?></a>
                     </div>
