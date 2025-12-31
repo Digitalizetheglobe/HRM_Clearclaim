@@ -21,6 +21,7 @@ class Kernel extends ConsoleKernel
         \App\Console\Commands\MarkAbsentees::class,
         \App\Console\Commands\RecalculateLoanAmounts::class,
         \App\Console\Commands\RepairEducationDocuments::class,
+        \App\Console\Commands\CreateOffboardingProcesses::class,
     ];
 
     
