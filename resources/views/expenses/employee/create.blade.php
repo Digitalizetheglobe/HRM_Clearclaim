@@ -25,7 +25,7 @@
                         <div class="col-md-6">
                             <div class="form-group">
                                 <label class="form-label">{{ __('Category') }} <span class="text-danger">*</span></label>
-                                <select name="category_id" class="form-control" required>
+                                <select name="category_id" class="form-control @error('category_id') is-invalid @enderror" required>
                                     <option value="">{{ __('Select Category') }}</option>
                                     @foreach($categories as $category)
                                         <option value="{{ $category->id }}" {{ old('category_id') == $category->id ? 'selected' : '' }}>

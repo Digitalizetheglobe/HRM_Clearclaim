@@ -68,7 +68,6 @@
         },
         "classmap": [
             "app/Console/Commands/",
-            "app/Console/commands/",
             "app/Services/",
             "app/services/"
         ],

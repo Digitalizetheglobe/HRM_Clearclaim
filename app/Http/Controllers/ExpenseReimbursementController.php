@@ -255,7 +255,7 @@ class ExpenseReimbursementController extends Controller
             return redirect()->back()->with('error', __('Employee profile not found.'));
         }
 
-        $categories = ExpenseCategory::where('status', 1)
+        $categories = ExpenseCategory::where('status', 'active')
             ->where('created_by', Auth::user()->creatorId())
             ->get();
 

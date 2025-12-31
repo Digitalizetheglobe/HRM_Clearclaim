@@ -78,3 +78,4 @@ class CreateOffboardingProcessesTable extends Migration
 }
 
 
+
