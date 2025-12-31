@@ -27,12 +27,17 @@
                                 <label class="form-label">{{ __('Category') }} <span class="text-danger">*</span></label>
                                 <select name="category_id" class="form-control @error('category_id') is-invalid @enderror" required>
                                     <option value="">{{ __('Select Category') }}</option>
-                                    @foreach($categories as $category)
+                                    @forelse($categories as $category)
                                         <option value="{{ $category->id }}" {{ old('category_id') == $category->id ? 'selected' : '' }}>
                                             {{ $category->name }}
                                         </option>
-                                    @endforeach
+                                    @empty
+                                        <option value="" disabled>{{ __('No categories available. Please contact administrator.') }}</option>
+                                    @endforelse
                                 </select>
+                                @if($categories->isEmpty())
+                                    <small class="text-danger">{{ __('No expense categories found. Please ask your administrator to add categories.') }}</small>
+                                @endif
                                 @error('category_id')
                                     <span class="invalid-feedback" role="alert">{{ $message }}</span>
                                 @enderror

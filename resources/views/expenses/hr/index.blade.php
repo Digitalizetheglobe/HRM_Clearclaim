@@ -9,6 +9,14 @@
     <li class="breadcrumb-item">{{ __('Expenses Management') }}</li>
 @endsection
 
+@section('action-button')
+    @if(Auth::user()->type == 'company' || Auth::user()->type == 'super admin')
+        <a href="{{ route('expense-categories.index') }}" class="btn btn-sm btn-primary">
+            <i class="ti ti-tag"></i> {{ __('Manage Categories') }}
+        </a>
+    @endif
+@endsection
+
 @section('content')
 <div class="row">
     <!-- Statistics Cards -->

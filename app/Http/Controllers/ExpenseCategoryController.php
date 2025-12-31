@@ -10,7 +10,8 @@ class ExpenseCategoryController extends Controller
 {
     public function index()
     {
-        if (!Auth::user()->can('Manage Expense Category')) {
+        // Allow only company and super admin users
+        if (!in_array(Auth::user()->type, ['company', 'super admin'])) {
             return redirect()->back()->with('error', __('Permission denied.'));
         }
 
@@ -23,7 +24,8 @@ class ExpenseCategoryController extends Controller
 
     public function create()
     {
-        if (!Auth::user()->can('Create Expense Category')) {
+        // Allow only company and super admin users
+        if (!in_array(Auth::user()->type, ['company', 'super admin'])) {
             return redirect()->back()->with('error', __('Permission denied.'));
         }
 
@@ -32,7 +34,8 @@ class ExpenseCategoryController extends Controller
 
     public function store(Request $request)
     {
-        if (!Auth::user()->can('Create Expense Category')) {
+        // Allow only company and super admin users
+        if (!in_array(Auth::user()->type, ['company', 'super admin'])) {
             return redirect()->back()->with('error', __('Permission denied.'));
         }
 
@@ -59,7 +62,8 @@ class ExpenseCategoryController extends Controller
 
     public function edit($id)
     {
-        if (!Auth::user()->can('Edit Expense Category')) {
+        // Allow only company and super admin users
+        if (!in_array(Auth::user()->type, ['company', 'super admin'])) {
             return redirect()->back()->with('error', __('Permission denied.'));
         }
 
@@ -72,7 +76,8 @@ class ExpenseCategoryController extends Controller
 
     public function update(Request $request, $id)
     {
-        if (!Auth::user()->can('Edit Expense Category')) {
+        // Allow only company and super admin users
+        if (!in_array(Auth::user()->type, ['company', 'super admin'])) {
             return redirect()->back()->with('error', __('Permission denied.'));
         }
 
@@ -102,7 +107,8 @@ class ExpenseCategoryController extends Controller
 
     public function destroy($id)
     {
-        if (!Auth::user()->can('Delete Expense Category')) {
+        // Allow only company and super admin users
+        if (!in_array(Auth::user()->type, ['company', 'super admin'])) {
             return redirect()->back()->with('error', __('Permission denied.'));
         }
 

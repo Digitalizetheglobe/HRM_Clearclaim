@@ -8,6 +8,15 @@
     <li class="breadcrumb-item"><?php echo e(__('Expenses Management')); ?></li>
 <?php $__env->stopSection(); ?>
 
+<?php $__env->startSection('action-button'); ?>
+    <?php if(Auth::user()->type == 'company' || Auth::user()->type == 'super admin'): ?>
+        <a href="<?php echo e(route('expense-categories.index')); ?>" class="btn btn-sm btn-primary">
+            <i class="ti ti-tag"></i> <?php echo e(__('Manage Categories')); ?>
+
+        </a>
+    <?php endif; ?>
+<?php $__env->stopSection(); ?>
+
 <?php $__env->startSection('content'); ?>
 <div class="row">
     <!-- Statistics Cards -->
