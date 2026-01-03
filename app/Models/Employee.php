@@ -29,6 +29,7 @@ class Employee extends Model
         'site_id',
         'department_id',
         'designation_id',
+        'reporting_manager',
         'education_details',
         'experience_details',
         'company_doj',

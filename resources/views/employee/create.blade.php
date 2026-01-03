@@ -210,7 +210,15 @@
                                         </div>
                                     </div>
                                     
-                                   
+                                    <div class="form-group col-md-6">
+                                        {{ Form::label('reporting_manager', __('Reporting Manager'), ['class' => 'form-label']) }}
+                                        <div class="form-icon-user reporting_manager_div">
+                                            <select class="form-control reporting_manager_id" name="reporting_manager" id="reporting_manager_id" placeholder="Select Reporting Manager">
+                                                <option value="">{{ __('Select Reporting Manager') }}</option>
+                                            </select>
+                                        </div>
+                                    </div>
+
                                     <div class="form-group">
                                         {!! Form::label('company_doj', __('Company Date Of Joining'), ['class' => 'form-label']) !!}
                                         {!! Form::date('company_doj', null, [
@@ -526,6 +534,7 @@
         $(document).on('change', 'select[name=department_id]', function() {
             var department_id = $(this).val();
             getDesignation(department_id);
+            getEmployeesByDepartment(department_id);
         });
 
         function getDesignation(did) {
@@ -551,6 +560,35 @@
                     new Choices('#choices-multiple', {
                         removeItemButton: true,
                     });
+                }
+            });
+        }
+
+        function getEmployeesByDepartment(department_id) {
+            if (!department_id) {
+                $('.reporting_manager_id').empty();
+                $('.reporting_manager_id').append('<option value="">{{ __('Select Reporting Manager') }}</option>');
+                return;
+            }
+            
+            $.ajax({
+                url: '{{ route('employee.getemployees') }}',
+                type: 'POST',
+                data: {
+                    "department_id": department_id,
+                    "_token": "{{ csrf_token() }}",
+                },
+                success: function(data) {
+                    $('.reporting_manager_id').empty();
+                    $('.reporting_manager_id').append('<option value="">{{ __('Select Reporting Manager') }}</option>');
+                    $.each(data, function(key, value) {
+                        $('.reporting_manager_id').append('<option value="' + key + '">' + value + '</option>');
+                    });
+                },
+                error: function(xhr, status, error) {
+                    console.error('Error fetching employees:', error);
+                    $('.reporting_manager_id').empty();
+                    $('.reporting_manager_id').append('<option value="">{{ __('Select Reporting Manager') }}</option>');
                 }
             });
         }

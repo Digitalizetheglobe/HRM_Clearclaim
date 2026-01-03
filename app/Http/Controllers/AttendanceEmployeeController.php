@@ -253,25 +253,22 @@ class AttendanceEmployeeController extends Controller
                 return redirect()->route('attendanceemployee.index')->with('error', __('Employee Attendance Already Created.'));
             }
 
-            $date = date("Y-m-d");
+            $date = $request->date ?? date("Y-m-d");
 
-            // Calculate late time
-            $totalLateSeconds = strtotime($request->clock_in) - strtotime($date . Utility::getValByName('company_start_time'));
-            $hours = floor($totalLateSeconds / 3600);
-            $mins  = floor($totalLateSeconds / 60 % 60);
-            $secs  = floor($totalLateSeconds % 60);
-            $late  = sprintf('%02d:%02d:%02d', $hours, $mins, $secs);
+            // Calculate late time based on 10:15 AM threshold
+            $late = $this->calculateLateTime($request->clock_in . ':00', $date);
 
             // Calculate early leaving
-            $totalEarlyLeavingSeconds = strtotime($date . Utility::getValByName('company_end_time')) - strtotime($request->clock_out);
+            $endTime = Utility::getValByName('company_end_time');
+            $totalEarlyLeavingSeconds = strtotime($date . ' ' . $endTime) - strtotime($date . ' ' . $request->clock_out . ':00');
             $hours = floor($totalEarlyLeavingSeconds / 3600);
             $mins  = floor($totalEarlyLeavingSeconds / 60 % 60);
             $secs  = floor($totalEarlyLeavingSeconds % 60);
             $earlyLeaving = sprintf('%02d:%02d:%02d', $hours, $mins, $secs);
 
             // Calculate overtime
-            if (strtotime($request->clock_out) > strtotime($date . Utility::getValByName('company_end_time'))) {
-                $totalOvertimeSeconds = strtotime($request->clock_out) - strtotime($date . Utility::getValByName('company_end_time'));
+            if (strtotime($request->clock_out . ':00') > strtotime($date . ' ' . $endTime)) {
+                $totalOvertimeSeconds = strtotime($date . ' ' . $request->clock_out . ':00') - strtotime($date . ' ' . $endTime);
                 $hours = floor($totalOvertimeSeconds / 3600);
                 $mins  = floor($totalOvertimeSeconds / 60 % 60);
                 $secs  = floor($totalOvertimeSeconds % 60);
@@ -280,16 +277,13 @@ class AttendanceEmployeeController extends Controller
                 $overtime = '00:00:00';
             }
 
-            // Calculate total worked hours
-            $workedSeconds = strtotime($request->clock_out) - strtotime($request->clock_in);
-            $workedHours = $workedSeconds / 3600;
-            
-            // Determine status
-            if ($workedHours >= AttendanceEmployee::REQUIRED_WORKING_HOURS) {
-                $status = AttendanceEmployee::STATUS_PRESENT;
-            } else {
-                $status = AttendanceEmployee::STATUS_HALF_DAY;
-            }
+            // Calculate status using new rules
+            $status = $this->calculateAttendanceStatusWithNewRules(
+                $request->clock_in . ':00',
+                $request->clock_out . ':00',
+                $date,
+                $request->employee_id
+            );
 
             $employeeAttendance = new AttendanceEmployee();
             $employeeAttendance->employee_id   = $request->employee_id;
@@ -479,36 +473,32 @@ class AttendanceEmployeeController extends Controller
                 return redirect()->route('attendanceemployee.index')->with('error', __('Attendance record not found.'));
             }
 
-            $startTime = Utility::getValByName('company_start_time');
-            $endTime   = Utility::getValByName('company_end_time');
+            $endTime = Utility::getValByName('company_end_time');
 
             $clockIn = $request->clock_in;
             $clockOut = $request->clock_out;
 
-            // Calculate late time
-            $totalLateSeconds = strtotime($clockIn) - strtotime($startTime);
-            $hours = floor($totalLateSeconds / 3600);
-            $mins  = floor($totalLateSeconds / 60 % 60);
-            $secs  = floor($totalLateSeconds % 60);
-            $late  = sprintf('%02d:%02d:%02d', $hours, $mins, $secs);
+            // Calculate late time based on 10:15 AM threshold
+            $late = $this->calculateLateTime($clockIn, $request->date);
 
             // Determine status and calculate other values
-            // If clock_out is '00:00:00' or empty, it's a single punch in
+            // If clock_out is '00:00:00' or empty, it's a single punch in (Half Day per new rules)
             if (empty($clockOut) || $clockOut == '00:00:00') {
-                $status = AttendanceEmployee::STATUS_SINGLE_PUNCH;
+                // Check if HR/Company user wants to override status
+                $status = $request->status ?? AttendanceEmployee::STATUS_HALF_DAY;
                 $earlyLeaving = '00:00:00';
                 $overtime = '00:00:00';
             } else {
                 // Calculate early leaving
-                $totalEarlyLeavingSeconds = strtotime($endTime) - strtotime($clockOut);
+                $totalEarlyLeavingSeconds = strtotime($request->date . ' ' . $endTime) - strtotime($request->date . ' ' . $clockOut);
                 $hours = floor($totalEarlyLeavingSeconds / 3600);
                 $mins  = floor($totalEarlyLeavingSeconds / 60 % 60);
                 $secs  = floor($totalEarlyLeavingSeconds % 60);
                 $earlyLeaving = sprintf('%02d:%02d:%02d', $hours, $mins, $secs);
 
                 // Calculate overtime
-                if (strtotime($clockOut) > strtotime($endTime)) {
-                    $totalOvertimeSeconds = strtotime($clockOut) - strtotime($endTime);
+                if (strtotime($request->date . ' ' . $clockOut) > strtotime($request->date . ' ' . $endTime)) {
+                    $totalOvertimeSeconds = strtotime($request->date . ' ' . $clockOut) - strtotime($request->date . ' ' . $endTime);
                     $hours = floor($totalOvertimeSeconds / 3600);
                     $mins  = floor($totalOvertimeSeconds / 60 % 60);
                     $secs  = floor($totalOvertimeSeconds % 60);
@@ -517,15 +507,16 @@ class AttendanceEmployeeController extends Controller
                     $overtime = '00:00:00';
                 }
 
-                // Calculate total worked hours
-                $workedSeconds = strtotime($clockOut) - strtotime($clockIn);
-                $workedHours = $workedSeconds / 3600;
-                
-                // Determine status based on worked hours
-                if ($workedHours >= AttendanceEmployee::REQUIRED_WORKING_HOURS) {
-                    $status = AttendanceEmployee::STATUS_PRESENT;
+                // Calculate status using new rules (HR/Company can override)
+                if ((\Auth::user()->type == 'company' || \Auth::user()->type == 'hr') && $request->has('status')) {
+                    $status = $request->status;
                 } else {
-                    $status = AttendanceEmployee::STATUS_HALF_DAY;
+                    $status = $this->calculateAttendanceStatusWithNewRules(
+                        $clockIn,
+                        $clockOut,
+                        $request->date,
+                        $request->employee_id
+                    );
                 }
             }
 
@@ -764,30 +755,18 @@ class AttendanceEmployeeController extends Controller
                         $in  = date("H:i:s", strtotime($request->$in));
                         $out = date("H:i:s", strtotime($request->$out));
 
-                        $totalLateSeconds = strtotime($in) - strtotime($startTime);
-
-                        $hours = floor($totalLateSeconds / 3600);
-                        $mins  = floor($totalLateSeconds / 60 % 60);
-                        $secs  = floor($totalLateSeconds % 60);
-                        $late  = sprintf('%02d:%02d:%02d', $hours, $mins, $secs);
+                        // Calculate late time based on 10:15 AM threshold
+                        $late = $this->calculateLateTime($in, $date);
 
                         //early Leaving
-                        $totalEarlyLeavingSeconds = strtotime($endTime) - strtotime($out);
+                        $totalEarlyLeavingSeconds = strtotime($date . ' ' . $endTime) - strtotime($date . ' ' . $out);
                         $hours                    = floor($totalEarlyLeavingSeconds / 3600);
                         $mins                     = floor($totalEarlyLeavingSeconds / 60 % 60);
                         $secs                     = floor($totalEarlyLeavingSeconds % 60);
                         $earlyLeaving             = sprintf('%02d:%02d:%02d', $hours, $mins, $secs);
 
-                        // Calculate total worked hours
-                        $workedSeconds = strtotime($out) - strtotime($in);
-                        $workedHours = $workedSeconds / 3600;
-                        
-                        // Determine status
-                        if ($workedHours >= AttendanceEmployee::REQUIRED_WORKING_HOURS) {
-                            $status = AttendanceEmployee::STATUS_PRESENT;
-                        } else {
-                            $status = AttendanceEmployee::STATUS_HALF_DAY;
-                        }
+                        // Calculate status using new rules
+                        $status = $this->calculateAttendanceStatusWithNewRules($in, $out, $date, $employee);
 
                         if (strtotime($out) > strtotime($endTime)) {
                             //Overtime
@@ -1032,11 +1011,8 @@ class AttendanceEmployeeController extends Controller
                 return redirect()->back()->with('error', __('Your clock-in is already being processed.'));
             }
 
-            // Calculate late time
-            $expectedStartTime = $date . ' ' . Utility::getValByName('company_start_time');
-            $actualClockInTime = $date . ' ' . $time;
-            $totalLateSeconds = max(strtotime($actualClockInTime) - strtotime($expectedStartTime), 0);
-            $late = gmdate("H:i:s", $totalLateSeconds);
+            // Calculate late time based on 10:15 AM threshold
+            $late = $this->calculateLateTime($time, $date);
 
             $employeeAttendance = new AttendanceEmployee();
             $employeeAttendance->employee_id = $employeeId;
@@ -1069,15 +1045,13 @@ class AttendanceEmployeeController extends Controller
             $clockOutTime = strtotime($time);
             $workedSeconds = $clockOutTime - $clockInTime;
             
-            // Calculate total worked hours in decimal
-            $totalWorkedHours = $workedSeconds / 3600;
-            
-            // Determine status based on worked hours
-            if ($totalWorkedHours >= AttendanceEmployee::REQUIRED_WORKING_HOURS) {
-                $status = AttendanceEmployee::STATUS_PRESENT;
-            } else {
-                $status = AttendanceEmployee::STATUS_HALF_DAY;
-            }
+            // Calculate status using new rules
+            $status = $this->calculateAttendanceStatusWithNewRules(
+                $todayAttendance->clock_in,
+                $time,
+                $date,
+                $employeeId
+            );
             
             $totalWorked = gmdate("H:i:s", $workedSeconds);
 
@@ -1134,9 +1108,17 @@ class AttendanceEmployeeController extends Controller
                 }
             }
 
-            // Get current month and year
-            $currentMonth = request()->input('month', date('m'));
-            $currentYear = request()->input('year', date('Y'));
+            // Get current month and year from request or use current date
+            $currentMonth = (int)request()->input('month', date('m'));
+            $currentYear = (int)request()->input('year', date('Y'));
+            
+            // Validate month and year
+            if ($currentMonth < 1 || $currentMonth > 12) {
+                $currentMonth = (int)date('m');
+            }
+            if ($currentYear < 2000 || $currentYear > 2100) {
+                $currentYear = (int)date('Y');
+            }
 
             $currentDate = \Carbon\Carbon::create($currentYear, $currentMonth, 1);
             $previousMonth = $currentDate->copy()->subMonth();
@@ -1147,9 +1129,13 @@ class AttendanceEmployeeController extends Controller
             // Only process data if we have a selected employee
             if ($selectedEmployee) {
                 foreach ($employees as $employee) {
-                    // Get all attendance records (no month filter)
+                    // Get attendance records ONLY for the current month
+                    $startOfMonth = $currentDate->copy()->startOfMonth()->format('Y-m-d');
+                    $endOfMonth = $currentDate->copy()->endOfMonth()->format('Y-m-d');
+                    
                     $attendances = DB::table('attendance_employees')
                         ->where('employee_id', $employee->id)
+                        ->whereBetween('date', [$startOfMonth, $endOfMonth])
                         ->get()
                         ->map(function ($item) {
                             $date = \Carbon\Carbon::parse($item->date)->format('Y-m-d');
@@ -1160,9 +1146,17 @@ class AttendanceEmployeeController extends Controller
                             ];
                         });
 
-                    // Get all approved leaves (no month filter)
+                    // Get approved leaves ONLY for the current month
                     $leaves = LocalLeave::where('employee_id', $employee->id)
                         ->where('status', 'Approved')
+                        ->where(function($query) use ($startOfMonth, $endOfMonth) {
+                            $query->whereBetween('start_date', [$startOfMonth, $endOfMonth])
+                                  ->orWhereBetween('end_date', [$startOfMonth, $endOfMonth])
+                                  ->orWhere(function($q) use ($startOfMonth, $endOfMonth) {
+                                      $q->where('start_date', '<=', $startOfMonth)
+                                        ->where('end_date', '>=', $endOfMonth);
+                                  });
+                        })
                         ->get()
                         ->map(function ($item) {
                             return [
@@ -1174,21 +1168,31 @@ class AttendanceEmployeeController extends Controller
 
                     $employeeData = [];
 
-                    // Mark 'present' from attendance records
+                    // Mark 'present' from attendance records (only current month)
                     foreach ($attendances as $attendance) {
+                        // Check if this is a late mark (clock-in after 10:15 AM)
+                        $isLateMark = $this->isLateMark($attendance['clock_in']);
+                        
                         $employeeData[$attendance['date']] = [
                             'type' => 'present',
                             'clock_in' => $attendance['clock_in'],
-                            'clock_out' => $attendance['clock_out']
+                            'clock_out' => $attendance['clock_out'],
+                            'is_late' => $isLateMark
                         ];
                     }
 
-                    // Mark 'leave' days
+                    // Mark 'leave' days (only current month)
                     foreach ($leaves as $leave) {
                         $start = \Carbon\Carbon::parse($leave['start_date']);
                         $end = \Carbon\Carbon::parse($leave['end_date']);
+                        $monthStart = $currentDate->copy()->startOfMonth();
+                        $monthEnd = $currentDate->copy()->endOfMonth();
 
-                        for ($date = $start->copy(); $date->lte($end); $date->addDay()) {
+                        // Only process dates within the current month
+                        $processStart = $start->gt($monthStart) ? $start : $monthStart;
+                        $processEnd = $end->lt($monthEnd) ? $end : $monthEnd;
+
+                        for ($date = $processStart->copy(); $date->lte($processEnd); $date->addDay()) {
                             $formattedDate = $date->format('Y-m-d');
 
                             if (!isset($employeeData[$formattedDate])) {
@@ -1200,19 +1204,19 @@ class AttendanceEmployeeController extends Controller
                         }
                     }
 
-                    // Fill in 'absent' for all dates in the calendar view
-                    // We'll process 3 months to ensure smooth navigation
-                    $startRange = $currentDate->copy()->subMonth(); // Show previous month
-                    $endRange = $currentDate->copy()->addMonth(); // Show next month
+                    // Fill in 'absent' ONLY for current month dates
+                    $monthStart = $currentDate->copy()->startOfMonth();
+                    $monthEnd = $currentDate->copy()->endOfMonth();
+                    $today = \Carbon\Carbon::today();
                     
-                    for ($date = $startRange->copy(); $date->lte($endRange); $date->addDay()) {
+                    for ($date = $monthStart->copy(); $date->lte($monthEnd); $date->addDay()) {
                         $dateFormatted = $date->format('Y-m-d');
 
                         if (!isset($employeeData[$dateFormatted])) {
-                            if ($date->lte(\Carbon\Carbon::today())) {
+                            if ($date->lte($today)) {
                                 $employeeData[$dateFormatted] = ['type' => 'absent'];
                             }
-                            // else: future dates remain unmarked
+                            // Future dates remain unmarked
                         }
                     }
 
@@ -1681,17 +1685,125 @@ class AttendanceEmployeeController extends Controller
         return sprintf('%02d:%02d', $diff->h, $diff->i);
     }
 
-
-    protected function calculateAttendanceStatus($clockIn, $clockOut, $date)
+    /**
+     * Check if clock-in time is considered a late mark (after 10:15 AM)
+     */
+    private function isLateMark($clockIn)
     {
+        if (empty($clockIn) || $clockIn == '00:00:00') {
+            return false;
+        }
+        
+        $lateMarkTime = AttendanceEmployee::LATE_MARK_TIME; // 10:15:00
+        return strtotime($clockIn) > strtotime($lateMarkTime);
+    }
+
+    /**
+     * Calculate late time based on 10:15 AM threshold
+     */
+    private function calculateLateTime($clockIn, $date)
+    {
+        if (empty($clockIn) || $clockIn == '00:00:00') {
+            return '00:00:00';
+        }
+        
+        $lateMarkTime = AttendanceEmployee::LATE_MARK_TIME; // 10:15:00
+        $expectedTime = $date . ' ' . $lateMarkTime;
+        $actualTime = $date . ' ' . $clockIn;
+        
+        $totalLateSeconds = max(strtotime($actualTime) - strtotime($expectedTime), 0);
+        
+        $hours = floor($totalLateSeconds / 3600);
+        $mins = floor($totalLateSeconds / 60 % 60);
+        $secs = $totalLateSeconds % 60;
+        
+        return sprintf('%02d:%02d:%02d', $hours, $mins, $secs);
+    }
+
+    /**
+     * Count late marks for an employee in a given month
+     */
+    private function countLateMarksInMonth($employeeId, $date)
+    {
+        $carbonDate = Carbon::parse($date);
+        $startOfMonth = $carbonDate->copy()->startOfMonth()->format('Y-m-d');
+        $endOfMonth = $carbonDate->copy()->endOfMonth()->format('Y-m-d');
+        
+        $lateMarks = AttendanceEmployee::where('employee_id', $employeeId)
+            ->whereBetween('date', [$startOfMonth, $endOfMonth])
+            ->where('clock_in', '!=', '00:00:00')
+            ->get()
+            ->filter(function($attendance) {
+                return $this->isLateMark($attendance->clock_in);
+            });
+        
+        return $lateMarks->count();
+    }
+
+    /**
+     * Calculate attendance status based on new rules:
+     * - Half Day if: >3 late marks in month OR <4.5 hours worked OR missed punch-out
+     */
+    private function calculateAttendanceStatusWithNewRules($clockIn, $clockOut, $date, $employeeId)
+    {
+        // If no clock in at all, return Absent
+        if (empty($clockIn) || $clockIn == '00:00:00') {
+            return AttendanceEmployee::STATUS_ABSENT;
+        }
+        
+        // If clocked in but not out, return Half Day (missed punch-out)
+        if (empty($clockOut) || $clockOut == '00:00:00') {
+            return AttendanceEmployee::STATUS_HALF_DAY;
+        }
+        
+        // Calculate total worked hours
+        $start = Carbon::parse($date . ' ' . $clockIn);
+        $end = Carbon::parse($date . ' ' . $clockOut);
+        
+        // Handle case where clock out might be next day
+        if ($end->lt($start)) {
+            $end->addDay();
+        }
+        
+        $totalMinutes = $end->diffInMinutes($start);
+        $workedHours = $totalMinutes / 60;
+        
+        // Check if worked hours < 4.5 hours
+        if ($workedHours < AttendanceEmployee::HALF_DAY_HOURS_THRESHOLD) {
+            return AttendanceEmployee::STATUS_HALF_DAY;
+        }
+        
+        // Check if employee has more than 3 late marks in the month
+        $lateMarksCount = $this->countLateMarksInMonth($employeeId, $date);
+        if ($lateMarksCount > AttendanceEmployee::MAX_LATE_MARKS_PER_MONTH) {
+            return AttendanceEmployee::STATUS_HALF_DAY;
+        }
+        
+        // If all conditions pass, check if it's a full day (8.5 hours)
+        if ($totalMinutes >= 510) { // 8.5 hours = 510 minutes
+            return AttendanceEmployee::STATUS_PRESENT;
+        } else {
+            return AttendanceEmployee::STATUS_HALF_DAY;
+        }
+    }
+
+
+    protected function calculateAttendanceStatus($clockIn, $clockOut, $date, $employeeId = null)
+    {
+        // Use new rules if employee ID is provided
+        if ($employeeId) {
+            return $this->calculateAttendanceStatusWithNewRules($clockIn, $clockOut, $date, $employeeId);
+        }
+        
+        // Fallback to old logic if employee ID not provided
         // If no clock in at all, return Absent
         if (empty($clockIn) || $clockIn == '00:00:00') {
             return 'Absent';
         }
         
-        // If clocked in but not out, return Single Punch In
+        // If clocked in but not out, return Half Day (per new rules)
         if (empty($clockOut) || $clockOut == '00:00:00') {
-            return 'Single Punch In';
+            return AttendanceEmployee::STATUS_HALF_DAY;
         }
         
         // Calculate total worked time

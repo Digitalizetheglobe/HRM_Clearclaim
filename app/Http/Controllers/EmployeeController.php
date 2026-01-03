@@ -225,6 +225,7 @@
                     'branch_id' => $request['branch_id'],
                     'department_id' => $request['department_id'],
                     'designation_id' => $request['designation_id'],
+                    'reporting_manager' => $request['reporting_manager'] ?? null,
                     'company_doj' => $request['company_doj'] ?? now(), // Default to current date
                     'office_phone_one' => $request['office_phone_one'] ?? null,
                     'office_phone_two' => $request['office_phone_two'] ?? null,
@@ -930,6 +931,21 @@
             $designations = Designation::where('department_id', $request->department_id)->get()->pluck('name', 'id')->toArray();
 
             return response()->json($designations);
+        }
+
+        public function getEmployeesByDepartment(Request $request)
+        {
+            if ($request->department_id) {
+                $employees = Employee::where('created_by', '=', \Auth::user()->creatorId())
+                    ->where('department_id', $request->department_id)
+                    ->get()
+                    ->pluck('name', 'id')
+                    ->toArray();
+            } else {
+                $employees = [];
+            }
+
+            return response()->json($employees);
         }
 
         public function view($id)

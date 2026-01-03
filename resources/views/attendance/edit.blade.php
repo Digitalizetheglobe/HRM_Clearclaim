@@ -19,6 +19,21 @@
         {{ Form::label('clock_out', __('Clock Out'), ['class' => 'col-form-label']) }}
         {{ Form::time('clock_out', null, ['class' => 'form-control pc-timepicker-2 ','id'=>'clock_out']) }}
     </div>
+    
+    @if(\Auth::user()->type == 'company' || \Auth::user()->type == 'hr')
+    <div class="form-group col-lg-6 col-md-6">
+        {{ Form::label('status', __('Status'), ['class' => 'col-form-label']) }}
+        {{ Form::select('status', [
+            'Present' => __('Present'),
+            'Half Day' => __('Half Day'),
+            'Absent' => __('Absent'),
+            'Single Punch In' => __('Single Punch In')
+        ], $attendanceEmployee->status, ['class' => 'form-control select2', 'id' => 'status']) }}
+        <small class="form-text text-muted">{{ __('HR/Company users can override the automatically calculated status') }}</small>
+    </div>
+    @else
+        {{ Form::hidden('status', $attendanceEmployee->status) }}
+    @endif
 </div>
 </div>
 <div class="modal-footer">

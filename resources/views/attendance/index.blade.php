@@ -316,6 +316,15 @@
                             <tbody>
                                 @foreach ($attendanceEmployee as $attendance)
                                     @php
+                                        // Check if this is a late mark (clock-in after 10:15 AM)
+                                        $isLateMark = false;
+                                        if ($attendance->clock_in && $attendance->clock_in != '00:00:00') {
+                                            $lateMarkTime = \App\Models\AttendanceEmployee::LATE_MARK_TIME; // 10:15:00
+                                            $clockInTime = strtotime($attendance->clock_in);
+                                            $lateThreshold = strtotime($lateMarkTime);
+                                            $isLateMark = $clockInTime > $lateThreshold;
+                                        }
+                                        
                                         // Calculate total hours
                                         $totalHours = null;
                                         $totalMinutes = null;
@@ -380,7 +389,12 @@
                                             <td>{{ !empty($attendance->employee) ? $attendance->employee->name : '' }}</td>
                                         @endif
                                         <td>{{ \Auth::user()->dateFormat($attendance->date) }}</td>
-                                        <td>{{ $attendance->status }}</td>
+                                        <td>
+                                            <span>{{ $attendance->status }}</span>
+                                            @if($isLateMark)
+                                                <span class="badge bg-danger ms-2" style="font-size: 10px; padding: 2px 6px;">LATE</span>
+                                            @endif
+                                        </td>
                                         <td>{{ $attendance->clock_in != '00:00:00' ? \Auth::user()->timeFormat($attendance->clock_in) : '00:00' }}
                                         </td>
                                         <td>{{ $attendance->clock_out != '00:00:00' ? \Auth::user()->timeFormat($attendance->clock_out) : '00:00' }}

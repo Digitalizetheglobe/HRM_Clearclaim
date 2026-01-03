@@ -329,6 +329,15 @@
                             <tbody>
                                 <?php $__currentLoopData = $attendanceEmployee; $__env->addLoop($__currentLoopData); foreach($__currentLoopData as $attendance): $__env->incrementLoopIndices(); $loop = $__env->getLastLoop(); ?>
                                     <?php
+                                        // Check if this is a late mark (clock-in after 10:15 AM)
+                                        $isLateMark = false;
+                                        if ($attendance->clock_in && $attendance->clock_in != '00:00:00') {
+                                            $lateMarkTime = \App\Models\AttendanceEmployee::LATE_MARK_TIME; // 10:15:00
+                                            $clockInTime = strtotime($attendance->clock_in);
+                                            $lateThreshold = strtotime($lateMarkTime);
+                                            $isLateMark = $clockInTime > $lateThreshold;
+                                        }
+                                        
                                         // Calculate total hours
                                         $totalHours = null;
                                         $totalMinutes = null;
@@ -393,7 +402,12 @@
                                             <td><?php echo e(!empty($attendance->employee) ? $attendance->employee->name : ''); ?></td>
                                         <?php endif; ?>
                                         <td><?php echo e(\Auth::user()->dateFormat($attendance->date)); ?></td>
-                                        <td><?php echo e($attendance->status); ?></td>
+                                        <td>
+                                            <span><?php echo e($attendance->status); ?></span>
+                                            <?php if($isLateMark): ?>
+                                                <span class="badge bg-danger ms-2" style="font-size: 10px; padding: 2px 6px;">LATE</span>
+                                            <?php endif; ?>
+                                        </td>
                                         <td><?php echo e($attendance->clock_in != '00:00:00' ? \Auth::user()->timeFormat($attendance->clock_in) : '00:00'); ?>
 
                                         </td>
