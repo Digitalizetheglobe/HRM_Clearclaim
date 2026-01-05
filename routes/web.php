@@ -569,12 +569,7 @@ Route::group(['middleware' => ['verified']], function () {
             'XSS',
         ]
     );
-    Route::resource('email_template_lang', EmailTemplateLangController::class)->middleware(
-        [
-            'auth',
-            'XSS',
-        ]
-    );
+
     Route::get(
         '/test',
 
