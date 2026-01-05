@@ -427,6 +427,11 @@
                             </li>
                         <?php endif; ?>
 
+                        <li class="dash-item">
+                            <a class="dash-link text-white hover:text-white hover:bg-[#001a3b] text-lg"
+                            href="<?php echo e(route('attendance-regularisation.index')); ?>"><?php echo e(__('Attendance Regularisation')); ?></a>
+                        </li>
+
                         <?php if (app(\Illuminate\Contracts\Auth\Access\Gate::class)->check('Create Attendance')): ?>
                             <li class="dash-item">
                                 <a class="dash-link text-white hover:text-white hover:bg-[#001a3b] text-lg"

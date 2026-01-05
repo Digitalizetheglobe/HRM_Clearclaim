@@ -428,6 +428,11 @@
                             </li>
                         @endcan
 
+                        <li class="dash-item">
+                            <a class="dash-link text-white hover:text-white hover:bg-[#001a3b] text-lg"
+                            href="{{ route('attendance-regularisation.index') }}">{{ __('Attendance Regularisation') }}</a>
+                        </li>
+
                         @can('Create Attendance')
                             <li class="dash-item">
                                 <a class="dash-link text-white hover:text-white hover:bg-[#001a3b] text-lg"

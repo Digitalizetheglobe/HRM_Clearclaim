@@ -1236,6 +1236,25 @@ Route::group(['middleware' => ['verified']], function () {
     Route::get('attendance/export', [AttendanceEmployeeController::class, 'export'])->name('attendance.export');
     Route::get('attendance/export/{employeeId}', [AttendanceEmployeeController::class, 'exportEmployee'])->name('attendance.export.employee');
     
+    // Attendance Regularisation Routes
+    Route::resource('attendance-regularisation', \App\Http\Controllers\AttendanceRegularisationController::class)->middleware(
+        [
+            'auth',
+            'XSS',
+        ]
+    );
+    Route::post('attendance-regularisation/{id}/approve', [\App\Http\Controllers\AttendanceRegularisationController::class, 'approve'])->name('attendance-regularisation.approve')->middleware(
+        [
+            'auth',
+            'XSS',
+        ]
+    );
+    Route::post('attendance-regularisation/{id}/reject', [\App\Http\Controllers\AttendanceRegularisationController::class, 'reject'])->name('attendance-regularisation.reject')->middleware(
+        [
+            'auth',
+            'XSS',
+        ]
+    );
 
         // Route::resource('timesheet', TimeSheetController::class)->middleware(
         //     [
