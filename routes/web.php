@@ -28,7 +28,6 @@ use App\Http\Controllers\DepartmentController;
 use App\Http\Controllers\DesignationController;
 use App\Http\Controllers\DocumentController;
 use App\Http\Controllers\BranchController;
-use App\Http\Controllers\SiteController;
 use App\Http\Controllers\AwardTypeController;
 use App\Http\Controllers\TerminationController;
 use App\Http\Controllers\TerminationTypeController;
@@ -698,9 +697,6 @@ Route::group(['middleware' => ['verified']], function () {
             'XSS',
         ]
     );
-
-    Route::resource('site', SiteController::class)->middleware(['auth', 'XSS']);
-
     
     Route::resource('awardtype', AwardTypeController::class)->middleware(
         [
