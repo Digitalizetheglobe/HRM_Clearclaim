@@ -376,9 +376,20 @@ class AttendanceRegularisationController extends Controller
      */
     private function createAttendanceFromRegularisation($regularisation)
     {
-        $date = $regularisation->date;
-        $clockIn = $regularisation->punch_in_time;
-        $clockOut = $regularisation->punch_out_time;
+        // Get date as string (Y-m-d format)
+        $date = is_string($regularisation->date) ? $regularisation->date : $regularisation->date->format('Y-m-d');
+        
+        // Get times as strings (H:i:s format)
+        $clockIn = is_string($regularisation->punch_in_time) ? $regularisation->punch_in_time : $regularisation->punch_in_time;
+        $clockOut = is_string($regularisation->punch_out_time) ? $regularisation->punch_out_time : $regularisation->punch_out_time;
+        
+        // Ensure times are in H:i:s format
+        if (strlen($clockIn) == 5) {
+            $clockIn = $clockIn . ':00'; // Add seconds if missing
+        }
+        if (strlen($clockOut) == 5) {
+            $clockOut = $clockOut . ':00'; // Add seconds if missing
+        }
 
         // Calculate late time based on 10:15 AM threshold
         $late = $this->calculateLateTime($clockIn, $date);
@@ -429,9 +440,20 @@ class AttendanceRegularisationController extends Controller
             return '00:00:00';
         }
 
+        // Ensure date is in Y-m-d format
+        if (!is_string($date)) {
+            $date = $date->format('Y-m-d');
+        }
+
+        // Ensure clockIn is a string in H:i:s format
+        $clockInStr = is_string($clockIn) ? $clockIn : $clockIn;
+        if (strlen($clockInStr) == 5) {
+            $clockInStr = $clockInStr . ':00'; // Add seconds if missing
+        }
+
         $lateMarkTime = AttendanceEmployee::LATE_MARK_TIME; // 10:15:00
         $expectedTime = $date . ' ' . $lateMarkTime;
-        $actualTime = $date . ' ' . $clockIn;
+        $actualTime = $date . ' ' . $clockInStr;
 
         $totalLateSeconds = max(strtotime($actualTime) - strtotime($expectedTime), 0);
 
@@ -457,9 +479,25 @@ class AttendanceRegularisationController extends Controller
             return AttendanceEmployee::STATUS_HALF_DAY;
         }
 
+        // Ensure date is in Y-m-d format
+        if (!is_string($date)) {
+            $date = $date->format('Y-m-d');
+        }
+
+        // Ensure times are strings in H:i:s format
+        $clockInStr = is_string($clockIn) ? $clockIn : $clockIn;
+        $clockOutStr = is_string($clockOut) ? $clockOut : $clockOut;
+        
+        if (strlen($clockInStr) == 5) {
+            $clockInStr = $clockInStr . ':00';
+        }
+        if (strlen($clockOutStr) == 5) {
+            $clockOutStr = $clockOutStr . ':00';
+        }
+
         // Calculate total worked hours
-        $start = Carbon::parse($date . ' ' . $clockIn);
-        $end = Carbon::parse($date . ' ' . $clockOut);
+        $start = Carbon::parse($date . ' ' . $clockInStr);
+        $end = Carbon::parse($date . ' ' . $clockOutStr);
 
         // Handle case where clock out might be next day
         if ($end->lt($start)) {

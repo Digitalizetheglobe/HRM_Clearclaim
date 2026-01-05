@@ -30,8 +30,6 @@ class AttendanceRegularisation extends Model
 
     protected $casts = [
         'date' => 'date',
-        'punch_in_time' => 'datetime:H:i:s',
-        'punch_out_time' => 'datetime:H:i:s',
         'approved_at' => 'datetime',
     ];
 
