@@ -13,7 +13,6 @@ use App\Http\Controllers\RoleController;
 use App\Http\Controllers\ReportController;
 use App\Http\Controllers\MeetingController;
 use App\Http\Controllers\IncomeTypeController;
-use App\Http\Controllers\ExpenseController;
 use App\Http\Controllers\ExpenseTypeController;
 use App\Http\Controllers\AttendanceEmployeeController;
 use App\Http\Controllers\LeaveController;
@@ -1293,12 +1292,7 @@ Route::group(['middleware' => ['verified']], function () {
             'XSS',
         ]
     );
-    Route::resource('expense', ExpenseController::class)->middleware(
-        [
-            'auth',
-            'XSS',
-        ]
-    );
+
     Route::resource('transferbalance', TransferBalanceController::class)->middleware(
         [
             'auth',
@@ -1904,7 +1898,6 @@ Route::group(['middleware' => ['verified']], function () {
     Route::get('export/deposite', [DepositController::class, 'export'])->name('deposite.export');
 
     //expense Export
-    Route::get('export/expense', [ExpenseController::class, 'export'])->name('expense.export');
 
     //Transfer Balance Export
     Route::get('export/transfer-balance', [TransferBalanceController::class, 'export'])->name('transfer_balance.export');
