@@ -9,29 +9,58 @@ class Kernel extends ConsoleKernel
 {
     /**
      * Define the application's command schedule.
+     *
+     * @param  \Illuminate\Console\Scheduling\Schedule  $schedule
+     * @return void
      */
-    protected function schedule(Schedule $schedule): void
+
+    protected $commands = [
+        \App\Console\Commands\AllocateMonthlyLeaves::class,
+        \App\Console\Commands\CreditMonthlyLeave::class,
+        \App\Console\Commands\FixLoanAmounts::class,
+        \App\Console\Commands\MarkAbsentees::class,
+        \App\Console\Commands\RecalculateLoanAmounts::class,
+        \App\Console\Commands\RepairEducationDocuments::class,
+        \App\Console\Commands\CreateOffboardingProcesses::class,
+    ];
+
+
+    
+    protected function schedule(Schedule $schedule)
     {
-        // Delete old todos daily
+        // Schedule the custom command to run daily
         $schedule->command('todos:delete-old')->daily();
-
-        // Allocate monthly leaves on 1st day at midnight
         $schedule->command('leaves:allocate-monthly')
-            ->monthlyOn(1, '00:00');
+             ->monthlyOn(1, '00:00');
+        $schedule->command('attendance:mark-absentees')->dailyAt('23:59');
 
-        // Mark absentees daily at 11:59 PM
-        $schedule->command('attendance:mark-absentees')
-            ->dailyAt('23:59');
+
+
     }
+    
 
     /**
      * Register the commands for the application.
+     *
+     * @return void
      */
-    protected function commands(): void
+    protected function commands()
     {
-        // Laravel auto-discovers all commands from this directory
-        $this->load(__DIR__ . '/Commands');
+        
+        // Load commands from both possible casings to avoid Linux case-sensitivity issues
+        // when projects were developed/deployed from case-insensitive filesystems.
+        $commandsDir = __DIR__ . '/Commands';
+        $commandsDirLower = __DIR__ . '/commands';
+
+        if (is_dir($commandsDir)) {
+            $this->load($commandsDir);
+        }
+        if (is_dir($commandsDirLower)) {
+            $this->load($commandsDirLower);
+        }
 
         require base_path('routes/console.php');
     }
+
+    
 }
