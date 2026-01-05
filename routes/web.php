@@ -746,12 +746,6 @@ Route::group(['middleware' => ['verified']], function () {
             'XSS',
         ]
     );
-    Route::resource('task', TaskController::class);
-    Route::post('task/getdepartment', [TaskController::class, 'getDepartment'])->name('task.getdepartment');
-    Route::post('task/getemployee', [TaskController::class, 'getEmployee'])->name('task.getemployee');
-    
-
-
 
 
     Route::get('holiday/calender', [HolidayController::class, 'calender'])->name('holiday.calender')->middleware(
