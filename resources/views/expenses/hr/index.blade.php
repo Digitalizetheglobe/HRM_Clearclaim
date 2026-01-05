@@ -16,6 +16,7 @@
         </a>
     @endif
 @endsection
+<!-- latest code add -->
 
 @section('content')
 <div class="row">
