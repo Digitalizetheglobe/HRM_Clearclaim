@@ -1247,21 +1247,7 @@ Route::group(['middleware' => ['verified']], function () {
         //         'XSS',
         //     ]
         // );
-
-        Route::resource('enquiry', EnquiryFormController::class)->middleware(
-            [
-                'auth',
-                'XSS',
-            ]
-        );
-        
-    
-       
-        
-
-    
-
-    
+ 
 
 
     Route::resource('expensetype', ExpenseTypeController::class)->middleware(
