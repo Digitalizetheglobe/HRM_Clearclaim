@@ -23,6 +23,7 @@ class Kernel extends ConsoleKernel
         \App\Console\Commands\RepairEducationDocuments::class,
         \App\Console\Commands\CreateOffboardingProcesses::class,
     ];
+    // check proprety of schedule
 
 
     
