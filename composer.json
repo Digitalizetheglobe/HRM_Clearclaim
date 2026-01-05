@@ -69,7 +69,7 @@
         "classmap": [
             "app/Console/Commands/",
             "app/Services/",
-            "app/services/"
+            "app/Services/"
         ],
         "exclude-from-classmap": [
             "app/Http/Controllers/vendor/Chatify/"
