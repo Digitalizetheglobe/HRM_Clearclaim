@@ -2,8 +2,6 @@
 
 namespace Chatify\Http\Controllers;
 
-namespace App\Http\Controllers\vendor\Chatify;
-
 use App\Models\ChMessage;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
