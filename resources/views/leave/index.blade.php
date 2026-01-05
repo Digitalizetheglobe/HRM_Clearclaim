@@ -115,6 +115,7 @@
                                     <th>{{ __('End Date') }}</th>
                                     <th>{{ __('Duration') }}</th>
                                     <th>{{ __('Total Days') }}</th>
+                                    <th>{{ __('Leave Type') }}</th>
                                     <th>{{ __('Leave Reason') }}</th>
                                     <th>{{ __('Status') }}</th>
                                     @if (\Auth::user()->type != 'employee')
@@ -139,6 +140,13 @@
                                             @endif
                                         </td>
                                         <td>{{ $leave->total_leave_days }}</td>
+                                        <td>
+                                            @if($leave->is_lop)
+                                                <span class="badge bg-danger">{{ __('LOP') }}</span>
+                                            @else
+                                                <span class="badge bg-success">{{ __('Paid') }}</span>
+                                            @endif
+                                        </td>
                                         <!-- <td>{{ $leave->leave_reason }}</td> -->
                                         <td>{!! breakAfterWords($leave->leave_reason) !!}</td>
                                         <td>

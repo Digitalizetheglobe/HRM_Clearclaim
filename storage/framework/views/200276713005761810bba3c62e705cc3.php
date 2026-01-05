@@ -39,14 +39,14 @@
             <i class="ti ti-alert-triangle"></i> 
             <strong><?php echo e(__('Monthly Leave Limit Reached!')); ?></strong><br>
             <?php echo e(__('You have already used '.$monthlyLeaveInfo['used'].' paid leaves this month. Maximum 2 paid leaves allowed per month.')); ?><br>
-            <?php echo e(__('Any additional leaves must be applied as Leave Without Pay (LWP).')); ?>
-
+            <strong><?php echo e(__('Your leave will be automatically marked as LOP (Loss of Pay) and will NOT be deducted from your annual leave balance.')); ?></strong>
         </div>
     <?php elseif(isset($monthlyLeaveInfo) && $monthlyLeaveInfo['remaining'] <= 0.5): ?>
         <div class="alert alert-info">
             <i class="ti ti-info-circle"></i> 
             <strong><?php echo e(__('Monthly Leave Limit Notice')); ?></strong><br>
-            <?php echo e(__('You have used '.$monthlyLeaveInfo['used'].' paid leaves this month. Only '.$monthlyLeaveInfo['remaining'].' paid leave(s) remaining.')); ?>
+            <?php echo e(__('You have used '.$monthlyLeaveInfo['used'].' paid leaves this month. Only '.$monthlyLeaveInfo['remaining'].' paid leave(s) remaining.')); ?><br>
+            <?php echo e(__('Any leaves beyond this will be automatically marked as LOP.')); ?>
 
         </div>
     <?php endif; ?>
@@ -61,6 +61,38 @@
                     <option value="Full Day"><?php echo e(__('Full Day')); ?></option>
                     <option value="Half Day"><?php echo e(__('Half Day')); ?></option>
                 </select>
+            </div>
+        </div>
+    </div>
+
+    
+    <div class="row">
+        <div class="col-md-12">
+            <div class="form-group">
+                <?php echo e(Form::label('leave_type_selection', __('Leave Type'), ['class' => 'col-form-label'])); ?><span class="text-danger pl-1">*</span>
+                <select name="leave_type_selection" id="leave_type_selection" class="form-control select" required>
+                    <option value=""><?php echo e(__('Select Leave Type')); ?></option>
+                    <?php if(isset($monthlyLeaveInfo) && $monthlyLeaveInfo['exceeded']): ?>
+                        
+                        <option value="lop"><?php echo e(__('LOP (Loss of Pay) - Required')); ?></option>
+                    <?php elseif(isset($monthlyLeaveInfo) && $monthlyLeaveInfo['remaining'] > 0): ?>
+                        
+                        <option value="paid"><?php echo e(__('Paid Leave (Remaining: ')); ?><?php echo e(number_format($monthlyLeaveInfo['remaining'], 2)); ?><?php echo e(__(')')); ?></option>
+                        <option value="lop"><?php echo e(__('LOP (Loss of Pay)')); ?></option>
+                    <?php else: ?>
+                        
+                        <option value="paid"><?php echo e(__('Paid Leave')); ?></option>
+                        <option value="lop"><?php echo e(__('LOP (Loss of Pay)')); ?></option>
+                    <?php endif; ?>
+                </select>
+                <small class="form-text text-muted">
+                    <?php if(isset($monthlyLeaveInfo) && $monthlyLeaveInfo['exceeded']): ?>
+                        <span class="text-danger"><?php echo e(__('You must select LOP as you have used all paid leaves this month.')); ?></span>
+                    <?php else: ?>
+                        <?php echo e(__('Paid leaves are deducted from your annual 15-leave balance. LOP leaves are not deducted.')); ?>
+
+                    <?php endif; ?>
+                </small>
             </div>
         </div>
     </div>

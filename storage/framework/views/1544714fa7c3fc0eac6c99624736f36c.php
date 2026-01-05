@@ -118,6 +118,7 @@
                                     <th><?php echo e(__('End Date')); ?></th>
                                     <th><?php echo e(__('Duration')); ?></th>
                                     <th><?php echo e(__('Total Days')); ?></th>
+                                    <th><?php echo e(__('Leave Type')); ?></th>
                                     <th><?php echo e(__('Leave Reason')); ?></th>
                                     <th><?php echo e(__('Status')); ?></th>
                                     <?php if(\Auth::user()->type != 'employee'): ?>
@@ -144,6 +145,13 @@
                                             <?php endif; ?>
                                         </td>
                                         <td><?php echo e($leave->total_leave_days); ?></td>
+                                        <td>
+                                            <?php if($leave->is_lop): ?>
+                                                <span class="badge bg-danger"><?php echo e(__('LOP')); ?></span>
+                                            <?php else: ?>
+                                                <span class="badge bg-success"><?php echo e(__('Paid')); ?></span>
+                                            <?php endif; ?>
+                                        </td>
                                         <!-- <td><?php echo e($leave->leave_reason); ?></td> -->
                                         <td><?php echo breakAfterWords($leave->leave_reason); ?></td>
                                         <td>

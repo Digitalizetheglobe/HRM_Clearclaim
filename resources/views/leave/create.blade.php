@@ -34,13 +34,14 @@
             <i class="ti ti-alert-triangle"></i> 
             <strong>{{ __('Monthly Leave Limit Reached!') }}</strong><br>
             {{ __('You have already used '.$monthlyLeaveInfo['used'].' paid leaves this month. Maximum 2 paid leaves allowed per month.') }}<br>
-            {{ __('Any additional leaves must be applied as Leave Without Pay (LWP).') }}
+            <strong>{{ __('Your leave will be automatically marked as LOP (Loss of Pay) and will NOT be deducted from your annual leave balance.') }}</strong>
         </div>
     @elseif(isset($monthlyLeaveInfo) && $monthlyLeaveInfo['remaining'] <= 0.5)
         <div class="alert alert-info">
             <i class="ti ti-info-circle"></i> 
             <strong>{{ __('Monthly Leave Limit Notice') }}</strong><br>
-            {{ __('You have used '.$monthlyLeaveInfo['used'].' paid leaves this month. Only '.$monthlyLeaveInfo['remaining'].' paid leave(s) remaining.') }}
+            {{ __('You have used '.$monthlyLeaveInfo['used'].' paid leaves this month. Only '.$monthlyLeaveInfo['remaining'].' paid leave(s) remaining.') }}<br>
+            {{ __('Any leaves beyond this will be automatically marked as LOP.') }}
         </div>
     @endif
 
@@ -54,6 +55,37 @@
                     <option value="Full Day">{{ __('Full Day') }}</option>
                     <option value="Half Day">{{ __('Half Day') }}</option>
                 </select>
+            </div>
+        </div>
+    </div>
+
+    {{-- Leave Type Selection (Paid/LOP) --}}
+    <div class="row">
+        <div class="col-md-12">
+            <div class="form-group">
+                {{ Form::label('leave_type_selection', __('Leave Type'), ['class' => 'col-form-label']) }}<span class="text-danger pl-1">*</span>
+                <select name="leave_type_selection" id="leave_type_selection" class="form-control select" required>
+                    <option value="">{{ __('Select Leave Type') }}</option>
+                    @if(isset($monthlyLeaveInfo) && $monthlyLeaveInfo['exceeded'])
+                        {{-- Only LOP option if limit exceeded --}}
+                        <option value="lop">{{ __('LOP (Loss of Pay) - Required') }}</option>
+                    @elseif(isset($monthlyLeaveInfo) && $monthlyLeaveInfo['remaining'] > 0)
+                        {{-- Both options if still have remaining paid leaves --}}
+                        <option value="paid">{{ __('Paid Leave (Remaining: ') }}{{ number_format($monthlyLeaveInfo['remaining'], 2) }}{{ __(')') }}</option>
+                        <option value="lop">{{ __('LOP (Loss of Pay)') }}</option>
+                    @else
+                        {{-- Default: both options --}}
+                        <option value="paid">{{ __('Paid Leave') }}</option>
+                        <option value="lop">{{ __('LOP (Loss of Pay)') }}</option>
+                    @endif
+                </select>
+                <small class="form-text text-muted">
+                    @if(isset($monthlyLeaveInfo) && $monthlyLeaveInfo['exceeded'])
+                        <span class="text-danger">{{ __('You must select LOP as you have used all paid leaves this month.') }}</span>
+                    @else
+                        {{ __('Paid leaves are deducted from your annual 15-leave balance. LOP leaves are not deducted.') }}
+                    @endif
+                </small>
             </div>
         </div>
     </div>

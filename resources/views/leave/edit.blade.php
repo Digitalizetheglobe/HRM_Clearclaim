@@ -56,6 +56,28 @@
         </div>
     </div>
 
+    {{-- Leave Type Selection (Paid/LOP) --}}
+    <div class="row">
+        <div class="col-md-12">
+            <div class="form-group">
+                {{ Form::label('leave_type_selection', __('Leave Type'), ['class' => 'col-form-label']) }}<span class="text-danger pl-1">*</span>
+                <select name="leave_type_selection" id="leave_type_selection" class="form-control select" required>
+                    <option value="">{{ __('Select Leave Type') }}</option>
+                    <option value="paid" @if($leave->is_paid) selected @endif>{{ __('Paid Leave') }}</option>
+                    <option value="lop" @if($leave->is_lop) selected @endif>{{ __('LOP (Loss of Pay)') }}</option>
+                </select>
+                <small class="form-text text-muted">
+                    {{ __('Current: ') }}
+                    @if($leave->is_lop)
+                        <span class="badge bg-danger">{{ __('LOP') }}</span>
+                    @else
+                        <span class="badge bg-success">{{ __('Paid') }}</span>
+                    @endif
+                </small>
+            </div>
+        </div>
+    </div>
+
     {{-- Start and End Date --}}
     <div class="row">
         <div class="col-md-6">
