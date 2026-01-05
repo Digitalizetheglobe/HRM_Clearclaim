@@ -390,10 +390,6 @@ Route::middleware(['auth'])->group(function () {
             ->name('timesheet.show');
         // In your routes file
         Route::get('/get-projects-by-employee/{employeeId}', [TimeSheetController::class, 'getProjectsByEmployee']);
-
-        Route::get('/timesheet/{timesheet}', [TimeSheetController::class, 'show'])
-        ->middleware(['auth', 'timesheet.visibility'])
-        ->name('timesheet.show');
     });
 
 // routes/web.php
