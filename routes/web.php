@@ -1,6 +1,5 @@
 <?php
 
-use App\Http\Controllers\AamarpayController;
 use App\Models\Employee;
 use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\UserController;
@@ -1827,9 +1826,6 @@ Route::group(['middleware' => ['verified']], function () {
 
     Route::post('cashfree/payments/store', [CashfreeController::class, 'cashfreePaymentStore'])->name('cashfree.payment');
     Route::any('cashfree/payments/success', [CashfreeController::class, 'cashfreePaymentSuccess'])->name('cashfreePayment.success');
-
-    Route::post('/aamarpay/payment', [AamarpayController::class, 'pay'])->name('pay.aamarpay.payment');
-    Route::any('/aamarpay/success/{data}', [AamarpayController::class, 'aamarpaysuccess'])->name('pay.aamarpay.success');
 
     Route::post('/paytr/payment/{plan_id}', [PaytrController::class, 'PlanpayWithPaytr'])->name('plan.pay.with.paytr');
     Route::get('/paytr/sussess/', [PaytrController::class, 'paytrsuccess'])->name('pay.paytr.success');
