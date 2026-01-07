@@ -58,3 +58,4 @@ class AttendanceRegularisationNotification extends Notification implements Shoul
     }
 }
 
+

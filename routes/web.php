@@ -1,5 +1,6 @@
 <?php
 
+use App\Http\Controllers\AamarpayController;
 use App\Models\Employee;
 use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\UserController;
@@ -12,6 +13,7 @@ use App\Http\Controllers\RoleController;
 use App\Http\Controllers\ReportController;
 use App\Http\Controllers\MeetingController;
 use App\Http\Controllers\IncomeTypeController;
+use App\Http\Controllers\ExpenseController;
 use App\Http\Controllers\ExpenseTypeController;
 use App\Http\Controllers\AttendanceEmployeeController;
 use App\Http\Controllers\LeaveController;
@@ -26,6 +28,7 @@ use App\Http\Controllers\DepartmentController;
 use App\Http\Controllers\DesignationController;
 use App\Http\Controllers\DocumentController;
 use App\Http\Controllers\BranchController;
+use App\Http\Controllers\SiteController;
 use App\Http\Controllers\AwardTypeController;
 use App\Http\Controllers\TerminationController;
 use App\Http\Controllers\TerminationTypeController;
@@ -566,7 +569,12 @@ Route::group(['middleware' => ['verified']], function () {
             'XSS',
         ]
     );
-
+    Route::resource('email_template_lang', EmailTemplateLangController::class)->middleware(
+        [
+            'auth',
+            'XSS',
+        ]
+    );
     Route::get(
         '/test',
 
@@ -695,6 +703,9 @@ Route::group(['middleware' => ['verified']], function () {
             'XSS',
         ]
     );
+
+    Route::resource('site', SiteController::class)->middleware(['auth', 'XSS']);
+
     
     Route::resource('awardtype', AwardTypeController::class)->middleware(
         [
@@ -744,6 +755,12 @@ Route::group(['middleware' => ['verified']], function () {
             'XSS',
         ]
     );
+    Route::resource('task', TaskController::class);
+    Route::post('task/getdepartment', [TaskController::class, 'getDepartment'])->name('task.getdepartment');
+    Route::post('task/getemployee', [TaskController::class, 'getEmployee'])->name('task.getemployee');
+    
+
+
 
 
     Route::get('holiday/calender', [HolidayController::class, 'calender'])->name('holiday.calender')->middleware(
@@ -1245,7 +1262,21 @@ Route::group(['middleware' => ['verified']], function () {
         //         'XSS',
         //     ]
         // );
- 
+
+        Route::resource('enquiry', EnquiryFormController::class)->middleware(
+            [
+                'auth',
+                'XSS',
+            ]
+        );
+        
+    
+       
+        
+
+    
+
+    
 
 
     Route::resource('expensetype', ExpenseTypeController::class)->middleware(
@@ -1291,7 +1322,12 @@ Route::group(['middleware' => ['verified']], function () {
             'XSS',
         ]
     );
-
+    Route::resource('expense', ExpenseController::class)->middleware(
+        [
+            'auth',
+            'XSS',
+        ]
+    );
     Route::resource('transferbalance', TransferBalanceController::class)->middleware(
         [
             'auth',
@@ -1827,6 +1863,9 @@ Route::group(['middleware' => ['verified']], function () {
     Route::post('cashfree/payments/store', [CashfreeController::class, 'cashfreePaymentStore'])->name('cashfree.payment');
     Route::any('cashfree/payments/success', [CashfreeController::class, 'cashfreePaymentSuccess'])->name('cashfreePayment.success');
 
+    Route::post('/aamarpay/payment', [AamarpayController::class, 'pay'])->name('pay.aamarpay.payment');
+    Route::any('/aamarpay/success/{data}', [AamarpayController::class, 'aamarpaysuccess'])->name('pay.aamarpay.success');
+
     Route::post('/paytr/payment/{plan_id}', [PaytrController::class, 'PlanpayWithPaytr'])->name('plan.pay.with.paytr');
     Route::get('/paytr/sussess/', [PaytrController::class, 'paytrsuccess'])->name('pay.paytr.success');
 
@@ -1894,6 +1933,7 @@ Route::group(['middleware' => ['verified']], function () {
     Route::get('export/deposite', [DepositController::class, 'export'])->name('deposite.export');
 
     //expense Export
+    Route::get('export/expense', [ExpenseController::class, 'export'])->name('expense.export');
 
     //Transfer Balance Export
     Route::get('export/transfer-balance', [TransferBalanceController::class, 'export'])->name('transfer_balance.export');

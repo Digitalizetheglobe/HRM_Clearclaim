@@ -41,3 +41,4 @@ class CreateAttendanceRegularisationsTable extends Migration
     }
 }
 
+

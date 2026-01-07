@@ -11,3 +11,5 @@ Modules/LandingPage.zip
 /storage/framework
 
 /public/uploads
+
+/storage/app/public/uploads
