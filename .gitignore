@@ -1,6 +1,12 @@
 # Environment
 .env
 
+
+Modules/LandingPage.zip
+Modules/*.zip
+
+
+
 # Dependencies
 /vendor
 /node_modules
