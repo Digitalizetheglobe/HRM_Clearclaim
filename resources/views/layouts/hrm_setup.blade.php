@@ -8,8 +8,6 @@
             </a>
         @endcan
 
-
-        
         @can('Manage Department')
             <a href="{{ route('department.index') }}"
                 class="list-group-item list-group-item-action border-0 {{ request()->is('department*') ? 'active' : '' }}">{{ __('Department') }}
@@ -24,12 +22,12 @@
         </a>
         @endcan        
 
-        @can('Manage Leave Type')
+        <!-- @can('Manage Leave Type')
         <a href="{{ route('leavetype.index') }}"
             class="list-group-item list-group-item-action border-0 {{ Request::route()->getName() == 'leavetype.index' ? 'active' : '' }}">{{ __('Leave Type') }}
             <div class="float-end"><i class="ti ti-chevron-right"></i></div>
         </a>
-        @endcan
+        @endcan -->
 
         @can('Manage Document Type')
         <a href="{{ route('document.index') }}"
@@ -45,7 +43,7 @@
         </a>
         @endcan
 
-        @can('Manage Allowance Option')
+        <!-- @can('Manage Allowance Option')
         <a href="{{ route('allowanceoption.index') }}"
             class="list-group-item list-group-item-action border-0 {{ request()->is('allowanceoption*') ? 'active' : '' }}">{{ __('Allowance Option') }}
             <div class="float-end"><i class="ti ti-chevron-right"></i></div>
@@ -85,7 +83,7 @@
             class="list-group-item list-group-item-action border-0 {{ request()->is('awardtype*') ? 'active' : '' }}">{{ __('Award Type') }}
             <div class="float-end"><i class="ti ti-chevron-right"></i></div>
         </a>
-        @endcan
+        @endcan -->
 
         @can('Manage Termination Type')
         <a href="{{ route('terminationtype.index') }}"
@@ -108,7 +106,7 @@
         </a>
         @endcan
 
-        @can('Manage Performance Type')
+        <!-- @can('Manage Performance Type')
         <a href="{{ route('performanceType.index') }}"
             class="list-group-item list-group-item-action border-0 {{ request()->is('performanceType*') ? 'active' : '' }}">{{ __('Performance Type') }}
             <div class="float-end"><i class="ti ti-chevron-right"></i></div>
@@ -148,7 +146,7 @@
             class="list-group-item list-group-item-action border-0 {{ request()->is('contract_type*') ? 'active' : '' }}">{{ __('Contract Type') }}
             <div class="float-end"><i class="ti ti-chevron-right"></i></div>
         </a>
-        @endcan
+        @endcan -->
 
     </div>
 </div>

@@ -104,43 +104,9 @@
                             <i class="ti ti-home text-white text-[30px]"></i>
                         </span>
                         <span class="dash-mtext">{{ __('Dashboard') }}</span>
-                        <!-- <span class="dash-arrow " style="background: none;">
-                            <i data-feather="chevron-right"></i>
-                        </span> -->
+
                     </a>
 
-                    <!-- <ul class="dash-submenu">
-                        <li class="dash-item {{ Request::segment(1) == null || Request::segment(1) == 'report' ? 'active dash-trigger' : '' }}">
-                            <a class="dash-link text-white hover:text-white hover:bg-[#001a3b] text-lg" 
-                            href="{{ route('dashboard') }}">
-                            {{ __('Overview') }}
-                            </a>
-                        </li>
-                        @if (Gate::check('Manage Report'))
-                            <li class="dash-item dash-hasmenu">
-                                <a href="#!" 
-                                class="dash-link text-white hover:text-white hover:bg-[#001a3b] text-lg">
-                                    <span class=""><i class=""></i></span>
-                                    <span class="dash-mtext">{{ __('Report') }}</span>
-                                    <span class="dash-arrow">
-                                        <i data-feather="chevron-right"></i>
-                                    </span>
-                                </a>
-                                <ul class="dash-submenu">
-                                    @can('Manage Report')
-                                        
-                                        <li class="dash-item">
-                                            <a class="dash-link text-white hover:text-white hover:bg-[#001a3b] text-lg" 
-                                            href="{{ route('report.monthly.attendance') }}">
-                                            {{ __('Monthly Attendance') }}
-                                            </a>
-                                        </li>
-                                        
-                                    @endcan
-                                </ul>
-                            </li>
-                        @endif
-                    </ul> -->
                 </li>
             @endif
 
@@ -155,7 +121,7 @@
                     </a>
                 </li>
             @else
-                @if (Gate::check('Manage User') ||
+                <!-- @if (Gate::check('Manage User') ||
                         Gate::check('Manage Role') ||
                         Gate::check('Manage Employee Profile') ||
                         Gate::check('Manage Employee Last Login'))
@@ -185,14 +151,14 @@
                                     </a>
                                 </li>
                             @endcan
-                            <!-- @can('Manage Role')
+                            @can('Manage Role')
                                 <li class="dash-item">
                                     <a class="dash-link text-white hover:text-white hover:bg-[#001a3b] text-lg" 
                                     href="{{ route('roles.index') }}">
                                     {{ __('Role') }}
                                     </a>
                                 </li>
-                            @endcan -->
+                            @endcan
                             @can('Manage Employee Profile')
                                 <li class="dash-item">
                                     <a class="dash-link text-white hover:text-white hover:bg-[#001a3b] text-lg" 
@@ -212,7 +178,7 @@
                             @endcan --}}
                         </ul>
                     </li>
-                @endif
+                @endif -->
             @endif
 
             <!-- user-->
@@ -271,131 +237,7 @@
                 </a>
             </li>
 
-
-
-             <!-- Notice -->
-            <li class="dash-item">
-                <a href="{{ route('notices.index') }}" class="dash-link text-white hover:text-white hover:bg-[#001a3b] text-lg flex items-center space-x-2">
-                <span class="dash-micon text-white text-[30px] shadow-none" style="background: none;">
-                <i class="fas fa-clipboard-list text-white text-[30px]"></i></span>
-                    <span class="dash-mtext">{{ __('Notice') }}</span>
-                </a>
-            </li>
-
-             <!-- Expenses & Reimbursement -->
-            <li class="dash-item {{ Request::segment(1) == 'expenses' ? 'active' : '' }}">
-                <a href="{{ route('expenses.index') }}" class="dash-link text-white hover:text-white hover:bg-[#001a3b] text-lg flex items-center space-x-2">
-                <span class="dash-micon text-white text-[30px] shadow-none" style="background: none;">
-                <i class="fas fa-receipt text-white text-[30px]"></i></span>
-                    <span class="dash-mtext">{{ __('Expenses') }}</span>
-                </a>
-            </li>
-
-             <!-- enquiry -->
-                <!-- <li class="dash-item">
-                    <a href="{{ route('timesheet.index') }}" class="dash-link text-white hover:text-white hover:bg-[#001a3b] text-lg flex items-center space-x-2">
-                        <span class="dash-micon text-white text-[30px] shadow-none" style="background: none;">
-                            <i class="fas fa-question-circle text-white text-[30px]"></i>
-                        </span>
-                        <span class="dash-mtext">{{ __('TimeSheet') }}</span>
-                    </a>
-                </li> -->
-
-                <li
-                    class="dash-item dash-hasmenu {{ Request::segment(1) == 'setsalary' || Request::segment(1) == 'offboarding' || Request::segment(1) == 'resignation' || Request::segment(1) == 'termination' ? 'dash-trigger active' : '' }}">
-                    <a href="#!" class="dash-link text-white hover:text-white hover:bg-[#001a3b] text-lg flex items-center space-x-2"><span class="dash-micon text-white text-[30px] shadow-none" style="background: none;">
-                            <i class="fas fa-user-slash text-white text-[30px]"></i>
-                          </span><span
-                            class="dash-mtext">{{ __('Offboard ') }}</span><span class="dash-arrow"><i
-                                data-feather="chevron-right"></i></span></a>
-                    <ul class="dash-submenu">
-                        @if(\Auth::user()->type == 'company' || Gate::check('Manage Resignation'))
-                            <li class="dash-item {{ Request::segment(1) == 'offboarding' ? 'active' : '' }}">
-                                <a class="dash-link text-white hover:text-white hover:bg-[#001a3b] text-lg"
-                                    href="{{ route('offboarding.index') }}">{{ __('Off-Boarding Steps') }}</a>
-                            </li>
-                        @endif
-                        <li class="dash-item">
-                            <a class="dash-link text-white hover:text-white hover:bg-[#001a3b] text-lg"
-                                href="{{ route('resignation.index') }}">{{ __('Resignation ') }}</a>
-                        </li>
-                        <li class="dash-item">
-                            <a class="dash-link text-white hover:text-white hover:bg-[#001a3b] text-lg"
-                                href="{{ route('termination.index') }}">{{ __('Exit Formalities') }}</a>
-                        </li>
-                    </ul>
-                </li>
-
-            <!-- payroll-->
-            @if (Gate::check('Manage Set Salary') || Gate::check('Manage Pay Slip'))
-                <li
-                    class="dash-item dash-hasmenu  {{ Request::segment(1) == 'setsalary' ? 'dash-trigger active' : '' }}">
-                    <a href="#!" class="dash-link text-white hover:text-white hover:bg-[#001a3b] text-lg flex items-center space-x-2">
-                        <span class="dash-micon text-[50px] shadow-none" style="background: none;">
-                            <i class="ti ti-receipt text-white text-[30px]">
-                            </i>
-                        </span>
-                        <span class="dash-mtext">
-                            {{ __('Payroll') }}
-                        </span>
-                        <span class="dash-arrow"><i data-feather="chevron-right">
-                            </i>
-                        </span>
-                    </a>
-                    <ul class="dash-submenu ">
-                        <li class="dash-item {{ Request::segment(1) == 'setsalary' ? 'active' : '-' }}">
-                            <a class="dash-link text-white hover:text-white hover:bg-[#001a3b] text-lg" href="{{ route('setsalary.index') }}">{{ __('Set Salary') }}</a>
-                        </li>
-                        <li class="dash-item">
-                            <a class="dash-link text-white hover:text-white hover:bg-[#001a3b] text-lg" href="{{ route('payslip.index') }}">{{ __('Payslip') }}</a>
-                        </li>
-
-                    </ul>
-                </li>
-            @endif
-            <!-- payroll-->
-
-            @if (\Auth::user()->type == 'employee')
-                <li
-                    class="dash-item dash-hasmenu {{ Request::segment(1) == 'setsalary' ? 'dash-trigger active' : '' }}">
-                    <a href="#!" class="dash-link text-white hover:text-white hover:bg-[#001a3b] text-lg flex items-center space-x-2"><span class="dash-micon text-white text-[30px] shadow-none" style="background: none;"><i
-                                class="ti ti-receipt text-white text-[30px]"></i></span><span
-                            class="dash-mtext">{{ __('Payroll') }}</span><span class="dash-arrow"><i
-                                data-feather="chevron-right"></i></span></a>
-                    <ul class="dash-submenu">
-                        <li class="dash-item {{ Request::segment(1) == 'setsalary' ? 'active' : '-' }}">
-                            <a class="dash-link text-white hover:text-white hover:bg-[#001a3b] text-lg"
-                                href="{{ route('setsalary.show', \Illuminate\Support\Facades\Crypt::encrypt(\Auth::user()->id)) }}">{{ __('Salary') }}</a>
-                        </li>
-                        <li class="dash-item">
-                            <a class="dash-link text-white hover:text-white hover:bg-[#001a3b] text-lg" href="{{ route('payslip.index') }}">{{ __('Payslip') }}</a>
-                        </li>
-                    </ul>
-                </li>
-            @endif
-
-                <li
-                    class="dash-item dash-hasmenu {{ Request::segment(1) == 'calender' && Request::segment(2) == 'leave' ? 'dash-trigger active' : '' }}">
-                    <a href="#!" class="dash-link text-white hover:text-white hover:bg-[#001a3b] text-lg flex items-center space-x-2"><span class="dash-micon text-white text-[30px] shadow-none" style="background: none;"><i
-                                class="ti ti-clock text-white text-[30px]"></i></span><span
-                            class="dash-mtext">{{ __('Leave') }}</span><span class="dash-arrow"><i
-                                data-feather="chevron-right"></i></span></a>
-                    <ul class="dash-submenu">
-                        
-                        @can('Manage Leave')
-                            <li class="dash-item {{ Request::segment(1) == 'calender' ? ' active' : '' }}">
-                                <a class="dash-link text-white hover:text-white hover:bg-[#001a3b] text-lg" href="{{ route('leave.index') }}">{{ __('Manage Leave') }}</a>
-                            </li>              
-                        @endcan
-                        
-                    </ul>
-                </li>
-
-
-
-
-
-            <!-- timesheet-->
+            <!-- Attendance -->
             @if (Gate::check('Manage Attendance') || Gate::check('Create Attendance') || Gate::check('Manage Biometric Attendance'))
                 <li class="dash-item dash-hasmenu {{ Request::is('attendance*') || Request::is('biometric-attendance*') ? 'dash-trigger active' : '' }}">
                     <a href="#!" class="dash-link text-white hover:text-white hover:bg-[#001a3b] text-lg flex items-center space-x-2">
@@ -450,10 +292,139 @@
                 </li>
             @endif
 
-            <!--timesheet-->
+            <!--Attendance-->
+
+            <!-- Leave -->
+                <li
+                    class="dash-item dash-hasmenu {{ Request::segment(1) == 'calender' && Request::segment(2) == 'leave' ? 'dash-trigger active' : '' }}">
+                    <a href="#!" class="dash-link text-white hover:text-white hover:bg-[#001a3b] text-lg flex items-center space-x-2"><span class="dash-micon text-white text-[30px] shadow-none" style="background: none;"><i
+                                class="ti ti-clock text-white text-[30px]"></i></span><span
+                            class="dash-mtext">{{ __('Leave') }}</span><span class="dash-arrow"><i
+                                data-feather="chevron-right"></i></span></a>
+                    <ul class="dash-submenu">
+                        
+                        @can('Manage Leave')
+                            <li class="dash-item {{ Request::segment(1) == 'calender' ? ' active' : '' }}">
+                                <a class="dash-link text-white hover:text-white hover:bg-[#001a3b] text-lg" href="{{ route('leave.index') }}">{{ __('Manage Leave') }}</a>
+                            </li>              
+                        @endcan
+                        
+                    </ul>
+                </li>
+            <!-- Leave -->
+
+
+            <!-- payroll-->
+            @if (Gate::check('Manage Set Salary') || Gate::check('Manage Pay Slip'))
+                <li
+                    class="dash-item dash-hasmenu  {{ Request::segment(1) == 'setsalary' ? 'dash-trigger active' : '' }}">
+                    <a href="#!" class="dash-link text-white hover:text-white hover:bg-[#001a3b] text-lg flex items-center space-x-2">
+                        <span class="dash-micon text-[50px] shadow-none" style="background: none;">
+                            <i class="ti ti-receipt text-white text-[30px]">
+                            </i>
+                        </span>
+                        <span class="dash-mtext">
+                            {{ __('Payroll') }}
+                        </span>
+                        <span class="dash-arrow"><i data-feather="chevron-right">
+                            </i>
+                        </span>
+                    </a>
+                    <ul class="dash-submenu ">
+                        <li class="dash-item {{ Request::segment(1) == 'setsalary' ? 'active' : '-' }}">
+                            <a class="dash-link text-white hover:text-white hover:bg-[#001a3b] text-lg" href="{{ route('setsalary.index') }}">{{ __('Set Salary') }}</a>
+                        </li>
+                        <li class="dash-item">
+                            <a class="dash-link text-white hover:text-white hover:bg-[#001a3b] text-lg" href="{{ route('payslip.index') }}">{{ __('Payslip') }}</a>
+                        </li>
+
+                    </ul>
+                </li>
+            @endif
+            <!-- payroll-->
+
+            @if (\Auth::user()->type == 'employee')
+                <li
+                    class="dash-item dash-hasmenu {{ Request::segment(1) == 'setsalary' ? 'dash-trigger active' : '' }}">
+                    <a href="#!" class="dash-link text-white hover:text-white hover:bg-[#001a3b] text-lg flex items-center space-x-2"><span class="dash-micon text-white text-[30px] shadow-none" style="background: none;"><i
+                                class="ti ti-receipt text-white text-[30px]"></i></span><span
+                            class="dash-mtext">{{ __('Payroll') }}</span><span class="dash-arrow"><i
+                                data-feather="chevron-right"></i></span></a>
+                    <ul class="dash-submenu">
+                        <li class="dash-item {{ Request::segment(1) == 'setsalary' ? 'active' : '-' }}">
+                            <a class="dash-link text-white hover:text-white hover:bg-[#001a3b] text-lg"
+                                href="{{ route('setsalary.show', \Illuminate\Support\Facades\Crypt::encrypt(\Auth::user()->id)) }}">{{ __('Salary') }}</a>
+                        </li>
+                        <li class="dash-item">
+                            <a class="dash-link text-white hover:text-white hover:bg-[#001a3b] text-lg" href="{{ route('payslip.index') }}">{{ __('Payslip') }}</a>
+                        </li>
+                    </ul>
+                </li>
+            @endif
+
+            <!-- payroll Employee -->
+
+
+
+             <!-- Notice -->
+            <li class="dash-item">
+                <a href="{{ route('notices.index') }}" class="dash-link text-white hover:text-white hover:bg-[#001a3b] text-lg flex items-center space-x-2">
+                <span class="dash-micon text-white text-[30px] shadow-none" style="background: none;">
+                <i class="fas fa-clipboard-list text-white text-[30px]"></i></span>
+                    <span class="dash-mtext">{{ __('Notice') }}</span>
+                </a>
+            </li>
+
+            <!--company policy-->
+            <!-- @if (Gate::check('Manage Company Policy'))
+                <li class="dash-item">
+                    <a href="{{ route('company-policy.index') }}" class="dash-link text-white hover:text-white hover:bg-[#001a3b] text-lg flex items-center space-x-2"><span class="dash-micon text-white text-[30px] shadow-none" style="background: none;">
+                            <i class="ti ti-pray text-white text-[30px]"></i></span><span
+                            class="dash-mtext">{{ __('Company Policy') }}</span></a>
+                </li>
+            @endcan -->
+            <!-- Company Policy -->
+
+             <!-- Expenses & Reimbursement -->
+            <li class="dash-item {{ Request::segment(1) == 'expenses' ? 'active' : '' }}">
+                <a href="{{ route('expenses.index') }}" class="dash-link text-white hover:text-white hover:bg-[#001a3b] text-lg flex items-center space-x-2">
+                <span class="dash-micon text-white text-[30px] shadow-none" style="background: none;">
+                <i class="fas fa-receipt text-white text-[30px]"></i></span>
+                    <span class="dash-mtext">{{ __('Expenses') }}</span>
+                </a>
+            </li>
+
+
+
+                <li
+                    class="dash-item dash-hasmenu {{ Request::segment(1) == 'setsalary' || Request::segment(1) == 'offboarding' || Request::segment(1) == 'resignation' || Request::segment(1) == 'termination' ? 'dash-trigger active' : '' }}">
+                    <a href="#!" class="dash-link text-white hover:text-white hover:bg-[#001a3b] text-lg flex items-center space-x-2"><span class="dash-micon text-white text-[30px] shadow-none" style="background: none;">
+                            <i class="fas fa-user-slash text-white text-[30px]"></i>
+                          </span><span
+                            class="dash-mtext">{{ __('Offboard ') }}</span><span class="dash-arrow"><i
+                                data-feather="chevron-right"></i></span></a>
+                    <ul class="dash-submenu">
+                        @if(\Auth::user()->type == 'company' || Gate::check('Manage Resignation'))
+                            <li class="dash-item {{ Request::segment(1) == 'offboarding' ? 'active' : '' }}">
+                                <a class="dash-link text-white hover:text-white hover:bg-[#001a3b] text-lg"
+                                    href="{{ route('offboarding.index') }}">{{ __('Off-Boarding Steps') }}</a>
+                            </li>
+                        @endif
+                        <li class="dash-item">
+                            <a class="dash-link text-white hover:text-white hover:bg-[#001a3b] text-lg"
+                                href="{{ route('resignation.index') }}">{{ __('Resignation ') }}</a>
+                        </li>
+                        <li class="dash-item">
+                            <a class="dash-link text-white hover:text-white hover:bg-[#001a3b] text-lg"
+                                href="{{ route('termination.index') }}">{{ __('Exit Formalities') }}</a>
+                        </li>
+                    </ul>
+                </li>
+
+
 
             <!-- performance-->
-            @if (Gate::check('Manage Indicator') || Gate::check('Manage Appraisal') || Gate::check('Manage Goal Tracking'))
+            <!-- @if (Gate::check('Manage Indicator') || Gate::check('Manage Appraisal') || Gate::check('Manage Goal Tracking'))
                 <li class="dash-item dash-hasmenu">
                     <a href="#!" class="dash-link text-white hover:text-white hover:bg-[#001a3b] text-lg flex items-center space-x-2"><span class="dash-micon text-white text-[30px] shadow-none" style="background: none;"><i
                                 class="ti ti-3d-cube-sphere text-white text-[30px]"></i></span><span
@@ -480,11 +451,11 @@
                         @endcan
                     </ul>
                 </li>
-            @endif
+            @endif -->
             <!--performance-->
 
             <!--fianance-->
-            @if (Gate::check('Manage Account List') ||
+            <!-- @if (Gate::check('Manage Account List') ||
                     Gate::check('Manage Payee') ||
                     Gate::check('Manage Payer') ||
                     Gate::check('Manage Deposit') ||
@@ -540,11 +511,11 @@
                         @endcan
                     </ul>
                 </li>
-            @endif
+            @endif -->
             <!-- fianance-->
 
             <!--trainning-->
-            @if (Gate::check('Manage Trainer') || Gate::check('Manage Training'))
+            <!-- @if (Gate::check('Manage Trainer') || Gate::check('Manage Training'))
                 <li
                     class="dash-item dash-hasmenu {{ Request::segment(1) == 'training' ? 'dash-trigger active' : '' }}">
                     <a href="#!" class="dash-link text-white hover:text-white hover:bg-[#001a3b] text-lg flex items-center space-x-2"><span class="dash-micon text-white text-[30px] shadow-none" style="background: none;"><i
@@ -565,13 +536,13 @@
                         @endcan
                     </ul>
                 </li>
-            @endif
+            @endif -->
 
             <!-- tranning-->
 
 
             <!-- HR-->
-            @if (Gate::check('Manage Awards') ||
+            <!-- @if (Gate::check('Manage Awards') ||
                     Gate::check('Manage Transfer') ||
                     Gate::check('Manage Resignation') ||
                     Gate::check('Manage Travels') ||
@@ -627,7 +598,7 @@
                         </li>
                     </ul>
                 </li>
-            @endif
+            @endif -->
             <!-- HR-->
 
             <!-- recruitment-->
@@ -704,28 +675,16 @@
 
             
             <!--contract-->
-            @can('Manage Contract')
+            <!-- @can('Manage Contract')
                 <li
                     class="dash-item {{ Request::route()->getName() == 'contract.index' || Request::route()->getName() == 'contract.show' ? 'active' : '' }}">
                     <a href="{{ route('contract.index') }}" class="dash-link text-white hover:text-white hover:bg-[#001a3b] text-lg flex items-center space-x-2"><span class="dash-micon text-white text-[30px] shadow-none" style="background: none;">
                         <i class="ti ti-device-floppy text-white text-[30px]">
                         </i></span><span class="dash-mtext">{{ __('Contracts') }}</span></a>
                 </li>
-            @endcan
+            @endcan -->
 
             <!--end-->
-
-
-           
-
-
-
-
-
-
-            
-
-
 
             <!-- ticket-->
             @can('Manage Ticket')
@@ -738,22 +697,17 @@
 
 
             <!-- Event-->
-            @can('Manage Event')
+            <!-- @can('Manage Event')
                 <li class="dash-item">
                     <a href="{{ route('event.index') }}" class="dash-link text-white hover:text-white hover:bg-[#001a3b] text-lgn flex items-center space-x-2"><span class="dash-micon text-white text-[30px] shadow-none" style="background: none;"><i
                                 class="ti ti-calendar-event text-white text-[30px]"></i></span><span
                             class="dash-mtext">{{ __('Event') }}</span>
                     </a>
                 </li>
-            @endcan
-
-            
-
-
-             
+            @endcan -->
 
             <!--meeting-->
-            @can('Manage Meeting')
+            <!-- @can('Manage Meeting')
                 <li
                     class="dash-item {{ Request::segment(1) == 'meeting' || Request::segment(2) == 'meeting' ? 'active' : '' }}">
                     <a href="{{ route('meeting.index') }}" class="dash-link text-white hover:text-white hover:bg-[#001a3b] text-lg flex items-center space-x-2"><span class="dash-micon text-white text-[30px] shadow-none" style="background: none;"><i
@@ -761,10 +715,10 @@
                             class="dash-mtext">{{ __('Meeting') }}</span></a>
                 </li>
             @endcan
-
+ -->
 
             <!-- Zoom meeting-->
-            @can('Manage Zoom meeting')
+            <!-- @can('Manage Zoom meeting')
                 @if (\Auth::user()->type != 'super admin')
                     <li class="dash-item {{ Request::segment(1) == 'zoommeeting' ? 'active' : '' }}">
                         <a href="{{ route('zoom-meeting.index') }}" class="dash-link text-white hover:text-white hover:bg-[#001a3b] text-lg flex items-center space-x-2"><span class="dash-micon text-white text-[30px] shadow-none" style="background: none;"><i
@@ -772,40 +726,31 @@
                                 class="dash-mtext">{{ __('Zoom Meeting') }}</span></a>
                     </li>
                 @endif
-            @endcan
+            @endcan -->
 
             <!-- assets-->
-            @if (Gate::check('Manage Assets'))
+            <!-- @if (Gate::check('Manage Assets'))
                 <li class="dash-item">
                     <a href="{{ route('account-assets.index') }}" class="dash-link text-white hover:text-white hover:bg-[#001a3b] text-lg flex items-center space-x-2"><span class="dash-micon text-white text-[30px] shadow-none" style="background: none;"><i
                                 class="ti ti-medical-cross text-white text-[30px]"></i></span><span
                             class="dash-mtext">{{ __('Assets') }}</span></a>
                 </li>
             @endcan
-
+ -->
 
             <!-- document-->
-            @if (Gate::check('Manage Document'))
+            <!-- @if (Gate::check('Manage Document'))
                 <li class="dash-item">
                     <a href="{{ route('document-upload.index') }}" class="dash-link text-white hover:text-white hover:bg-[#001a3b] text-lgflex items-center space-x-2"><span class="dash-micon text-white text-[30px] shadow-none" style="background: none;">
                             <i class="ti ti-file text-white text-[30px]"></i></span><span
                             class="dash-mtext">{{ __('Document') }}</span></a>
                 </li>
-            @endcan
-
-            <!--company policy-->
+            @endcan -->
 
 
 
-            @if (Gate::check('Manage Company Policy'))
-                <li class="dash-item">
-                    <a href="{{ route('company-policy.index') }}" class="dash-link text-white hover:text-white hover:bg-[#001a3b] text-lg flex items-center space-x-2"><span class="dash-micon text-white text-[30px] shadow-none" style="background: none;">
-                            <i class="ti ti-pray text-white text-[30px]"></i></span><span
-                            class="dash-mtext">{{ __('Company Policy') }}</span></a>
-                </li>
-            @endcan
             <!--chats-->
-            @if (\Auth::user()->type != 'super admin')
+            <!-- @if (\Auth::user()->type != 'super admin')
                 <li class="dash-item {{ Request::segment(1) == 'chats' ? 'active' : '' }}">
                     <a href="{{ url('chats') }}" class="dash-link text-white hover:text-white hover:bg-[#001a3b] text-lg flex items-center space-x-2"><span class="dash-micon text-white text-[30px] shadow-none" style="background: none;"><i
                                 class="ti ti-messages text-white text-[30px]"></i></span><span
@@ -872,7 +817,7 @@
 
                 </li>
                 {{-- @endif --}}
-            @endif
+            @endif -->
 
             @if (\Auth::user()->type == 'super admin')
                 <!--  -->
@@ -919,46 +864,17 @@
                             class="dash-mtext">{{ __('Settings') }}</span></a>
                 </li>
             @endif
+
+            
             <!--------------------- Start System Setup ----------------------------------->
 
             @if (\Auth::user()->type != 'super admin')
-
-                @if (Gate::check('Manage Plan') || Gate::check('Manage Order') || Gate::check('Manage Company Settings'))
-                    <li class="dash-item dash-hasmenu">
-                        <a href="#!" class="dash-link text-white hover:text-white hover:bg-[#001a3b] text-lg flex items-center space-x-2">
-                            <span class="dash-micon text-white text-[30px] shadow-none" style="background: none;"><i class="ti ti-settings text-white text-[30px]"></i></span><span
-                                class="dash-mtext">{{ __('System Setup') }}</span><span
-                                class="dash-arrow">
-                                <i data-feather="chevron-right"></i></span>
+                @if (Gate::check('Manage Company Settings'))
+                    <li class="dash-item">
+                        <a href="{{ route('settings.index') }}" class="dash-link text-white hover:text-white hover:bg-[#001a3b] text-lg flex items-center space-x-2">
+                            <span class="dash-micon text-white text-[30px] shadow-none" style="background: none;"><i class="ti ti-settings text-white text-[30px]"></i></span>
+                            <span class="dash-mtext">{{ __('System Setting') }}</span>
                         </a>
-                        <ul class="dash-submenu">
-                            @if (Gate::check('Manage Company Settings'))
-                                <li
-                                    class="dash-item dash-hasmenu {{ Request::segment(1) == 'company-setting' ? ' active' : '' }}">
-                                    <a href="{{ route('settings.index') }}"
-                                        class="dash-link text-white hover:text-white hover:bg-[#001a3b] text-lg flex items-center space-x-2">{{ __('System Settings') }}</a>
-                                </li>
-                            @endif
-                            @if (Gate::check('Manage Plan'))
-                                <li
-                                    class="dash-item{{ Request::route()->getName() == 'plans.index' || Request::route()->getName() == 'stripe' ? ' active' : '' }}">
-                                    <a href="{{ route('plans.index') }}"
-                                        class="dash-link text-white hover:text-white hover:bg-[#001a3b] text-lg">{{ __('Setup Subscription Plan') }}</a>
-                                </li>
-                            @endif
-                            <li
-                                class="dash-item{{ Request::route()->getName() == 'referral-program.company' ? ' active' : '' }}">
-                                <a href="{{ route('referral-program.company') }}"
-                                    class="dash-link text-white hover:text-white hover:bg-[#001a3b] text-lg">{{ __('Referral Program') }}</a>
-                            </li>
-                            @if (\Auth::user()->type == 'super admin' || \Auth::user()->type == 'company')
-                                <li
-                                    class="dash-item {{ Request::segment(1) == 'order' ? 'active' : '' }}">
-                                    <a href="{{ route('order.index') }}"
-                                        class="dash-link text-white hover:text-white hover:bg-[#001a3b] text-lg">{{ __('Order') }}</a>
-                                </li>
-                            @endif
-                        </ul>
                     </li>
                 @endif
             @endif

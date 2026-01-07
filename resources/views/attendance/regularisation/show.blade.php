@@ -110,6 +110,26 @@
         </div>
     </div>
 
+    <!-- Approve Confirmation Modal -->
+    <div class="modal fade" id="approveModal" tabindex="-1" aria-labelledby="approveModalLabel" aria-hidden="true">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="approveModalLabel">{{ __('Approve Regularisation Request') }}</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    <p>{{ __('Are you sure you want to approve this regularisation request?') }}</p>
+                    <p class="text-muted"><small>{{ __('This will create an attendance record for the selected date.') }}</small></p>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">{{ __('Cancel') }}</button>
+                    <button type="button" class="btn btn-success" id="confirmApproveBtn">{{ __('Approve') }}</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
     <!-- Reject Modal -->
     <div class="modal fade" id="rejectModal" tabindex="-1" aria-labelledby="rejectModalLabel" aria-hidden="true">
         <div class="modal-dialog">
@@ -121,9 +141,10 @@
                 <form id="rejectForm" method="POST">
                     @csrf
                     <div class="modal-body">
+                        <p class="mb-3">{{ __('Are you sure you want to reject this regularisation request?') }}</p>
                         <div class="form-group">
                             <label for="rejection_reason" class="form-label">{{ __('Rejection Reason') }} <span class="text-danger">*</span></label>
-                            <textarea class="form-control" id="rejection_reason" name="rejection_reason" rows="3" required maxlength="1000"></textarea>
+                            <textarea class="form-control" id="rejection_reason" name="rejection_reason" rows="3" required maxlength="1000" placeholder="{{ __('Please provide a reason for rejection...') }}"></textarea>
                         </div>
                     </div>
                     <div class="modal-footer">
@@ -139,41 +160,57 @@
 @push('script-page')
     <script>
         $(document).ready(function() {
-            // Approve regularisation
+            var currentRegularisationId = {{ $regularisation->id }};
+
+            // Approve regularisation - Show confirmation modal
             $(document).on('click', '.approve-regularisation', function(e) {
                 e.preventDefault();
-                var id = $(this).data('id');
-                
-                if (confirm('{{ __("Are you sure you want to approve this regularisation request?") }}')) {
-                    $.ajax({
-                        url: '{{ url("attendance-regularisation") }}/' + id + '/approve',
-                        type: 'POST',
-                        data: {
-                            _token: '{{ csrf_token() }}'
-                        },
-                        success: function(response) {
-                            if (response.success || response.redirect) {
-                                location.reload();
-                            } else {
-                                alert(response.message || '{{ __("Error approving request") }}');
-                            }
-                        },
-                        error: function(xhr) {
-                            if (xhr.responseJSON && xhr.responseJSON.message) {
-                                alert(xhr.responseJSON.message);
-                            } else {
-                                alert('{{ __("Error approving request") }}');
-                            }
+                $('#approveModal').modal('show');
+            });
+
+            // Confirm approve action
+            $('#confirmApproveBtn').on('click', function() {
+                var btn = $(this);
+                var originalText = btn.html();
+                btn.prop('disabled', true).html('<i class="fas fa-spinner fa-spin"></i> {{ __("Processing...") }}');
+
+                $.ajax({
+                    url: '{{ url("attendance-regularisation") }}/' + currentRegularisationId + '/approve',
+                    type: 'POST',
+                    data: {
+                        _token: '{{ csrf_token() }}'
+                    },
+                    success: function(response) {
+                        $('#approveModal').modal('hide');
+                        if (response.success || response.redirect) {
+                            location.reload();
+                        } else {
+                            alert(response.message || '{{ __("Error approving request") }}');
+                            btn.prop('disabled', false).html(originalText);
                         }
-                    });
-                }
+                    },
+                    error: function(xhr) {
+                        $('#approveModal').modal('hide');
+                        var errorMsg = '{{ __("Error approving request") }}';
+                        if (xhr.responseJSON && xhr.responseJSON.message) {
+                            errorMsg = xhr.responseJSON.message;
+                        }
+                        alert(errorMsg);
+                        btn.prop('disabled', false).html(originalText);
+                    }
+                });
+            });
+
+            // Reset approve button when modal is closed
+            $('#approveModal').on('hidden.bs.modal', function() {
+                $('#confirmApproveBtn').prop('disabled', false).html('{{ __("Approve") }}');
             });
 
             // Reject regularisation
             $(document).on('click', '.reject-regularisation', function(e) {
                 e.preventDefault();
-                var id = $(this).data('id');
-                $('#rejectForm').attr('action', '{{ url("attendance-regularisation") }}/' + id + '/reject');
+                $('#rejectForm').attr('action', '{{ url("attendance-regularisation") }}/' + currentRegularisationId + '/reject');
+                $('#rejection_reason').val('');
                 $('#rejectModal').modal('show');
             });
         });

@@ -327,11 +327,7 @@
             // Clear all notifications
             document.getElementById('clear-all-notifications')?.addEventListener('click', function(e) {
                 e.preventDefault();
-                
-                if (!confirm('{{ __("Are you sure you want to clear all notifications?") }}')) {
-                    return;
-                }
-                
+
                 fetch('/notifications/clear-all', {
                     method: 'POST',
                     headers: {

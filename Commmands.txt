@@ -1,0 +1,31 @@
+Step 1 :
+cd /home/hrm.clearclaim.in/HRM_Clearclaim
+
+
+Step 2 :
+git config --global --add safe.directory /home/hrm.clearclaim.in/HRM_Clearclaim
+
+
+Step 3 :
+git reset --hard
+
+
+Step 4 :
+git pull origin clean-main --rebase
+
+
+Step 5 :
+git pull origin clean-main --rebase
+
+
+Step 6 :
+php artisan optimize:clear
+
+
+Step 7 :
+chown -R hrmcl4411:hrmcl4411 storage bootstrap/cache
+chmod -R 775 storage bootstrap/cache
+
+
+Step 8 :
+/usr/local/lsws/bin/lswsctrl restart
