@@ -191,16 +191,7 @@
                                         <p><strong>{{ __('Designation') }}:</strong> {{ $employee->designation->name ?? 'N/A' }}</p>
                                     </div>
                                     <div class="col-md-6">
-                                        <p><strong>{{ __('Reporting Manager') }}:</strong> 
-                                            @if($employee->reporting_manager)
-                                                @php
-                                                    $reportingManager = \App\Models\Employee::find($employee->reporting_manager);
-                                                @endphp
-                                                {{ $reportingManager->name ?? 'N/A' }}
-                                            @else
-                                                N/A
-                                            @endif
-                                        </p>
+                                        <p><strong>{{ __('Reporting Manager') }}:</strong> {{ $employee->reportingManager->name ?? 'N/A' }}</p>
                                     </div>
                                     <div class="col-md-6">
                                         <p><strong>{{ __('Date of Joining') }}:</strong> 

@@ -65,6 +65,11 @@ class Employee extends Model
     return $this->belongsTo(User::class, 'approved_by');
 }
 
+    public function reportingManager()
+    {
+        return $this->belongsTo(Employee::class, 'reporting_manager');
+    }
+
     public function project()
     {
         return $this->belongsTo(Project::class, 'site_id');

@@ -531,10 +531,10 @@
                     return redirect()->back()->with('error', __('Employee not available'));
                 }
 
-                $employee = Employee::with(['branch', 'department', 'designation', 'user', 'approvedBy'])->find($empId);
+                $employee = Employee::with(['branch', 'department', 'designation', 'user', 'approvedBy', 'reportingManager'])->find($empId);
                 
                 if (!$employee) {
-                    $employee = Employee::where('user_id', $empId)->with(['branch', 'department', 'designation', 'user', 'approvedBy'])->first();
+                    $employee = Employee::where('user_id', $empId)->with(['branch', 'department', 'designation', 'user', 'approvedBy', 'reportingManager'])->first();
                 }
 
                 if (!$employee) {
