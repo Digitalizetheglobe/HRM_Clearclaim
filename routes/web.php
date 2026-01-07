@@ -977,6 +977,13 @@ Route::group(['middleware' => ['verified']], function () {
         ]
     );
 
+    // Salary Arrears Routes
+    Route::get('salary-arrears', [\App\Http\Controllers\SalaryArrearController::class, 'index'])->name('salary-arrears.index')->middleware(['auth', 'XSS']);
+    Route::post('salary-arrears', [\App\Http\Controllers\SalaryArrearController::class, 'store'])->name('salary-arrears.store')->middleware(['auth', 'XSS']);
+    Route::delete('salary-arrears/{id}', [\App\Http\Controllers\SalaryArrearController::class, 'destroy'])->name('salary-arrears.destroy')->middleware(['auth', 'XSS']);
+    Route::get('salary-arrears/departments', [\App\Http\Controllers\SalaryArrearController::class, 'getDepartments'])->name('salary-arrears.departments')->middleware(['auth', 'XSS']);
+    Route::post('salary-arrears/employees', [\App\Http\Controllers\SalaryArrearController::class, 'getEmployeesByDepartment'])->name('salary-arrears.employees')->middleware(['auth', 'XSS']);
+
     Route::get('payslip/paysalary/{id}/{date}', [PaySlipController::class, 'paysalary'])->name('payslip.paysalary')->middleware(
         [
             'auth',
@@ -1058,6 +1065,9 @@ Route::group(['middleware' => ['verified']], function () {
             'XSS',
         ]
     );
+
+    // Salary Processing Routes
+    Route::get('salary-processing', [\App\Http\Controllers\SalaryProcessingController::class, 'index'])->name('salary-processing.index')->middleware(['auth', 'XSS']);
 
 
     Route::resource('resignation', ResignationController::class)->middleware(

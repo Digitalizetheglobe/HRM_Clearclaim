@@ -109,19 +109,25 @@ class PaySlipController extends Controller
 
         $formate_month_year = $year . '-' . $month;
         $validatePaysilp    = PaySlip::where('salary_month', '=', $formate_month_year)->where('created_by', \Auth::user()->creatorId())->pluck('employee_id');
-        $payslip_employee   = Employee::where('created_by', \Auth::user()->creatorId())->where('company_doj', '<=', date($year . '-' . $month . '-t'))->count();
+        // Only count employees with salary > 0
+        $payslip_employee   = Employee::where('created_by', \Auth::user()->creatorId())
+            ->where('company_doj', '<=', date($year . '-' . $month . '-t'))
+            ->where('salary', '>', 0)
+            ->count();
 
 
        
 
 
         if ($payslip_employee > count($validatePaysilp)) {
-            $employees = Employee::where('created_by', \Auth::user()->creatorId())->where('company_doj', '<=', date($year . '-' . $month . '-t'))->whereNotIn('employee_id', $validatePaysilp)->get();
-            $employeesSalary = Employee::where('created_by', \Auth::user()->creatorId())->where('salary', '<=', 0)->first();
-
-            if (!empty($employeesSalary)) {
-                return redirect()->route('payslip.index')->with('error', __('Please set employee salary.'));
-            }
+            // Only get employees with salary > 0 who don't have payslips yet
+            $employees = Employee::where('created_by', \Auth::user()->creatorId())
+                ->where('company_doj', '<=', date($year . '-' . $month . '-t'))
+                ->where('salary', '>', 0)
+                ->whereNotIn('employee_id', $validatePaysilp)
+                ->get();
+            
+            $payslipGenerated = false;
             foreach ($employees as $employee) {
 
                 $chek = PaySlip::where(['employee_id' => $employee->id, 'salary_month' => $formate_month_year])->first();
@@ -137,7 +143,13 @@ class PaySlipController extends Controller
                     continue;
                 }
 
+                // Skip if employee doesn't have salary set (additional safety check)
+                if (empty($employee->salary) || $employee->salary <= 0) {
+                    continue;
+                }
+
                 if (!$chek && $chek == null) {
+                    $payslipGenerated = true;
                     $payslipEmployee                       = new PaySlip();
                     $payslipEmployee->employee_id          = $employee->id;
                     $payslipEmployee->net_payble           = $employee->get_net_salary();
@@ -209,7 +221,12 @@ class PaySlipController extends Controller
                     }
                 }
             }
-            return redirect()->route('payslip.index')->with('success', __('Payslip successfully created.'));
+            
+            if ($payslipGenerated) {
+                return redirect()->route('payslip.index')->with('success', __('Payslip successfully created.'));
+            } else {
+                return redirect()->route('payslip.index')->with('info', __('No new payslips to generate. All employees with salary already have payslips for this month.'));
+            }
         } else {
             return redirect()->route('payslip.index')->with('error', __('Payslip Already created.'));
         }

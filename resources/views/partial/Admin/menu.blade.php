@@ -254,14 +254,14 @@
                             <a class="dash-link text-white hover:bg-[#001a3b] text-lg" href="{{ route('attendance.calendar') }}">{{ __('Attendance Calendar') }}</a>
                         </li>
 
-                        @can('Manage Report')      
+                        <!-- @can('Manage Report')      
                             <li class="dash-item">
                                  <a class="dash-link text-white hover:text-white hover:bg-[#001a3b] text-lg" 
                                 href="{{ route('report.monthly.attendance') }}">
                                 {{ __('Monthly Attendance') }}
                                 </a>
                             </li>                                      
-                        @endcan
+                        @endcan -->
 
                         @can('Manage Attendance')
                             <li class="dash-item">
@@ -281,13 +281,13 @@
                                 href="{{ route('attendanceemployee.bulkattendance') }}">{{ __('Bulk Attendance') }}</a>
                             </li>
                         @endcan
-
+<!-- 
                         @can('Manage Biometric Attendance')
                             <li class="dash-item">
                                 <a class="dash-link text-white hover:text-white hover:bg-[#001a3b] text-lg"
                                 href="{{ route('biometric-attendance.index') }}">{{ __('Biometric Attendance') }}</a>
                             </li>
-                        @endcan
+                        @endcan -->
                     </ul>
                 </li>
             @endif
@@ -317,7 +317,7 @@
             <!-- payroll-->
             @if (Gate::check('Manage Set Salary') || Gate::check('Manage Pay Slip'))
                 <li
-                    class="dash-item dash-hasmenu  {{ Request::segment(1) == 'setsalary' ? 'dash-trigger active' : '' }}">
+                    class="dash-item dash-hasmenu  {{ Request::segment(1) == 'setsalary' || Request::segment(1) == 'salary-arrears' ? 'dash-trigger active' : '' }}">
                     <a href="#!" class="dash-link text-white hover:text-white hover:bg-[#001a3b] text-lg flex items-center space-x-2">
                         <span class="dash-micon text-[50px] shadow-none" style="background: none;">
                             <i class="ti ti-receipt text-white text-[30px]">
@@ -334,8 +334,14 @@
                         <li class="dash-item {{ Request::segment(1) == 'setsalary' ? 'active' : '-' }}">
                             <a class="dash-link text-white hover:text-white hover:bg-[#001a3b] text-lg" href="{{ route('setsalary.index') }}">{{ __('Set Salary') }}</a>
                         </li>
+                        <li class="dash-item {{ Request::segment(1) == 'salary-arrears' ? 'active' : '' }}">
+                            <a class="dash-link text-white hover:text-white hover:bg-[#001a3b] text-lg" href="{{ route('salary-arrears.index') }}">{{ __('Salary Arrears') }}</a>
+                        </li>
                         <li class="dash-item">
                             <a class="dash-link text-white hover:text-white hover:bg-[#001a3b] text-lg" href="{{ route('payslip.index') }}">{{ __('Payslip') }}</a>
+                        </li>
+                        <li class="dash-item {{ Request::segment(1) == 'salary-processing' ? 'active' : '' }}">
+                            <a class="dash-link text-white hover:text-white hover:bg-[#001a3b] text-lg" href="{{ route('salary-processing.index') }}">{{ __('Salary Processing') }}</a>
                         </li>
 
                     </ul>
