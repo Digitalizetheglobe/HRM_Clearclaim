@@ -2,16 +2,12 @@
 Modules/LandingPage.zip
 # If you prefer ignoring all zips under Modules, uncomment the next line
 # Modules/*.zip
-/vendor/
-
-
 .env
-/storage/*
-/bootstrap/cache/*
 
+/vendor
+/node_modules
 
-/storage/*
-!/storage/.gitignore
-!/storage/uploads
-!/storage/logs
-/bootstrap/cache/*
+/storage/logs
+/storage/framework
+
+/public/uploads
