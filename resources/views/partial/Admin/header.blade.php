@@ -44,9 +44,7 @@
                    role="button" aria-haspopup="false" aria-expanded="false" style="background-color: white;">
 <span class="theme-avtar" style="background-color: white;">
     <img alt="User Avatar"
-        src="{{ !empty(Auth::user()->avatar) 
-                ? asset('storage/uploads/avatar/' . Auth::user()->avatar) 
-                : asset('storage/uploads/avatar/avatar.png') }}"
+        src="{{ asset('images/avatar.png') }}"
         class="header-avtar" 
         style="width: 40px; height: 40px; border-radius: 50%; object-fit: cover; background-color: white;">
 </span>

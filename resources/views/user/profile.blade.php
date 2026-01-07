@@ -1,9 +1,4 @@
 @extends('layouts.admin')
-@php
-// $profile = asset(Storage::url('uploads/avatar/'));
-$profile=\App\Models\Utility::get_file('uploads/avatar/');
-
-@endphp
 
 @push('script-page')
     <script>
@@ -53,7 +48,7 @@ $profile=\App\Models\Utility::get_file('uploads/avatar/');
                             <small> {{ __('Details about your personal information') }}</small>
                         </div>
                         <div class="card-body">
-                            {{ Form::model($userDetail, ['route' => ['update.account'], 'method' => 'post', 'enctype' => 'multipart/form-data']) }}
+                            {{ Form::model($userDetail, ['route' => ['update.account'], 'method' => 'post']) }}
                             @csrf
                             <div class="row">
                                 <div class="col-lg-6 col-sm-6">
@@ -78,26 +73,6 @@ $profile=\App\Models\Utility::get_file('uploads/avatar/');
                                             <span class="invalid-feedback text-danger text-xs"
                                                 role="alert">{{ $message }}</span>
                                         @enderror
-                                    </div>
-                                </div>
-                                <div class="col-lg-6 col-md-6">
-                                    <div class="form-group">
-                                        {{ Form::label('profile', __('Avatar'), ['class' => 'col-form-label']) }}
-                                        <div class="choose-files ">
-                                            <label for="profile">
-                                                <div class=" bg-primary profile "> <i
-                                                        class="ti ti-upload px-1"></i>{{ __('Choose file here') }}
-                                                </div>
-                                                <input type="file" class="form-control file" name="profile" id="profile" onchange="document.getElementById('blah').src = window.URL.createObjectURL(this.files[0])">
-                                                <img id="blah" width="100" src="{{ !empty($userDetail->avatar) ? asset('storage/uploads/avatar/' . $userDetail->avatar) : asset('storage/uploads/avatar/avatar.png') }}" />
-                                            </label>
-                                        </div>
-                                        <span
-                                        class="text-xs text-muted">{{ __('Please upload a valid image file. Size of image should not be more than 2MB.') }}</span>
-                                    @error('profile')
-                                        <span class="invalid-feedback text-danger text-xs"
-                                            role="alert">{{ $message }}</span>
-                                    @enderror
                                     </div>
                                 </div>
                                 <div class="col-lg-12 text-end">
