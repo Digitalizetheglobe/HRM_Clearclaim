@@ -232,7 +232,15 @@
                                         </div>
                                     </div>
                                     
-                                   
+                                    <div class="form-group col-md-6">
+                                        {{ Form::label('reporting_manager', __('Reporting Manager'), ['class' => 'form-label']) }}
+                                        <div class="form-icon-user reporting_manager_div">
+                                            <select class="form-control reporting_manager_id" name="reporting_manager" id="reporting_manager_id" placeholder="Select Reporting Manager">
+                                                <option value="">{{ __('Select Reporting Manager') }}</option>
+                                            </select>
+                                        </div>
+                                    </div>
+
                                     <div class="form-group">
                                         {!! Form::label('company_doj', __('Company Date Of Joining'), ['class' => 'form-label']) !!}
                                         {!! Form::date('company_doj', null, [
@@ -691,6 +699,14 @@
                         $('.designation_id').val({{ $employee->designation_id }});
                     }
                 });
+                
+                // Load reporting managers for the current department
+                getEmployeesByDepartment(department_id).then(() => {
+                    // After loading employees, set the selected reporting manager
+                    if ({{ $employee->reporting_manager ?? 'null' }}) {
+                        $('.reporting_manager_id').val({{ $employee->reporting_manager }});
+                    }
+                });
             }
         });
 
@@ -713,6 +729,51 @@
                         });
                         
                         resolve(); // Resolve the promise when done
+                    }
+                });
+            });
+        }
+
+        $(document).on('change', 'select[name=department_id]', function() {
+            var department_id = $(this).val();
+            getDesignation(department_id);
+            getEmployeesByDepartment(department_id);
+        });
+
+        function getEmployeesByDepartment(department_id) {
+            return new Promise((resolve) => {
+                if (!department_id) {
+                    $('.reporting_manager_id').empty();
+                    $('.reporting_manager_id').append('<option value="">{{ __('Select Reporting Manager') }}</option>');
+                    resolve();
+                    return;
+                }
+                
+                $.ajax({
+                    url: '{{ route('employee.getemployees') }}',
+                    type: 'POST',
+                    data: {
+                        "department_id": department_id,
+                        "_token": "{{ csrf_token() }}",
+                    },
+                    success: function(data) {
+                        var currentValue = $('.reporting_manager_id').val();
+                        $('.reporting_manager_id').empty();
+                        $('.reporting_manager_id').append('<option value="">{{ __('Select Reporting Manager') }}</option>');
+                        $.each(data, function(key, value) {
+                            $('.reporting_manager_id').append('<option value="' + key + '">' + value + '</option>');
+                        });
+                        // Restore the selected value if it still exists
+                        if (currentValue) {
+                            $('.reporting_manager_id').val(currentValue);
+                        }
+                        resolve();
+                    },
+                    error: function(xhr, status, error) {
+                        console.error('Error fetching employees:', error);
+                        $('.reporting_manager_id').empty();
+                        $('.reporting_manager_id').append('<option value="">{{ __('Select Reporting Manager') }}</option>');
+                        resolve();
                     }
                 });
             });

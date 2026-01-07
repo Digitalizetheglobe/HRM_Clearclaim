@@ -409,6 +409,7 @@
                     'branch_id' => $request['branch_id'],
                     'department_id' => $request['department_id'],
                     'designation_id' => $request['designation_id'],
+                    'reporting_manager' => $request['reporting_manager'] ?? null,
                     'company_doj' => $request['company_doj'] ?? null,
                     'office_phone_one' => $request['office_phone_one'] ?? null,
                     'office_phone_two' => $request['office_phone_two'] ?? null,
