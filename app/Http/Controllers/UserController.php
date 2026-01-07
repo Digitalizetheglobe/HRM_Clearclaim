@@ -282,7 +282,12 @@ class UserController extends Controller
             $extension = $request->file('profile')->getClientOriginalExtension();
             $fileNameToStore = 'avatar_' . time() . '.' . $extension;
 
+            // Directory path: storage/app/public/uploads/avatar
+            // Full path: D:\HRM_Clearclaim\storage\app\public\uploads\avatar
             $dir = 'uploads/avatar/';
+            
+            // Ensure directory exists
+            \Storage::disk('public')->makeDirectory($dir);
             
             // Delete old avatar if exists
             if ($userDetail['avatar']) {
@@ -290,6 +295,7 @@ class UserController extends Controller
             }
             
             // Store new avatar in public storage
+            // Files will be saved to: D:\HRM_Clearclaim\storage\app\public\uploads\avatar
             $path = $request->file('profile')->storeAs($dir, $fileNameToStore, 'public');
             
             $user['avatar'] = $fileNameToStore;
