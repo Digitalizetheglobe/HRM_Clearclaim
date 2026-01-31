@@ -201,10 +201,10 @@ try {
             'loan_type' => isset($payslip->loan) ? gettype($payslip->loan) : 'N/A'
         ]);
         
-        $basicComponent = ($grossSalary / 30) * ($totalDays - $absentDays - $casualLeaveDays) * (float)0.45;
+        $basicComponent = ($grossSalary / $totalDays) * ($totalDays - $absentDays - $casualLeaveDays) * (float)0.45;
         $hraComponent = $basicComponent * (float)0.40;
         $medicalComponent = 0;
-        $specialComponent = (($grossSalary / 30) * ($totalDays - $absentDays - $casualLeaveDays) - ($basicComponent + $hraComponent + $medicalComponent)) + 200;
+        $specialComponent = (($grossSalary / $totalDays) * ($totalDays - $absentDays - $casualLeaveDays) - ($basicComponent + $hraComponent + $medicalComponent)) + 200;
         
         \Log::debug('Salary components calculated', [
             'gross_salary' => $grossSalary,
@@ -225,7 +225,7 @@ try {
 
     // Calculate salary deductions
     try {
-        $perDaySalary = $grossSalary / (float)30;
+        $perDaySalary = $grossSalary / $totalDays;
         $deductionForAbsent = (float)$absentDays * $perDaySalary;
         $deductionForCasualLeave = (float)$casualLeaveDays * $perDaySalary;
         $ptDeduction = is_numeric($payslip->professional_tax ?? 200) ? (float)($payslip->professional_tax ?? 200) : 200;
