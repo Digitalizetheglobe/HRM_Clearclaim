@@ -815,6 +815,19 @@
             return view('employee.template.custom_appointment_letter_pdf', compact('employees'));
         }
 
+        public function customAppointmentLetterPdfWithDate($id)
+        {
+            $employees = Employee::where('id', $id)->where('created_by', \Auth::user()->creatorId())->first();
+            
+            if (!$employees) {
+                return redirect()->back()->with('error', __('Employee not found.'));
+            }
+            
+            $appointmentDate = request()->get('appointment_date');
+            
+            return view('employee.template.custom_appointment_letter_pdf', compact('employees', 'appointmentDate'));
+        }
+
         public function customAppointmentLetterDoc($id)
         {
             $employees = Employee::where('id', $id)->where('created_by', \Auth::user()->creatorId())->first();
@@ -867,6 +880,41 @@
             $experience_certificate->content = ExperienceCertificate::replaceVariable($experience_certificate->content, $obj);
             return view('employee.template.ExpCertificatedocx', compact('experience_certificate', 'employees'));
         }
+
+        public function customExperienceCertificatePdf($id)
+        {
+            $employees = Employee::where('id', $id)->where('created_by', \Auth::user()->creatorId())->first();
+            
+            if (!$employees) {
+                return redirect()->back()->with('error', __('Employee not found.'));
+            }
+            
+            // Check if employee has termination record with termination date
+            $termination = Termination::where('employee_id', $id)->where('created_by', \Auth::user()->creatorId())->first();
+            if (empty($termination->termination_date)) {
+                return redirect()->back()->with('error', __('Experience Certificate cannot be generated until employee termination date is set.'));
+            }
+            
+            return view('employee.template.custom_experience_certificate_pdf', compact('employees'));
+        }
+
+        public function customExperienceCertificateDoc($id)
+        {
+            $employees = Employee::where('id', $id)->where('created_by', \Auth::user()->creatorId())->first();
+            
+            if (!$employees) {
+                return redirect()->back()->with('error', __('Employee not found.'));
+            }
+            
+            // Check if employee has termination record with termination date
+            $termination = Termination::where('employee_id', $id)->where('created_by', \Auth::user()->creatorId())->first();
+            if (empty($termination->termination_date)) {
+                return redirect()->back()->with('error', __('Experience Certificate cannot be generated until employee termination date is set.'));
+            }
+            
+            return view('employee.template.custom_experience_certificate_doc', compact('employees'));
+        }
+
         public function NocPdf($id)
         {
             $users = \Auth::user();

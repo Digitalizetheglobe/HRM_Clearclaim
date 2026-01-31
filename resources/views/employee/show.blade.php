@@ -57,43 +57,18 @@
         
         {{-- Offer Letter and Experience Certificate dropdowns --}}
         <div class="d-inline">
-            <ul class="list-unstyled mb-0 m-2 d-inline">
-                <li class="dropdown dash-h-item drp-language d-inline">
-                    <a class="dash-head-link dropdown-toggle arrow-none me-0 btn btn-sm btn-info" data-bs-toggle="dropdown" href="#"
-                        role="button" aria-haspopup="false" aria-expanded="false">
-                        <span class="drp-text hide-mob text-white"> {{ __('Appointment Letter') }}
-                            <i class="ti ti-chevron-down drp-arrow nocolor hide-mob"></i>
-                    </a>
-                    <div class="dropdown-menu dash-h-dropdown">
-                        <a href="{{ route('custom.appointment.letter.download.pdf', $employee->id) }}" class=" btn-icon dropdown-item"
-                            data-bs-toggle="tooltip" data-bs-placement="top" target="_blanks"><i
-                                class="ti ti-download ">&nbsp;</i>{{ __('PDF') }}</a>
+            <button type="button" 
+                    class="btn btn-sm btn-info m-2 d-inline" 
+                    data-bs-toggle="modal" 
+                    data-bs-target="#appointmentDateModal">
+                {{ __('Appointment Letter') }}
+            </button>
 
-                        <a href="{{ route('custom.appointment.letter.download.doc', $employee->id) }}" class=" btn-icon dropdown-item"
-                            data-bs-toggle="tooltip" data-bs-placement="top" target="_blanks"><i
-                                class="ti ti-download ">&nbsp;</i>{{ __('DOC') }}</a>
-                    </div>
-                </li>
-            </ul>
-
-            <ul class="list-unstyled mb-0 m-2 d-inline">
-                <li class="dropdown dash-h-item drp-language d-inline">
-                    <a class="dash-head-link dropdown-toggle arrow-none me-0 btn btn-sm btn-info" data-bs-toggle="dropdown" href="#"
-                        role="button" aria-haspopup="false" aria-expanded="false">
-                        <span class="drp-text hide-mob text-white"> {{ __('Experience Certificate') }}
-                            <i class="ti ti-chevron-down drp-arrow nocolor hide-mob"></i>
-                    </a>
-                    <div class="dropdown-menu dash-h-dropdown">
-                        <a href="{{ route('exp.download.pdf', $employee->id) }}" class=" btn-icon dropdown-item"
-                            data-bs-toggle="tooltip" data-bs-placement="top" target="_blanks"><i
-                                class="ti ti-download ">&nbsp;</i>{{ __('PDF') }}</a>
-
-                        <a href="{{ route('exp.download.doc', $employee->id) }}" class=" btn-icon dropdown-item"
-                            data-bs-toggle="tooltip" data-bs-placement="top" target="_blanks"><i
-                                class="ti ti-download ">&nbsp;</i>{{ __('DOC') }}</a>
-                    </div>
-                </li>
-            </ul>
+            <button type="button" 
+                    class="btn btn-sm btn-info m-2 d-inline" 
+                    onclick="window.open('{{ route('custom.experience.certificate.download.pdf', $employee->id) }}', '_blank')">
+                {{ __('Experience Certificate') }}
+            </button>
         </div>
     </div>
 @endsection
@@ -411,4 +386,72 @@
             </div>
         </div>
     @endif
+
+    {{-- Appointment Date Modal --}}
+    <div class="modal fade" id="appointmentDateModal" tabindex="-1" aria-labelledby="appointmentDateModalLabel" aria-hidden="true">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="appointmentDateModalLabel">{{ __('Select Appointment Date') }}</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <form action="{{ route('custom.appointment.letter.download.pdf.with.date', $employee->id) }}" method="GET" id="appointmentDateForm">
+                    @csrf
+                    <div class="modal-body">
+                        <p>{{ __('Please add your appointment date') }}:</p>
+                        <div class="form-group">
+                            <label for="appointment_date" class="form-label">{{ __('Appointment Date') }}</label>
+                            <input type="date" 
+                                   id="appointment_date" 
+                                   name="appointment_date" 
+                                   class="form-control" 
+                                   required 
+                                   value="{{ $employee->company_doj ? (is_string($employee->company_doj) ? $employee->company_doj : $employee->company_doj->format('Y-m-d')) : '' }}">
+                        </div>
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">{{ __('Cancel') }}</button>
+                        <button type="submit" class="btn btn-primary" id="downloadBtn">{{ __('Download PDF') }}</button>
+                    </div>
+                </form>
+                
+                <script>
+                document.getElementById('appointmentDateForm').addEventListener('submit', function(e) {
+                    e.preventDefault();
+                    
+                    const submitBtn = document.getElementById('downloadBtn');
+                    const modal = document.getElementById('appointmentDateModal');
+                    
+                    // Disable button to prevent multiple submissions
+                    submitBtn.disabled = true;
+                    submitBtn.innerHTML = '<span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span> Downloading...';
+                    
+                    // Get form data
+                    const formData = new FormData(this);
+                    const url = this.action + '?appointment_date=' + formData.get('appointment_date');
+                    
+                    // Create temporary link for download
+                    const link = document.createElement('a');
+                    link.href = url;
+                    link.target = '_blank';
+                    document.body.appendChild(link);
+                    link.click();
+                    document.body.removeChild(link);
+                    
+                    // Close modal after a short delay
+                    setTimeout(() => {
+                        const modalInstance = bootstrap.Modal.getInstance(modal);
+                        if (modalInstance) {
+                            modalInstance.hide();
+                        }
+                        
+                        // Reset button
+                        submitBtn.disabled = false;
+                        submitBtn.innerHTML = '{{ __('Download PDF') }}';
+                    }, 1000);
+                });
+                </script>
+            </div>
+        </div>
+    </div>
 @endsection

@@ -42,12 +42,12 @@
             <li class="dropdown dash-h-item drp-company">
                 <a class="dash-head-link dropdown-toggle arrow-none me-0" data-bs-toggle="dropdown" href="#"
                    role="button" aria-haspopup="false" aria-expanded="false" style="background-color: white;">
-<span class="theme-avtar" style="background-color: white;">
-    <img alt="User Avatar"
-        src="{{ asset('images/avatar.png') }}"
-        class="header-avtar" 
-        style="width: 40px; height: 40px; border-radius: 50%; object-fit: cover; background-color: white;">
-</span>
+                        <span class="theme-avtar" style="background-color: white;">
+                            <img alt="User Avatar"
+                                src="{{ asset('images/avatar.png') }}"
+                                class="header-avtar" 
+                                style="width: 40px; height: 40px; border-radius: 50%; object-fit: cover; background-color: white;">
+                        </span>
 
                     <span class="hide-mob ms-2" style="background-color: white;">
                         {{ 'Hi, ' . Auth::user()->name . '!' }}
@@ -118,12 +118,15 @@
                     </div>
                     <div class="noti-body" style="max-height: 400px; overflow-y: auto;" id="notifications-list">
                         @forelse($notifications as $notification)
+                            @php
+                                $isViewOnly = isset($notification->data['url']) && strpos($notification->data['url'], '/view') !== false;
+                            @endphp
                             <a href="javascript:void(0)" 
-                               class="notification-item d-block p-3 border-bottom {{ $notification->read_at ? '' : 'bg-light' }}" 
+                               class="notification-item d-block p-3 border-bottom {{ $notification->read_at ? '' : 'bg-light' }} {{ $isViewOnly ? 'notification-view-only' : '' }}" 
                                data-notification-id="{{ $notification->id }}"
                                data-url="{{ $notification->data['url'] ?? '#' }}"
                                data-leave-id="{{ $notification->data['leave_id'] ?? '' }}"
-                               style="text-decoration: none; color: inherit; cursor: pointer;">
+                               style="text-decoration: none; color: inherit; {{ $isViewOnly ? 'cursor: default;' : 'cursor: pointer;' }}">
                                 <div class="d-flex align-items-start">
                                     <div class="flex-shrink-0">
                                         @if(isset($notification->data['status']))
@@ -221,9 +224,38 @@
             // Handle notification item clicks
             document.querySelectorAll('.notification-item').forEach(item => {
                 item.addEventListener('click', function(e) {
+                    const url = this.getAttribute('data-url');
+                    
+                    // For view-only notifications (reporting managers), prevent any action
+                    if (url && url.includes('/view')) {
+                        e.preventDefault();
+                        e.stopPropagation();
+                        // Just mark as read without any action
+                        const notificationId = this.getAttribute('data-notification-id');
+                        fetch(`/notifications/${notificationId}/read`, {
+                            method: 'POST',
+                            headers: {
+                                'Content-Type': 'application/json',
+                                'X-CSRF-TOKEN': csrfToken
+                            }
+                        })
+                        .then(response => response.json())
+                        .then(data => {
+                            if (data.success) {
+                                // Remove unread indicator
+                                this.classList.remove('bg-light');
+                                this.querySelector('.badge.bg-primary')?.remove();
+                                
+                                // Update notification count
+                                updateNotificationCount();
+                            }
+                        })
+                        .catch(error => console.error('Error:', error));
+                        return;
+                    }
+                    
                     e.preventDefault();
                     const notificationId = this.getAttribute('data-notification-id');
-                    const url = this.getAttribute('data-url');
                     const leaveId = this.getAttribute('data-leave-id');
                     
                     // Mark notification as read
@@ -244,34 +276,40 @@
                             // Update notification count
                             updateNotificationCount();
                             
-                            // If this is a leave notification and user is company/hr, open the action modal
+                            // If this is a leave notification
                             if (leaveId && (url.includes('/leave/') || url.includes('action'))) {
                                 // Check if user can approve/reject (company or hr)
                                 const userType = '{{ Auth::user()->type }}';
                                 if (userType === 'company' || userType === 'hr') {
-                                    // Create a temporary link element to trigger the existing modal system
-                                    const tempLink = $('<a>', {
-                                        'href': '#',
-                                        'data-url': `/leave/${leaveId}/action`,
-                                        'data-ajax-popup': 'true',
-                                        'data-size': 'md',
-                                        'data-title': '{{ __("Leave Action") }}'
-                                    });
-                                    
-                                    // Append to body temporarily
-                                    $('body').append(tempLink);
-                                    
-                                    // Trigger click to open modal using existing system
-                                    tempLink.trigger('click');
-                                    
-                                    // Store notification ID for deletion after action
-                                    setTimeout(function() {
-                                        $('#commonModal').data('notification-id', notificationId);
-                                        // Remove temporary link
-                                        tempLink.remove();
-                                    }, 100);
+                                        // Create a temporary link element to trigger the existing modal system
+                                        const tempLink = $('<a>', {
+                                            'href': '#',
+                                            'data-url': `/leave/${leaveId}/action`,
+                                            'data-ajax-popup': 'true',
+                                            'data-size': 'md',
+                                            'data-title': '{{ __("Leave Action") }}'
+                                        });
+                                        
+                                        // Append to body temporarily
+                                        $('body').append(tempLink);
+                                        
+                                        // Trigger click to open modal using existing system
+                                        tempLink.trigger('click');
+                                        
+                                        // Store notification ID for deletion after action
+                                        setTimeout(function() {
+                                            $('#commonModal').data('notification-id', notificationId);
+                                            // Remove temporary link
+                                            tempLink.remove();
+                                        }, 100);
+                                    } else {
+                                        // For employees, redirect to leave index
+                                        if (url && url !== '#') {
+                                            window.location.href = url;
+                                        }
+                                    }
                                 } else {
-                                    // For employees, redirect to leave index
+                                    // For other leave URLs, just redirect
                                     if (url && url !== '#') {
                                         window.location.href = url;
                                     }

@@ -103,6 +103,15 @@ $company_logo = Utility::get_company_logo();
                                             </tr>
                                         @endforeach
 
+                                        @if(isset($extraAllowance) && $extraAllowance > 0)
+                                            <tr>
+                                                <td>{{ __('Extra Allowance') }}</td>
+                                                <td>{{ __('Salary Arrears') }}</td>
+                                                <td class="text-right">
+                                                    {{ \Auth::user()->priceFormat($extraAllowance) }}</td>
+                                            </tr>
+                                        @endif
+
                                     </tbody>
                                 </table>
                             </div>

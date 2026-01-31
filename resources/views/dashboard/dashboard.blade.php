@@ -86,7 +86,8 @@
                             <div class="col-xl-6">
                                 <div class="card">  
                                     <div class="card-header d-flex align-items-center">
-                                        <img src="{{ asset('storage/uploads/avatar/' . ($emp->user->avatar ?? 'default-avatar.png')) }}" 
+                                        <img                                 src="{{ asset('images/avatar.png') }}"
+ 
                                             alt="Profile Image" 
                                             class="rounded-circle me-4" 
                                             width="60" 

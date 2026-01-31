@@ -1142,6 +1142,12 @@ Route::group(['middleware' => ['verified']], function () {
             'XSS',
         ]
     );
+    Route::get('leave/{id}/view', [LeaveController::class, 'view'])->name('leave.view')->middleware(
+        [
+            'auth',
+            'XSS',
+        ]
+    );
 
     Route::post('leave/changeaction', [LeaveController::class, 'changeaction'])->name('leave.changeaction')->middleware(
         [
@@ -2051,12 +2057,19 @@ Route::group(['middleware' => ['verified']], function () {
     //Custom Appointment Letter (separate from Company Settings)
     Route::get('employee/custom-appointment-letter/pdf/{id}', [EmployeeController::class, 'customAppointmentLetterPdf'])->name('custom.appointment.letter.download.pdf');
     Route::get('employee/custom-appointment-letter/doc/{id}', [EmployeeController::class, 'customAppointmentLetterDoc'])->name('custom.appointment.letter.download.doc');
+    
+    //Custom Appointment Letter with Date
+    Route::get('employee/custom-appointment-letter/pdf/{id}/with-date', [EmployeeController::class, 'customAppointmentLetterPdfWithDate'])->name('custom.appointment.letter.download.pdf.with.date');
 
     //Experience Certificate
     Route::post('setting/exp/{lang?}', [SettingsController::class, 'experienceCertificateupdate'])->name('experiencecertificate.update');
     Route::get('setting/exp', [SettingsController::class, 'index'])->name('get.experiencecertificate.language');
     Route::get('employee/exppdf/{id}', [EmployeeController::class, 'ExpCertificatePdf'])->name('exp.download.pdf');
     Route::get('employee/expdoc/{id}', [EmployeeController::class, 'ExpCertificateDoc'])->name('exp.download.doc');
+    
+    //Custom Experience Certificate (separate from Company Settings)
+    Route::get('employee/custom-experience-certificate/pdf/{id}', [EmployeeController::class, 'customExperienceCertificatePdf'])->name('custom.experience.certificate.download.pdf');
+    Route::get('employee/custom-experience-certificate/doc/{id}', [EmployeeController::class, 'customExperienceCertificateDoc'])->name('custom.experience.certificate.download.doc');
 
     //NOC
     Route::post('setting/noc/{lang?}', [SettingsController::class, 'NOCupdate'])->name('noc.update');

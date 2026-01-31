@@ -140,7 +140,7 @@
                                         </div>
                                         <!-- Fourth Card - Department -->
                                         <div class="col-lg-4 col-md-6">
-                                            <div class="card" style="border-radius: 10px; background-color: #fff; cursor: pointer;" >
+                                            <div class="card" style="border-radius: 10px; background-color: #fff; cursor: pointer;" onclick="window.location.href='department'">
                                                 <div class="card-body" style="padding: 20px;">
                                                     <div class="align-items-center">
                                                         <div class="col-auto">
@@ -307,7 +307,7 @@
                                 </div>
                         </div>
 
-
+<!-- 
                         <div class="col-xl-12">
                             <div class="card">
                                 <div class="card-header card-body table-border-style">
@@ -394,7 +394,7 @@
                                             </div>
                                         </div>
                                     </div>
-                                </div>
+                                </div> -->
                         
                     </div>
                 </div>

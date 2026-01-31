@@ -34,11 +34,11 @@
                             <tr>
                                 <th>{{ __('Title') }}</th>
                                 <th>{{ __('Description') }}</th>
-                                <th>{{ __('Start Date') }}</th>
-                                <th>{{ __('End Date') }}</th>
-                                @if (Auth::user()->type != 'hr' && (Gate::check('Edit Meeting') || Gate::check('Delete Meeting')))
-                                    <th width="130px">{{ __('Actions') }}</th>
+                                @if(Auth::user()->type == 'company')
+                                    <th>{{ __('Start Date') }}</th>
+                                    <th>{{ __('End Date') }}</th>
                                 @endif
+                                <th width="130px">{{ __('Actions') }}</th>
                             </tr>
                         </thead>
                         <tbody>
@@ -46,10 +46,22 @@
                                 <tr>
                                     <td>{{ $notice->title }}</td>
                                     <td>{{ Str::limit($notice->description, 50) }}</td>
-                                    <td>{{ $notice->notice_startdate ? \Carbon\Carbon::parse($notice->notice_startdate)->format('d M Y') : '-' }}</td>
-                                    <td>{{ $notice->notice_enddate ? \Carbon\Carbon::parse($notice->notice_enddate)->format('d M Y') : '-' }}</td>
-                                    @if (Auth::user()->type != 'hr' && (Gate::check('Edit Meeting') || Gate::check('Delete Meeting')))
-                                        <td class="d-flex gap-2">
+                                    @if(Auth::user()->type == 'company')
+                                        <td>{{ $notice->notice_startdate ? \Carbon\Carbon::parse($notice->notice_startdate)->format('d M Y') : '-' }}</td>
+                                        <td>{{ $notice->notice_enddate ? \Carbon\Carbon::parse($notice->notice_enddate)->format('d M Y') : '-' }}</td>
+                                    @endif
+                                    <td class="d-flex gap-2">
+                                        <!-- Show Button -->
+                                        <a href="#" 
+                                            class="btn btn-sm btn-primary text-white" 
+                                            data-bs-toggle="modal" 
+                                            data-bs-target="#noticeModal{{ $notice->id }}"
+                                            data-bs-toggle="tooltip" 
+                                            title="{{ __('Show Notice') }}">
+                                            <i class="ti ti-eye"></i>
+                                        </a>
+                                        
+                                        @if (Auth::user()->type != 'hr' && (Gate::check('Edit Meeting') || Gate::check('Delete Meeting')))
                                             @can('Edit Meeting')
                                                 <!-- Edit Button -->
                                                 <a href="#" 
@@ -78,8 +90,8 @@
                                                     <i class="ti ti-trash text-white"></i>
                                                 </a>
                                             @endcan
-                                        </td>
-                                    @endif
+                                        @endif
+                                    </td>
                                 </tr>
                             @endforeach
                         </tbody>
@@ -89,12 +101,55 @@
         </div>
     </div>
 </div>
+
+<!-- Notice Modal Popups -->
+@foreach ($notices as $notice)
+<div class="modal fade" id="noticeModal{{ $notice->id }}" tabindex="-1" aria-labelledby="noticeModalLabel{{ $notice->id }}" aria-hidden="true">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="noticeModalLabel{{ $notice->id }}">{{ __('Notice Details') }}</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <div class="row">
+                    <div class="col-md-12">
+                        <h6 class="fw-bold">{{ __('Title') }}</h6>
+                        <p>{{ $notice->title }}</p>
+                    </div>
+                </div>
+                <div class="row">
+                    <div class="col-md-12">
+                        <h6 class="fw-bold">{{ __('Description') }}</h6>
+                        <p>{{ $notice->description }}</p>
+                    </div>
+                </div>
+                @if(Auth::user()->type == 'company')
+                    <div class="row">
+                        <div class="col-md-6">
+                            <h6 class="fw-bold">{{ __('Start Date') }}</h6>
+                            <p>{{ $notice->notice_startdate ? \Carbon\Carbon::parse($notice->notice_startdate)->format('d M Y') : '-' }}</p>
+                        </div>
+                        <div class="col-md-6">
+                            <h6 class="fw-bold">{{ __('End Date') }}</h6>
+                            <p>{{ $notice->notice_enddate ? \Carbon\Carbon::parse($notice->notice_enddate)->format('d M Y') : '-' }}</p>
+                        </div>
+                    </div>
+                @endif
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">{{ __('Close') }}</button>
+            </div>
+        </div>
+    </div>
+</div>
+@endforeach
 @endsection
 
 @push('scripts')
 <script type="text/javascript">
     $(document).ready(function() {
-        $('#notice-table').DataTable({
+        $('#pc-dt-simple').DataTable({
             "language": {
                 "emptyTable": "No notices found"
             },

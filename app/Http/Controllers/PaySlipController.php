@@ -20,6 +20,7 @@ use App\Models\Termination;
 use App\Models\LoanDeduction;
 use App\Models\User;
 use App\Models\Utility;
+use App\Models\SalaryArrear;
 use Illuminate\Http\Request;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\Auth;
@@ -406,7 +407,37 @@ class PaySlipController extends Controller
 
     $payslipDetail = Utility::employeePayslipDetail($id, $month);
 
-    return view('payslip.pdf', compact('payslip', 'employee', 'payslipDetail', 'employeesId'));
+    // Get extra allowance from salary arrears for this employee and payment month
+    \Log::info('Debugging salary arrears for employee', [
+        'employee_id' => $id,
+        'month' => $month,
+        'creator_id' => \Auth::user()->creatorId()
+    ]);
+
+    // First, let's see all salary arrears for this employee
+    $allArrears = SalaryArrear::where('employee_id', $id)
+        ->where('created_by', \Auth::user()->creatorId())
+        ->get();
+    
+    \Log::info('All salary arrears for employee', [
+        'arrears' => $allArrears->toArray(),
+        'count' => $allArrears->count()
+    ]);
+
+    $extraAllowance = SalaryArrear::where('employee_id', $id)
+        ->where('payment_month', 'like', $month . '%')
+        ->where('created_by', \Auth::user()->creatorId())
+        ->sum('amount');
+
+    \Log::info('Salary arrears query result', [
+        'extra_allowance' => $extraAllowance,
+        'query_sql' => SalaryArrear::where('employee_id', $id)
+            ->where('payment_month', 'like', $month . '%')
+            ->where('created_by', \Auth::user()->creatorId())
+            ->toSql()
+    ]);
+
+    return view('payslip.pdf', compact('payslip', 'employee', 'payslipDetail', 'employeesId', 'extraAllowance'));
 }
 
     public function send($id, $month)
@@ -454,10 +485,40 @@ class PaySlipController extends Controller
 
         $payslipDetail = Utility::employeePayslipDetail($payslip->employee_id, $month);
         
+        // Get extra allowance from salary arrears for this employee and payment month
+        \Log::info('Debugging salary arrears for employee (payslipPdf)', [
+            'employee_id' => $payslip->employee_id,
+            'month' => $month,
+            'creator_id' => \Auth::user()->creatorId()
+        ]);
+
+        // First, let's see all salary arrears for this employee
+        $allArrears = SalaryArrear::where('employee_id', $payslip->employee_id)
+            ->where('created_by', \Auth::user()->creatorId())
+            ->get();
+        
+        \Log::info('All salary arrears for employee (payslipPdf)', [
+            'arrears' => $allArrears->toArray(),
+            'count' => $allArrears->count()
+        ]);
+
+        $extraAllowance = SalaryArrear::where('employee_id', $payslip->employee_id)
+            ->where('payment_month', 'like', $month . '%')
+            ->where('created_by', \Auth::user()->creatorId())
+            ->sum('amount');
+
+        \Log::info('Salary arrears query result (payslipPdf)', [
+            'extra_allowance' => $extraAllowance,
+            'query_sql' => SalaryArrear::where('employee_id', $payslip->employee_id)
+                ->where('payment_month', 'like', $month . '%')
+                ->where('created_by', \Auth::user()->creatorId())
+                ->toSql()
+        ]);
+        
         // Format employee ID exactly like in the show method
         $employeesId = \Auth::user()->employeeIdFormat($employee->employee_id);
 
-        return view('payslip.payslipPdf', compact('payslip', 'employee', 'payslipDetail', 'employeesId'));
+        return view('payslip.payslipPdf', compact('payslip', 'employee', 'payslipDetail', 'employeesId', 'extraAllowance'));
     }
 
     public function editEmployee($paySlip)

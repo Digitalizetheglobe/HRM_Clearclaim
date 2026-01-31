@@ -52,10 +52,12 @@
                             var new_status = $("#" + target.id).data('status');
                             var stage_id = $(target).attr('data-id');
 
-                            $("#" + source.id).parent().find('.count').text($("#" + source.id +
-                                " > div").length);
-                            $("#" + target.id).parent().find('.count').text($("#" + target.id +
-                                " > div").length);
+                            // Update counts, but only count visible cards for completed stage
+                            var sourceVisibleCount = $("#" + source.id + " > div:not(.d-none):not([style*='display: none'])").length;
+                            var targetVisibleCount = $("#" + target.id + " > div:not(.d-none):not([style*='display: none'])").length;
+                            
+                            $("#" + source.id).parent().find('.count').text(sourceVisibleCount);
+                            $("#" + target.id).parent().find('.count').text(targetVisibleCount);
                             $.ajax({
                                 url: '{{ route('offboarding.order') }}',
                                 type: 'POST',
@@ -165,8 +167,21 @@
                         <div class="card">
                             <div class="card-header">
                                 <div class="float-end">
-                                    <span class="btn btn-sm btn-primary btn-icon count">
-                                        {{ count($processes) }}
+                                    <span class="btn btn-sm btn-primary btn-icon count" data-stage-id="{{ $stage->id }}">
+                                        @php
+                                            $visibleCount = 0;
+                                            foreach ($processes as $process) {
+                                                if ($stage->order == 8 && $process->updated_at) {
+                                                    $daysSinceCompletion = now()->diffInDays($process->updated_at);
+                                                    if ($daysSinceCompletion <= 7) {
+                                                        $visibleCount++;
+                                                    }
+                                                } else {
+                                                    $visibleCount++;
+                                                }
+                                            }
+                                            echo $visibleCount;
+                                        @endphp
                                     </span>
                                 </div>
                                 <h4 class="mb-0">{{ $stage->title }}</h4>
@@ -174,7 +189,19 @@
 
                             <div class="card-body kanban-box" id="{{ $json[$key] }}" data-id="{{ $stage->id }}" data-status="{{ $stage->id }}">
                                 @foreach ($processes as $process)
-                                    <div class="card" data-id="{{ $process->id }}">
+                                    @php
+                                        // Check if card should be hidden (older than 7 days for completed stage)
+                                        $shouldHideCard = false;
+                                        if ($stage->order == 8 && $process->updated_at) {
+                                            $daysSinceCompletion = now()->diffInDays($process->updated_at);
+                                            $shouldHideCard = $daysSinceCompletion > 7;
+                                        }
+                                    @endphp
+                                    
+                                    <div class="card {{ $shouldHideCard ? 'd-none' : '' }}" data-id="{{ $process->id }}" 
+                                         @if($shouldHideCard) 
+                                             style="display: none;" 
+                                         @endif>
                                         <div class="pt-3 ps-3">
                                         </div>
                                         <div class="card-header border-0 pb-0 position-relative">
@@ -194,6 +221,12 @@
                                                            data-process-id="{{ $process->id }}"
                                                            data-employee-id="{{ $process->employee->id }}"
                                                            data-step="6">
+                                                            {{ $process->employee->name }}
+                                                        </a>
+                                                    @elseif($stage->order == 8)
+                                                        <a href="#" 
+                                                           onclick="showOffboardingCompletedPopup(); return false;"
+                                                           class="process-link">
                                                             {{ $process->employee->name }}
                                                         </a>
                                                     @else
@@ -238,6 +271,12 @@
                                                                 target="_blank"><i
                                                                     class="ti ti-eye "></i><span
                                                                     class="ms-2">{{ __('View Employee Details') }}</span></a>
+                                                        @elseif($stage->order == 8)
+                                                            <a href="#" 
+                                                                onclick="showOffboardingCompletedPopup(); return false;"
+                                                                class="dropdown-item"><i
+                                                                    class="ti ti-eye "></i><span
+                                                                    class="ms-2">{{ __('View Details') }}</span></a>
                                                         @else
                                                             <a href="#" 
                                                                 data-url="{{ route('offboarding.step', ['id' => $process->id, 'step' => $stage->order]) }}"
@@ -468,6 +507,36 @@
             $(window).on('focus', function() {
                 setTimeout(checkEmployeePageReturn, 500);
             });
+
+            // Function to show offboarding completed popup
+            function showOffboardingCompletedPopup() {
+                var modalHtml = '<div class="modal fade" id="offboarding-completed-modal" tabindex="-1" role="dialog" aria-labelledby="offboardingCompletedModalLabel" aria-hidden="true">' +
+                    '<div class="modal-dialog modal-dialog-centered" role="document">' +
+                    '<div class="modal-content">' +
+                    '<div class="modal-header">' +
+                    '<h5 class="modal-title" id="offboardingCompletedModalLabel">{{ __("Offboarding Status") }}</h5>' +
+                    '<button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>' +
+                    '</div>' +
+                    '<div class="modal-body text-center">' +
+                    '<div class="mb-3">' +
+                    '<i class="ti ti-check-circle" style="font-size: 48px; color: #28a745;"></i>' +
+                    '</div>' +
+                    '<h5 class="text-success">{{ __("Offboarding Completed") }}</h5>' +
+                    '<p class="mt-3 text-muted">{{ __("The offboarding process has been successfully completed.") }}</p>' +
+                    '</div>' +
+                    '<div class="modal-footer">' +
+                    '<button type="button" class="btn btn-primary" data-bs-dismiss="modal">{{ __("OK") }}</button>' +
+                    '</div>' +
+                    '</div></div></div>';
+                
+                $('body').append(modalHtml);
+                $('#offboarding-completed-modal').modal('show');
+                
+                // Clean up modal when hidden
+                $('#offboarding-completed-modal').on('hidden.bs.modal', function() {
+                    $(this).remove();
+                });
+            }
         });
     </script>
 @endpush

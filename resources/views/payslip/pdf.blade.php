@@ -201,10 +201,10 @@ try {
             'loan_type' => isset($payslip->loan) ? gettype($payslip->loan) : 'N/A'
         ]);
         
-        $basicComponent = $grossSalary * (float)0.40;
-        $hraComponent = $grossSalary * (float)0.20;
-        $medicalComponent = $grossSalary * (float)0.05;
-        $specialComponent = $grossSalary * (float)0.35;
+        $basicComponent = ($grossSalary / 30) * ($totalDays - $absentDays - $casualLeaveDays) * (float)0.45;
+        $hraComponent = $basicComponent * (float)0.40;
+        $medicalComponent = 0;
+        $specialComponent = (($grossSalary / 30) * ($totalDays - $absentDays - $casualLeaveDays) - ($basicComponent + $hraComponent + $medicalComponent)) + 200;
         
         \Log::debug('Salary components calculated', [
             'gross_salary' => $grossSalary,
@@ -293,9 +293,13 @@ try {
     // Final calculations with strict type checking
     try {
         $loanDeduction = isset($payslip->loan) ? (float)$payslip->loan : 0;
+        $extraAllowance = isset($extraAllowance) ? (float)$extraAllowance : 0;
 
-        $totalDeductions = (float)$deductionForAbsent + (float)$deductionForCasualLeave + (float)$ptDeduction + (float)$loanDeduction;
-        $netSalary = (float)$grossSalary - (float)$totalDeductions;
+        // Add extra allowance to gross salary
+        $grossSalaryWithExtra = ($basicComponent + $hraComponent + $medicalComponent + $specialComponent) + (float)$extraAllowance;
+
+        $totalDeductions = (float)$ptDeduction + (float)$loanDeduction;
+        $netSalary = (float)$grossSalaryWithExtra - (float)$totalDeductions;
         
         \Log::info('Final salary calculations', [
             'total_deductions' => $totalDeductions,
@@ -331,6 +335,23 @@ try {
         abort(500, 'Failed to calculate final salary: ' . $e->getMessage());
     }
 
+    // Helper function to convert two digits
+    function convertTwoDigit($num, $words) {
+        if ($num == 0) return '';
+        
+        if ($num < 21) {
+            return $words[$num];
+        } else {
+            $tens = floor($num / 10) * 10;
+            $units = $num % 10;
+            $result = $words[$tens];
+            if ($units > 0) {
+                $result .= ' ' . $words[$units];
+            }
+            return $result;
+        }
+    }
+
     // Number to words conversion with error handling
     function numberToWords($number) {
         try {
@@ -338,47 +359,65 @@ try {
             $no = floor($number);
             $point = round(($number - $no) * 100);
             
+            \Log::debug('numberToWords input', ['number' => $number, 'no' => $no, 'point' => $point]);
+
             $words = array(
-                '0' => '', '1' => 'One', '2' => 'Two',
-                '3' => 'Three', '4' => 'Four', '5' => 'Five', '6' => 'Six',
-                '7' => 'Seven', '8' => 'Eight', '9' => 'Nine',
-                '10' => 'Ten', '11' => 'Eleven', '12' => 'Twelve',
-                '13' => 'Thirteen', '14' => 'Fourteen',
-                '15' => 'Fifteen', '16' => 'Sixteen', '17' => 'Seventeen',
-                '18' => 'Eighteen', '19' => 'Nineteen', '20' => 'Twenty',
-                '30' => 'Thirty', '40' => 'Forty', '50' => 'Fifty',
-                '60' => 'Sixty', '70' => 'Seventy',
-                '80' => 'Eighty', '90' => 'Ninety'
+                '0' => '', '1' => 'One', '2' => 'Two', '3' => 'Three', '4' => 'Four', '5' => 'Five',
+                '6' => 'Six', '7' => 'Seven', '8' => 'Eight', '9' => 'Nine', '10' => 'Ten',
+                '11' => 'Eleven', '12' => 'Twelve', '13' => 'Thirteen', '14' => 'Fourteen',
+                '15' => 'Fifteen', '16' => 'Sixteen', '17' => 'Seventeen', '18' => 'Eighteen',
+                '19' => 'Nineteen', '20' => 'Twenty', '30' => 'Thirty', '40' => 'Forty',
+                '50' => 'Fifty', '60' => 'Sixty', '70' => 'Seventy', '80' => 'Eighty', '90' => 'Ninety'
             );
             
             $digits = array('', 'Hundred', 'Thousand', 'Lakh', 'Crore');
+            $result = '';
             
-            $str = array();
-            $i = 0;
-            
-            while ($no > 0) {
-                $divider = ($i == 1) ? 10 : 100;
-                $number = floor($no % $divider);
-                $no = floor($no / $divider);
-                $i += ($divider == 10) ? 1 : 2;
-                
-                if ($number) {
-                    $plural = (($counter = count($str)) && $number > 9) ? 's' : null;
-                    $hundred = ($counter == 1 && $str[0]) ? ' and ' : null;
-                    $digitLabel = isset($digits[$counter]) ? $digits[$counter] : '';
-                    
-                    if ($number < 21) {
-                        $str[] = ($words[$number] ?? '') . " " . $digitLabel . $plural . " " . $hundred;
-                    } else {
-                        $tens = floor($number / 10) * 10;
-                        $units = $number % 10;
-                        $str[] = ($words[$tens] ?? '') . " " . ($words[$units] ?? '') . " " . $digitLabel . $plural . " " . $hundred;
+            if ($no > 0) {
+                // Handle Crores
+                if ($no >= 10000000) {
+                    $crores = floor($no / 10000000);
+                    $no = $no % 10000000;
+                    if ($crores > 0) {
+                        $result .= convertTwoDigit($crores, $words) . ' Crore ';
                     }
                 }
+                
+                // Handle Lakhs
+                if ($no >= 100000) {
+                    $lakhs = floor($no / 100000);
+                    $no = $no % 100000;
+                    if ($lakhs > 0) {
+                        $result .= convertTwoDigit($lakhs, $words) . ' Lakh ';
+                    }
+                }
+                
+                // Handle Thousands
+                if ($no >= 1000) {
+                    $thousands = floor($no / 1000);
+                    $no = $no % 1000;
+                    if ($thousands > 0) {
+                        $result .= convertTwoDigit($thousands, $words) . ' Thousand ';
+                    }
+                }
+                
+                // Handle Hundreds
+                if ($no >= 100) {
+                    $hundreds = floor($no / 100);
+                    $no = $no % 100;
+                    if ($hundreds > 0) {
+                        $result .= convertTwoDigit($hundreds, $words) . ' Hundred ';
+                    }
+                }
+                
+                // Handle remaining (less than 100)
+                if ($no > 0) {
+                    if ($result != '') {
+                        $result .= 'and ';
+                    }
+                    $result .= convertTwoDigit($no, $words);
+                }
             }
-            
-            $str = array_reverse($str);
-            $result = implode('', $str);
             
             $points = '';
             if ($point > 0) {
@@ -392,7 +431,10 @@ try {
                 }
             }
             
-            return trim($result . " Rupees" . $points) . " Only";
+            $finalResult = trim($result . " Rupees" . $points) . " Only";
+            \Log::debug('numberToWords final result', ['final_result' => $finalResult]);
+            
+            return $finalResult;
         } catch (\Exception $e) {
             \Log::error('Number to Words Conversion Error', [
                 'number' => $number,
@@ -403,6 +445,16 @@ try {
     }
 
     $netSalaryInWords = numberToWords($netSalary);
+    
+    \Log::info('Final salary values for display', [
+        'gross_salary_original' => $grossSalary,
+        'extra_allowance' => $extraAllowance ?? 0,
+        'gross_salary_with_extra' => $grossSalaryWithExtra,
+        'total_deductions' => $totalDeductions,
+        'net_salary' => $netSalary,
+        'net_salary_in_words' => $netSalaryInWords
+    ]);
+    
     \Log::info('Payslip generation completed successfully');
 
 } catch (\Throwable $th) {
@@ -437,8 +489,8 @@ try {
                     <!-- Header Section -->
                     <table style="width: 100%; border-collapse: collapse;">
                         <tr>
-                            <td style="width: 25%; border-right: 2px solid #000; padding: 15px; text-align: center; vertical-align: middle;">
-                                <img src="{{ url('storage/uploads/logo/logo.svg' ) }}" width="100px">
+                            <td style="width: 30%; border-right: 2px solid #000; padding: 15px; text-align: center; vertical-align: middle;">
+                                <img src="{{ asset('storage/uploads/logo/2_dark_logo.png') }}" width="150px" onerror="this.onerror=null; this.src='{{ url('storage/uploads/logo/logo.svg') }}';">
                                 <br>
                            
                             </td>
@@ -546,12 +598,12 @@ try {
                                             <td style="padding: 8px; font-size: 12px; border-bottom: 1px solid #000; text-align: right;">{{ \Auth::user()->priceFormat($specialComponent) }}</td>
                                         </tr>
                                          <tr style="height: 35px;">
-                                            <td style="padding: 8px; font-size: 12px; border-bottom: 1px solid #000; border-right: 1px solid #000;"></td>
-                                            <td style="padding: 8px; font-size: 12px; border-bottom: 1px solid #000; text-align: right;"></td>
+                                            <td style="padding: 8px; font-size: 12px; border-bottom: 1px solid #000; border-right: 1px solid #000;">Extra Allowance</td>
+                                            <td style="padding: 8px; font-size: 12px; border-bottom: 1px solid #000; text-align: right;">{{ \Auth::user()->priceFormat($extraAllowance ?? 0) }}</td>
                                         </tr>
                                         <tr style="background-color: #f8f9fa;">
                                             <td style="padding: 10px; font-size: 14px; font-weight: bold; border-right: 1px solid #000;">Gross Earning (A)</td>
-                                            <td style="padding: 10px; font-size: 14px; font-weight: bold; text-align: right;">{{ \Auth::user()->priceFormat($grossSalary) }}</td>
+                                            <td style="padding: 10px; font-size: 14px; font-weight: bold; text-align: right;">{{ \Auth::user()->priceFormat($grossSalaryWithExtra) }}</td>
                                         </tr>
                                     </table>
                                 </td>

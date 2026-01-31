@@ -382,6 +382,28 @@ class LeaveController extends Controller
             $user->notify(new LeaveActionNotification($notificationData));
         }
 
+        // Send notification to reporting manager if assigned
+        if ($employee && $employee->reporting_manager) {
+            $reportingManager = Employee::find($employee->reporting_manager);
+            
+            if ($reportingManager && $reportingManager->user_id) {
+                $reportingManagerUser = User::find($reportingManager->user_id);
+                
+                if ($reportingManagerUser) {
+                    $notificationData = [
+                        'leave_id' => $leave->id,
+                        'message' => $employee->name . ' has applied for leave from ' . 
+                                    \Auth::user()->dateFormat($leave->start_date) . ' to ' . 
+                                    \Auth::user()->dateFormat($leave->end_date),
+                        'status' => 'Pending',
+                        'url' => route('leave.view', $leave->id),
+                    ];
+                    
+                    $reportingManagerUser->notify(new LeaveActionNotification($notificationData));
+                }
+            }
+        }
+
         // Create success message based on leave type
         $successMessage = __('Leave successfully created.');
         if ($isPaidLeave) {
@@ -566,7 +588,33 @@ class LeaveController extends Controller
         $leave     = LocalLeave::find($id);
         $employee  = Employee::find($leave->employee_id);
 
+        // Check if current user is a reporting manager (view-only access)
+        if ($employee && $employee->reporting_manager) {
+            $reportingManager = Employee::find($employee->reporting_manager);
+            if ($reportingManager && $reportingManager->user_id == \Auth::user()->id) {
+                // Redirect reporting managers to view-only page
+                return redirect()->route('leave.view', $id);
+            }
+        }
+
         return view('leave.action', compact('employee', 'leave'));
+    }
+
+    public function view($id)
+    {
+        $leave     = LocalLeave::find($id);
+        $employee  = Employee::find($leave->employee_id);
+
+        // Verify that current user is the reporting manager for this leave
+        if ($employee && $employee->reporting_manager) {
+            $reportingManager = Employee::find($employee->reporting_manager);
+            if ($reportingManager && $reportingManager->user_id == \Auth::user()->id) {
+                return view('leave.view', compact('employee', 'leave'));
+            }
+        }
+
+        // If not the reporting manager, redirect to leave index
+        return redirect()->route('leave.index')->with('error', __('Permission denied.'));
     }
 
     public function changeaction(Request $request)
