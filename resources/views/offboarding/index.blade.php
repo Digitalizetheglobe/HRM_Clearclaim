@@ -171,7 +171,7 @@
                                         @php
                                             $visibleCount = 0;
                                             foreach ($processes as $process) {
-                                                if ($stage->order == 8 && $process->updated_at) {
+                                                if ($stage->order == 10 && $process->updated_at) {
                                                     $daysSinceCompletion = now()->diffInDays($process->updated_at);
                                                     if ($daysSinceCompletion <= 7) {
                                                         $visibleCount++;
@@ -192,7 +192,7 @@
                                     @php
                                         // Check if card should be hidden (older than 7 days for completed stage)
                                         $shouldHideCard = false;
-                                        if ($stage->order == 8 && $process->updated_at) {
+                                        if ($stage->order == 10 && $process->updated_at) {
                                             $daysSinceCompletion = now()->diffInDays($process->updated_at);
                                             $shouldHideCard = $daysSinceCompletion > 7;
                                         }
@@ -208,22 +208,40 @@
                                             <h5>
                                                 @if($process->employee)
                                                     @if($stage->order == 1)
+                                                        <a href="#" 
+                                                           data-url="{{ route('offboarding.step', ['id' => $process->id, 'step' => $stage->order]) }}"
+                                                           data-ajax-popup="true"
+                                                           data-size="lg"
+                                                           data-title="{{ $stage->title }} - {{ $process->employee->name }}"
+                                                           class="process-link">
+                                                            {{ $process->employee->name }}
+                                                        </a>
+                                                    @elseif($stage->order == 3)
+                                                        <a href="#" 
+                                                           data-url="{{ route('offboarding.step', ['id' => $process->id, 'step' => $stage->order]) }}"
+                                                           data-ajax-popup="true"
+                                                           data-size="lg"
+                                                           data-title="{{ $stage->title }} - {{ $process->employee->name }}"
+                                                           class="process-link">
+                                                            {{ $process->employee->name }}
+                                                        </a>
+                                                    @elseif($stage->order == 2)
                                                         <a href="{{ route('resignation.index') }}" class="process-link">
                                                             {{ $process->employee->name }}
                                                         </a>
-                                                    @elseif($stage->order == 5)
+                                                    @elseif($stage->order == 7)
                                                         <a href="{{ route('termination.index') }}" class="process-link">
                                                             {{ $process->employee->name }}
                                                         </a>
-                                                    @elseif($stage->order == 6)
+                                                    @elseif($stage->order == 8)
                                                         <a href="{{ route('employee.show', \Crypt::encrypt($process->employee->id)) }}" 
                                                            class="process-link hr-uploads-link"
                                                            data-process-id="{{ $process->id }}"
                                                            data-employee-id="{{ $process->employee->id }}"
-                                                           data-step="6">
+                                                           data-step="8">
                                                             {{ $process->employee->name }}
                                                         </a>
-                                                    @elseif($stage->order == 8)
+                                                    @elseif($stage->order == 10)
                                                         <a href="#" 
                                                            onclick="showOffboardingCompletedPopup(); return false;"
                                                            class="process-link">
@@ -253,25 +271,43 @@
                                                     </button>
                                                     <div class="dropdown-menu dropdown-menu-end">
                                                         @if($stage->order == 1)
+                                                            <a href="#" 
+                                                               data-url="{{ route('offboarding.step', ['id' => $process->id, 'step' => $stage->order]) }}"
+                                                               data-ajax-popup="true"
+                                                               data-size="lg"
+                                                               data-title="{{ $stage->title }} - {{ $process->employee ? $process->employee->name : 'N/A' }}"
+                                                               class="dropdown-item"><i
+                                                                    class="ti ti-eye "></i><span
+                                                                    class="ms-2">{{ __('View Details') }}</span></a>
+                                                        @elseif($stage->order == 3)
+                                                            <a href="#" 
+                                                               data-url="{{ route('offboarding.step', ['id' => $process->id, 'step' => $stage->order]) }}"
+                                                               data-ajax-popup="true"
+                                                               data-size="lg"
+                                                               data-title="{{ $stage->title }} - {{ $process->employee ? $process->employee->name : 'N/A' }}"
+                                                               class="dropdown-item"><i
+                                                                    class="ti ti-eye "></i><span
+                                                                    class="ms-2">{{ __('View Details') }}</span></a>
+                                                        @elseif($stage->order == 2)
                                                             <a href="{{ route('resignation.index') }}"
                                                                 class="dropdown-item"><i
                                                                     class="ti ti-eye "></i><span
                                                                     class="ms-2">{{ __('View Resignation') }}</span></a>
-                                                        @elseif($stage->order == 5)
+                                                        @elseif($stage->order == 7)
                                                             <a href="{{ route('termination.index') }}"
                                                                 class="dropdown-item"><i
                                                                     class="ti ti-eye "></i><span
                                                                     class="ms-2">{{ __('View Termination') }}</span></a>
-                                                        @elseif($stage->order == 6)
+                                                        @elseif($stage->order == 8)
                                                             <a href="{{ route('employee.show', \Crypt::encrypt($process->employee->id)) }}"
                                                                 class="dropdown-item hr-uploads-link"
                                                                 data-process-id="{{ $process->id }}"
                                                                 data-employee-id="{{ $process->employee->id }}"
-                                                                data-step="6"
+                                                                data-step="8"
                                                                 target="_blank"><i
                                                                     class="ti ti-eye "></i><span
                                                                     class="ms-2">{{ __('View Employee Details') }}</span></a>
-                                                        @elseif($stage->order == 8)
+                                                        @elseif($stage->order == 10)
                                                             <a href="#" 
                                                                 onclick="showOffboardingCompletedPopup(); return false;"
                                                                 class="dropdown-item"><i
@@ -304,7 +340,7 @@
                                                         <i class="ti ti-clock me-2"></i>{{ \Auth::user()->dateFormat($process->created_at) }}
                                                     </li>
 
-                                                    @if($stage->order == 2 && $process->access_removal_checklist)
+                                                    @if($stage->order == 4 && $process->access_removal_checklist)
                                                         @php
                                                             $accessItems = is_array($process->access_removal_checklist) ? $process->access_removal_checklist : [];
                                                             $accessDone = count(array_filter($accessItems, function($item) { return isset($item['done']) && $item['done']; }));
@@ -315,7 +351,7 @@
                                                         </li>
                                                     @endif
 
-                                                    @if($stage->order == 3 && $process->asset_collection_checklist)
+                                                    @if($stage->order == 5 && $process->asset_collection_checklist)
                                                         @php
                                                             $assetItems = is_array($process->asset_collection_checklist) ? $process->asset_collection_checklist : [];
                                                             $assetCollected = count(array_filter($assetItems, function($item) { return isset($item['collected']) && $item['collected']; }));
@@ -326,7 +362,7 @@
                                                         </li>
                                                     @endif
 
-                                                    @if($stage->order == 4 && $process->settlement_status)
+                                                    @if($stage->order == 6 && $process->settlement_status)
                                                         <li class="list-inline-item">
                                                             <span class="badge bg-{{ $process->settlement_status == 'completed' ? 'success' : 'warning' }}">
                                                                 {{ ucfirst($process->settlement_status) }}
@@ -370,7 +406,7 @@
             var today = now.getFullYear() + '-' + month + '-' + day;
             $('.current_date').val(today);
 
-            // Track when user clicks on employee link in step 6 (HR Uploads/Downloads)
+            // Track when user clicks on employee link in step 8 (HR Uploads/Downloads)
             $(document).on('click', 'a.hr-uploads-link', function(e) {
                 var processId = $(this).data('process-id');
                 var employeeId = $(this).data('employee-id');
@@ -380,7 +416,7 @@
                     sessionStorage.setItem('offboarding_employee_visit', JSON.stringify({
                         processId: processId,
                         employeeId: employeeId,
-                        step: 6,
+                        step: 8,
                         timestamp: new Date().getTime()
                     }));
                 }
@@ -437,13 +473,13 @@
                                     sessionStorage.removeItem('offboarding_employee_visit');
                                 });
                                 
-                                // When confirmation modal closes, open step 6 modal if user clicked Yes
+                                // When confirmation modal closes, open step 8 modal if user clicked Yes
                                 $('#download-confirm-modal').on('hidden.bs.modal', function() {
                                     $(this).remove();
                                     
                                     if (userClickedYes) {
-                                        // Open the step 6 modal for this process
-                                        var stepUrl = '{{ url("offboarding") }}/' + processId + '/step/6';
+                                        // Open the step 8 modal for this process
+                                        var stepUrl = '{{ url("offboarding") }}/' + processId + '/step/8';
                                         
                                         // Create modal dynamically
                                         $.ajax({
@@ -453,7 +489,7 @@
                                                 'X-Requested-With': 'XMLHttpRequest'
                                             },
                                             success: function(response) {
-                                                // Create and show step 6 modal
+                                                // Create and show step 8 modal
                                                 var modalHtml = '<div class="modal fade" id="offboarding-confirm-modal" tabindex="-1" role="dialog">' +
                                                     '<div class="modal-dialog modal-lg" role="document">' +
                                                     '<div class="modal-content">' +

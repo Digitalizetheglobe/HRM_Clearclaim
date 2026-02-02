@@ -987,6 +987,9 @@
             if ($request->department_id) {
                 $employees = Employee::where('created_by', '=', \Auth::user()->creatorId())
                     ->where('department_id', $request->department_id)
+                    ->whereHas('designation', function($query) {
+                        $query->where('name', 'LIKE', '%Manager%');
+                    })
                     ->get()
                     ->pluck('name', 'id')
                     ->toArray();

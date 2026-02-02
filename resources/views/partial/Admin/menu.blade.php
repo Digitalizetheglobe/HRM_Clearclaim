@@ -212,7 +212,7 @@
         @endif
 
             <!-- Onboarding -->
-            @if(\Auth::user()->type == 'company' || Gate::check('Manage Employee'))
+            @if(\Auth::user()->type != 'employee')
                 <li class="dash-item {{ Request::segment(1) == 'onboarding' ? 'active' : '' }}">
                     <a href="{{ route('onboarding.index') }}"
                         class="dash-link text-white hover:text-white hover:bg-[#001a3b] text-lg flex items-center space-x-2">
@@ -281,7 +281,7 @@
                                 href="{{ route('attendanceemployee.bulkattendance') }}">{{ __('Bulk Attendance') }}</a>
                             </li>
                         @endcan
-<!-- 
+                <!-- 
                         @can('Manage Biometric Attendance')
                             <li class="dash-item">
                                 <a class="dash-link text-white hover:text-white hover:bg-[#001a3b] text-lg"
@@ -308,6 +308,12 @@
                                 <a class="dash-link text-white hover:text-white hover:bg-[#001a3b] text-lg" href="{{ route('leave.index') }}">{{ __('Manage Leave') }}</a>
                             </li>              
                         @endcan
+                        
+                        @if(\Auth::user()->type == 'company' || (\Auth::user()->type == 'employee' && \Auth::user()->employee && \Auth::user()->employee->department && strcasecmp(\Auth::user()->employee->department->name, 'Human Resources') == 0) || (\Auth::user()->type == 'employee' && \Auth::user()->employee && \Auth::user()->employee->designation && strcasecmp(\Auth::user()->employee->designation->name, 'Manager') == 0))
+                            <li class="dash-item {{ Request::segment(1) == 'leave-details' ? ' active' : '' }}">
+                                <a class="dash-link text-white hover:text-white hover:bg-[#001a3b] text-lg" href="{{ route('leave-details.index') }}">{{ __('Leave Details') }}</a>
+                            </li>
+                        @endif
                         
                     </ul>
                 </li>
@@ -410,7 +416,7 @@
                             class="dash-mtext">{{ __('Offboard ') }}</span><span class="dash-arrow"><i
                                 data-feather="chevron-right"></i></span></a>
                     <ul class="dash-submenu">
-                        @if(\Auth::user()->type == 'company' || Gate::check('Manage Resignation'))
+                        @if(\Auth::user()->type != 'employee' || (\Auth::user()->type == 'employee' && \Auth::user()->employee && \Auth::user()->employee->department && strcasecmp(\Auth::user()->employee->department->name, 'Human Resources') == 0) )
                             <li class="dash-item {{ Request::segment(1) == 'offboarding' ? 'active' : '' }}">
                                 <a class="dash-link text-white hover:text-white hover:bg-[#001a3b] text-lg"
                                     href="{{ route('offboarding.index') }}">{{ __('Off-Boarding Steps') }}</a>
@@ -420,10 +426,18 @@
                             <a class="dash-link text-white hover:text-white hover:bg-[#001a3b] text-lg"
                                 href="{{ route('resignation.index') }}">{{ __('Resignation ') }}</a>
                         </li>
+                        @if((\Auth::user()->type == 'employee' && \Auth::user()->employee && \Auth::user()->employee->department && strcasecmp(\Auth::user()->employee->department->name, 'Human Resources') == 0) || (\Auth::user()->type == 'employee' && \Auth::user()->employee && \Auth::user()->employee->designation && strcasecmp(\Auth::user()->employee->designation->name, 'Manager') == 0))
+                        <li class="dash-item">
+                            <a class="dash-link text-white hover:text-white hover:bg-[#001a3b] text-lg"
+                                href="{{ route('employee-resignations.index') }}">{{ __('Employee Resignations') }}</a>
+                        </li>
+                        @endif
+                        @if(\Auth::user()->type != 'employee')
                         <li class="dash-item">
                             <a class="dash-link text-white hover:text-white hover:bg-[#001a3b] text-lg"
                                 href="{{ route('termination.index') }}">{{ __('Exit Formalities') }}</a>
                         </li>
+                        @endif
                     </ul>
                 </li>
 

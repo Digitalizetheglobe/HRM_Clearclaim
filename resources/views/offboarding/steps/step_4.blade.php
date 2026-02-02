@@ -1,64 +1,77 @@
-{{ Form::open(['route' => ['offboarding.update-step', $process->id, 4], 'method' => 'POST', 'id' => 'settlement-form']) }}
+{{ Form::open(['route' => ['offboarding.update-step', $process->id, 3], 'method' => 'POST', 'id' => 'asset-collection-form']) }}
 <div class="modal-body">
     <div class="row">
         <div class="col-md-12">
-            <div class="form-group">
-                <label class="form-label">{{ __('Employee') }}</label>
-                <input type="text" class="form-control" value="{{ $process->employee->name ?? 'N/A' }}" readonly>
-            </div>
-        </div>
-        <div class="col-md-12">
-            <div class="form-group">
-                <label class="form-label">{{ __('Salary Settlement') }} <span class="text-danger">*</span></label>
-                <input type="text" name="salary_settlement" class="form-control" 
-                    value="{{ is_array($process->settlement_details) ? ($process->settlement_details['salary_settlement'] ?? '') : '' }}" 
-                    required placeholder="{{ __('Enter salary settlement amount') }}">
-            </div>
-        </div>
-        <div class="col-md-12">
-            <div class="form-group">
-                <label class="form-label">{{ __('Leave Balance Adjustment') }}</label>
-                <input type="text" name="leave_balance" class="form-control" 
-                    value="{{ is_array($process->settlement_details) ? ($process->settlement_details['leave_balance'] ?? '') : '' }}" 
-                    placeholder="{{ __('Enter leave balance details') }}">
-            </div>
-        </div>
-        <div class="col-md-12">
-            <div class="form-group">
-                <label class="form-label">{{ __('Deductions') }}</label>
-                <input type="text" name="deductions" class="form-control" 
-                    value="{{ is_array($process->settlement_details) ? ($process->settlement_details['deductions'] ?? '') : '' }}" 
-                    placeholder="{{ __('Enter deductions if any') }}">
-            </div>
-        </div>
-        <div class="col-md-12">
-            <div class="form-group">
-                <label class="form-label">{{ __('Notes') }}</label>
-                <textarea name="notes" class="form-control" rows="3" 
-                    placeholder="{{ __('Enter any additional notes...') }}">{{ is_array($process->settlement_details) ? ($process->settlement_details['notes'] ?? '') : '' }}</textarea>
+            <h6 class="mb-3">{{ __('Asset Collection Checklist') }}</h6>
+            @php
+                $defaultAssetItems = [
+                    ['name' => 'Laptop', 'key' => 'laptop'],
+                    ['name' => 'Charger', 'key' => 'charger'],
+                    ['name' => 'Mobile', 'key' => 'mobile'],
+                    ['name' => 'Mouse', 'key' => 'mouse'],
+                    ['name' => 'SIM card', 'key' => 'sim'],
+                    ['name' => 'ID card', 'key' => 'id_card'],
+                    ['name' => 'Other assets', 'key' => 'other'],
+                ];
+                $currentChecklist = is_array($process->asset_collection_checklist) ? $process->asset_collection_checklist : [];
+            @endphp
+            
+            <div class="checklist-items">
+                @foreach($defaultAssetItems as $item)
+                    @php
+                        $existingItem = collect($currentChecklist)->firstWhere('key', $item['key']);
+                        $isCollected = $existingItem ? ($existingItem['collected'] ?? false) : false;
+                    @endphp
+                    <div class="form-check mb-3">
+                        <input class="form-check-input" type="checkbox" 
+                            name="checklist[{{ $item['key'] }}][collected]" 
+                            value="1" 
+                            id="asset_{{ $item['key'] }}"
+                            {{ $isCollected ? 'checked' : '' }}>
+                        <label class="form-check-label" for="asset_{{ $item['key'] }}">
+                            {{ $item['name'] }}
+                        </label>
+                        <input type="hidden" name="checklist[{{ $item['key'] }}][key]" value="{{ $item['key'] }}">
+                        <input type="hidden" name="checklist[{{ $item['key'] }}][name]" value="{{ $item['name'] }}">
+                    </div>
+                @endforeach
             </div>
         </div>
     </div>
 </div>
 <div class="modal-footer">
     <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">{{ __('Cancel') }}</button>
-    <button type="submit" class="btn btn-primary">{{ __('Mark as Completed') }}</button>
+    <button type="submit" class="btn btn-primary">{{ __('Save Checklist') }}</button>
 </div>
 {{ Form::close() }}
 
 <script>
-    $('#settlement-form').on('submit', function(e) {
+    $('#asset-collection-form').on('submit', function(e) {
         e.preventDefault();
+        var checklist = {};
+        $(this).find('input[type="checkbox"]').each(function() {
+            var key = $(this).attr('name').match(/\[([^\]]+)\]\[collected\]/)[1];
+            checklist[key] = {
+                'key': $(this).siblings('input[type="hidden"][name*="[key]"]').val(),
+                'name': $(this).siblings('input[type="hidden"][name*="[name]"]').val(),
+                'collected': $(this).is(':checked') ? true : false
+            };
+        });
+        
         $.ajax({
             url: $(this).attr('action'),
             type: 'POST',
-            data: $(this).serialize(),
+            data: {
+                checklist: checklist,
+                _token: $('meta[name="csrf-token"]').attr('content')
+            },
             success: function(data) {
-                show_toastr('Success', data.message || 'Settlement completed successfully', 'success');
+                show_toastr('Success', data.message || 'Checklist updated successfully', 'success');
                 location.reload();
             },
             error: function(data) {
-                show_toastr('Error', data.responseJSON.error || 'An error occurred', 'error');
+                var errorMsg = data.responseJSON && data.responseJSON.error ? data.responseJSON.error : 'An error occurred';
+                show_toastr('Error', errorMsg, 'error');
             }
         });
     });

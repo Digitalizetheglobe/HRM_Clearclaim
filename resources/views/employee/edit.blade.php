@@ -1,5 +1,44 @@
 {{-- Add this at the top of your edit.blade.php file --}}
-@if($employee->approval_status === 'approved' && \Auth::user()->type === 'employee')
+@php
+    // Determine edit permissions based on user role and department
+    $canEditCompanyDetails = false;
+    $emailReadonly = true; // Email is always locked for everyone
+    
+    if (\Auth::user()->type === 'company') {
+        // Company role can edit everything except email
+        $canEditCompanyDetails = true;
+    } elseif (\Auth::user()->type === 'employee') {
+        // Check if employee is from Human Resources department
+        $currentUserEmployee = \Auth::user()->employee;
+        if ($currentUserEmployee && $currentUserEmployee->department) {
+            $hrDepartment = \App\Models\Department::where('name', 'LIKE', '%Human Resource%')
+                ->orWhere('name', 'LIKE', '%HR%')
+                ->where('created_by', \Auth::user()->creatorId())
+                ->first();
+            
+            if ($hrDepartment && $currentUserEmployee->department_id == $hrDepartment->id) {
+                // HR employees can edit everything except email
+                $canEditCompanyDetails = true;
+            } else {
+                // Regular employees can only edit personal details, documents, education, bank, and experience
+                $canEditCompanyDetails = false;
+            }
+        } else {
+            $canEditCompanyDetails = false;
+        }
+    } else {
+        // Other roles (admin, etc.) can edit everything except email
+        $canEditCompanyDetails = true;
+    }
+    
+    // Determine if form should be readonly (for approved employees)
+    $readonly = false;
+    if($employee->approval_status === 'approved' && \Auth::user()->type === 'employee') {
+        $readonly = true;
+    }
+@endphp
+
+@if($readonly)
     <div class="alert alert-warning">
         <strong>{{ __('Notice') }}:</strong> 
         {{ __('Your details have been approved and can no longer be edited.') }}
@@ -10,15 +49,6 @@
         <a href="{{ route('employee.show', \Illuminate\Support\Facades\Crypt::encrypt($employee->id)) }}"
            class="btn btn-primary">{{ __('Back to View') }}</a>
     </div>
-    
-    @php
-        // Prevent form submission by disabling all inputs
-        $readonly = true;
-    @endphp
-@else
-    @php
-        $readonly = false;
-    @endphp
 @endif
 
 @extends('layouts.admin')
@@ -162,6 +192,7 @@
                                             'class' => 'form-control',
                                             'required' => 'required',
                                             'placeholder' => 'Enter employee email',
+                                            'readonly' => 'readonly',
                                         ]) !!}
                                     </div>
                                     <div class="form-group col-md-6">
@@ -201,7 +232,12 @@
                                     <div class="form-group col-md-6">
                                         {{ Form::label('branch_id', __('Select Branch*'), ['class' => 'form-label']) }}
                                         <div class="form-icon-user">
-                                            {{ Form::select('branch_id', $branches, $employee->branch_id, ['class' => 'form-control branch_id', 'id' => 'branch_id', 'required' => 'required']) }}
+                                            {{ Form::select('branch_id', $branches, $employee->branch_id, [
+                                                'class' => 'form-control branch_id', 
+                                                'id' => 'branch_id', 
+                                                'required' => 'required',
+                                                'disabled' => !$canEditCompanyDetails ? 'disabled' : null
+                                            ]) }}
                                         </div>
                                     </div>
 
@@ -209,7 +245,7 @@
                                         <div class="form-icon-user" id="department_id">
                                             {{ Form::label('department_id', __('Department'), ['class' => 'form-label']) }}
                                             <select class="form-control select department_id" name="department_id"
-                                                id="department_id" placeholder="Select Department" required>
+                                                id="department_id" placeholder="Select Department" required {{ !$canEditCompanyDetails ? 'disabled' : '' }}>
                                                 @foreach($departments as $id => $department)
                                                     <option value="{{ $id }}" {{ $employee->department_id == $id ? 'selected' : '' }}>{{ $department }}</option>
                                                 @endforeach
@@ -220,7 +256,7 @@
                                     <div class="form-group col-md-6">
                                         {{ Form::label('designation_id', __('Select Designation'), ['class' => 'form-label']) }}
                                         <div class="form-icon-user designation_div">
-                                            <select class="form-control designation_id" name="designation_id" id="designation_id" required>
+                                            <select class="form-control designation_id" name="designation_id" id="designation_id" required {{ !$canEditCompanyDetails ? 'disabled' : '' }}>
                                                 @if($employee->designation_id)
                                                     <option value="{{ $employee->designation_id }}" selected>
                                                         {{ $designations[$employee->designation_id] ?? 'N/A' }}
@@ -235,7 +271,7 @@
                                     <div class="form-group col-md-6">
                                         {{ Form::label('reporting_manager', __('Reporting Manager'), ['class' => 'form-label']) }}
                                         <div class="form-icon-user reporting_manager_div">
-                                            <select class="form-control reporting_manager_id" name="reporting_manager" id="reporting_manager_id" placeholder="Select Reporting Manager">
+                                            <select class="form-control reporting_manager_id" name="reporting_manager" id="reporting_manager_id" placeholder="Select Reporting Manager" {{ !$canEditCompanyDetails ? 'disabled' : '' }}>
                                                 <option value="">{{ __('Select Reporting Manager') }}</option>
                                             </select>
                                         </div>
@@ -246,7 +282,8 @@
                                         {!! Form::date('company_doj', null, [
                                             'class' => 'form-control',
                                             'autocomplete' => 'off',
-                                            'placeholder' => 'dd-mm-yyyy'
+                                            'placeholder' => 'dd-mm-yyyy',
+                                            'readonly' => !$canEditCompanyDetails ? 'readonly' : null
                                         ]) !!}
                                     </div>
                                 </div>
@@ -376,7 +413,12 @@
                                                 <label for="document" class="float-left pt-1 form-label">
                                                     {{ $document->name }} 
                                                     @if ($document->is_required == 1)
-                                                        <span class="text-danger">*</span>
+                                                        @php
+                                                            $employeeDoc = $employee->documents()->where('document_id', $document->id)->first();
+                                                        @endphp
+                                                        @if(!$employeeDoc || !$employeeDoc->document_value)
+                                                            <span class="text-danger">*</span>
+                                                        @endif
                                                     @endif
                                                 </label>
                                             </div>
@@ -389,7 +431,7 @@
                                                         </div>
                                                         <input type="file" 
                                                             class="form-control file @error('document') is-invalid @enderror"
-                                                            @if ($document->is_required == 1) required @endif
+                                                            @if ($document->is_required == 1 && (!$employeeDoc || !$employeeDoc->document_value)) required @endif
                                                             name="document[{{ $document->id }}]"
                                                             id="document[{{ $document->id }}]"
                                                             data-filename="{{ $document->id . '_filename' }}"
@@ -952,6 +994,13 @@
                     
                     reader.readAsDataURL(input.files[0]);
                 }
+            });
+            
+            // Handle disabled form fields before submission
+            $('form').on('submit', function() {
+                // Enable disabled fields temporarily before form submission
+                // This ensures the values are included in the form data
+                $(this).find(':disabled').prop('disabled', false);
             });
         });
     </script>

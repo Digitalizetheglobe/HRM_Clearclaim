@@ -94,19 +94,20 @@ class ResignationController extends Controller
                     ->first();
                 
                 if (!$existingProcess) {
-                    $firstStage = \App\Models\OffboardingStage::where('created_by', \Auth::user()->creatorId())
-                        ->orderBy('order', 'asc')
+                    // Get Manager Approval stage (order 1)
+                    $managerApprovalStage = \App\Models\OffboardingStage::where('created_by', \Auth::user()->creatorId())
+                        ->where('order', 1)
                         ->first();
                     
-                    if ($firstStage) {
+                    if ($managerApprovalStage) {
                         \App\Models\OffboardingProcess::create([
                             'employee_id' => $resignation->employee_id,
                             'resignation_id' => $resignation->id,
-                            'stage' => $firstStage->id,
+                            'stage' => $managerApprovalStage->id,
                             'created_by' => \Auth::user()->creatorId(),
                         ]);
                     } else {
-                        \Log::warning('Offboarding stage not found for user: ' . \Auth::user()->creatorId());
+                        \Log::warning('Manager Approval stage not found for user: ' . \Auth::user()->creatorId());
                     }
                 }
             } catch (\Exception $e) {
@@ -251,6 +252,50 @@ class ResignationController extends Controller
         return redirect()->back()->with('error', __('Permission denied.'));
     }
 
+    public function employeeResignationsIndex()
+    {
+        $user = \Auth::user();
+        
+        // Check if user has access (company, HR department, or Manager designation)
+        $hasAccess = $user->type == 'company' || 
+                    ($user->type == 'employee' && $user->employee && $user->employee->department && strcasecmp($user->employee->department->name, 'Human Resources') == 0) ||
+                    ($user->type == 'employee' && $user->employee && $user->employee->designation && strcasecmp($user->employee->designation->name, 'Manager') == 0);
+        
+        if ($hasAccess) {
+            // If user is from Human Resources department, show all resignations
+            if ($user->type == 'employee' && $user->employee && $user->employee->department && strcasecmp($user->employee->department->name, 'Human Resources') == 0) {
+                $resignations = Resignation::where('created_by', $user->creatorId())
+                    ->where('status', '!=', 'approved')
+                    ->with(['employee'])
+                    ->get();
+            }
+            // If user is a Manager, show only department-specific resignations
+            elseif ($user->type == 'employee' && $user->employee && $user->employee->designation && strcasecmp($user->employee->designation->name, 'Manager') == 0) {
+                $managerEmployee = $user->employee;
+                $managerDepartmentId = $managerEmployee->department_id;
+                
+                $resignations = Resignation::where('created_by', $user->creatorId())
+                    ->where('status', '!=', 'approved')
+                    ->whereHas('employee', function($query) use ($managerDepartmentId) {
+                        $query->where('department_id', $managerDepartmentId);
+                    })
+                    ->with(['employee'])
+                    ->get();
+            }
+            // If user is company type, show all resignations
+            else {
+                $resignations = Resignation::where('created_by', $user->creatorId())
+                    ->where('status', '!=', 'approved')
+                    ->with(['employee'])
+                    ->get();
+            }
+
+            return view('resignation.employee-resignations', compact('resignations'));
+        }
+        
+        return redirect()->back()->with('error', __('Permission denied.'));
+    }
+
     public function approve(Request $request, $id)
     {
         if(\Auth::user()->can('Manage Resignation')) {
@@ -276,33 +321,33 @@ class ResignationController extends Controller
                 'approved_at' => now(),
             ]);
 
-            // Update offboarding process to move directly to Access Removal Checklist (step 2, order 2)
+            // Update offboarding process to move to HR Approval (step 3, order 3)
             try {
                 $offboardingProcess = \App\Models\OffboardingProcess::where('resignation_id', $resignation->id)
                     ->where('created_by', \Auth::user()->creatorId())
                     ->first();
                 
                 if ($offboardingProcess) {
-                    // Get Access Removal Checklist stage (order 2)
-                    $accessRemovalStage = \App\Models\OffboardingStage::where('created_by', \Auth::user()->creatorId())
-                        ->where('order', 2)
+                    // Get HR Approval stage (order 3)
+                    $hrApprovalStage = \App\Models\OffboardingStage::where('created_by', \Auth::user()->creatorId())
+                        ->where('order', 3)
                         ->first();
                     
-                    if ($accessRemovalStage) {
-                        $offboardingProcess->stage = $accessRemovalStage->id;
+                    if ($hrApprovalStage) {
+                        $offboardingProcess->stage = $hrApprovalStage->id;
                         $offboardingProcess->save();
                     }
                 } else {
-                    // If process doesn't exist, create it and move to step 2
-                    $accessRemovalStage = \App\Models\OffboardingStage::where('created_by', \Auth::user()->creatorId())
-                        ->where('order', 2)
+                    // If process doesn't exist, create it and move to step 3
+                    $hrApprovalStage = \App\Models\OffboardingStage::where('created_by', \Auth::user()->creatorId())
+                        ->where('order', 3)
                         ->first();
                     
-                    if ($accessRemovalStage) {
+                    if ($hrApprovalStage) {
                         \App\Models\OffboardingProcess::create([
                             'employee_id' => $resignation->employee_id,
                             'resignation_id' => $resignation->id,
-                            'stage' => $accessRemovalStage->id,
+                            'stage' => $hrApprovalStage->id,
                             'created_by' => \Auth::user()->creatorId(),
                         ]);
                     }

@@ -168,6 +168,7 @@ Route::group(['middleware' => ['auth']], function () {
     Route::resource('resignation', ResignationController::class);
     Route::post('resignation/{id}/approve', [ResignationController::class, 'approve'])->name('resignation.approve');
     Route::get('resignation/{id}/review', [ResignationController::class, 'review'])->name('resignation.review');
+    Route::get('employee-resignations', [ResignationController::class, 'employeeResignationsIndex'])->name('employee-resignations.index');
 
     // Offboarding Routes
     Route::get('offboarding', [OffboardingController::class, 'index'])->name('offboarding.index');
@@ -1162,6 +1163,20 @@ Route::group(['middleware' => ['verified']], function () {
         ]
     );
     Route::resource('leave', LeaveController::class)->middleware(
+        [
+            'auth',
+            'XSS',
+        ]
+    );
+
+    Route::get('leave-details', [LeaveController::class, 'leaveDetails'])->name('leave-details.index')->middleware(
+        [
+            'auth',
+            'XSS',
+        ]
+    );
+
+    Route::get('get-employees-by-department', [LeaveController::class, 'getEmployeesByDepartment'])->name('get.employees.by.department')->middleware(
         [
             'auth',
             'XSS',

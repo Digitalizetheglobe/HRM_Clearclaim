@@ -164,7 +164,7 @@
                     @if($notifications->count() > 0)
                     <div class="noti-footer border-top p-2">
                         <div class="d-grid gap-2">
-                            <button type="button" class="btn btn-sm btn-danger" id="clear-all-notifications">
+                            <button type="button" class="btn btn-sm btn-danger" id="clear-all-notifications" onclick="clearAllNotificationsInline(event)">
                                 <i class="ti ti-trash me-1"></i>{{ __('Clear All') }}
                             </button>
                         </div>
@@ -219,7 +219,62 @@
         })
         
         document.addEventListener('DOMContentLoaded', function() {
+            console.log('Header script loaded'); // Debug log
             const csrfToken = document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') || '{{ csrf_token() }}';
+            
+            // Test if clear all button exists
+            const clearAllBtn = document.getElementById('clear-all-notifications');
+            console.log('Clear all button found:', !!clearAllBtn); // Debug log
+            
+            // If button doesn't exist initially, watch for it to be added dynamically
+            if (!clearAllBtn) {
+                const observer = new MutationObserver(function(mutations) {
+                    mutations.forEach(function(mutation) {
+                        if (mutation.addedNodes) {
+                            for (let node of mutation.addedNodes) {
+                                if (node.nodeType === 1) { // Element node
+                                    const button = node.querySelector ? node.querySelector('#clear-all-notifications') : null;
+                                    if (button || node.id === 'clear-all-notifications') {
+                                        console.log('Clear all button found via MutationObserver'); // Debug log
+                                        setupClearAllButton();
+                                        observer.disconnect();
+                                        return;
+                                    }
+                                }
+                            }
+                        }
+                    });
+                });
+                
+                observer.observe(document.body, {
+                    childList: true,
+                    subtree: true
+                });
+            } else {
+                setupClearAllButton();
+            }
+            
+            function setupClearAllButton() {
+                // Clear all notifications - Try both vanilla JS and jQuery
+                const clearAllBtn = document.getElementById('clear-all-notifications');
+                if (clearAllBtn) {
+                    clearAllBtn.addEventListener('click', function(e) {
+                        e.preventDefault();
+                        e.stopPropagation(); // Prevent dropdown from closing
+                        console.log('Clear all notifications clicked (vanilla JS)'); // Debug log
+                        clearAllNotifications();
+                    });
+                } else {
+                    console.log('Clear all button not found (vanilla JS), trying jQuery'); // Debug log
+                    // Fallback to jQuery
+                    $(document).on('click', '#clear-all-notifications', function(e) {
+                        e.preventDefault();
+                        e.stopPropagation(); // Prevent dropdown from closing
+                        console.log('Clear all notifications clicked (jQuery)'); // Debug log
+                        clearAllNotifications();
+                    });
+                }
+            }
             
             // Handle notification item clicks
             document.querySelectorAll('.notification-item').forEach(item => {
@@ -356,16 +411,20 @@
                         this.closest('small').remove();
                         
                         // Show success message
-                        show_toastr('{{ __("Success") }}', '{{ __("All notifications marked as read") }}', 'success');
+                        show_toastr('success', '{{ __("All notifications marked as read") }}');
                     }
                 })
                 .catch(error => console.error('Error:', error));
             });
             
-            // Clear all notifications
-            document.getElementById('clear-all-notifications')?.addEventListener('click', function(e) {
-                e.preventDefault();
-
+            // Inline function as backup
+            function clearAllNotificationsInline(event) {
+                event.preventDefault();
+                event.stopPropagation(); // Prevent dropdown from closing
+                console.log('Clear all notifications clicked (inline)'); // Debug log
+                
+                const csrfToken = document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') || '{{ csrf_token() }}';
+                
                 fetch('/notifications/clear-all', {
                     method: 'POST',
                     headers: {
@@ -375,15 +434,18 @@
                 })
                 .then(response => response.json())
                 .then(data => {
+                    console.log('Clear all response (inline):', data); // Debug log
                     if (data.success) {
                         // Clear all notifications from UI
                         const notificationsList = document.getElementById('notifications-list');
-                        notificationsList.innerHTML = `
-                            <div class="text-center p-4" id="no-notifications">
-                                <i class="ti ti-bell-off fs-1 text-muted"></i>
-                                <p class="mb-0 text-muted mt-2">{{ __('No notifications') }}</p>
-                            </div>
-                        `;
+                        if (notificationsList) {
+                            notificationsList.innerHTML = `
+                                <div class="text-center p-4" id="no-notifications">
+                                    <i class="ti ti-bell-off fs-1 text-muted"></i>
+                                    <p class="mb-0 text-muted mt-2">{{ __('No notifications') }}</p>
+                                </div>
+                            `;
+                        }
                         
                         // Remove count badge
                         const badge = document.getElementById('notification-count');
@@ -392,14 +454,75 @@
                         }
                         
                         // Hide footer
-                        document.querySelector('.noti-footer')?.remove();
+                        const footer = document.querySelector('.noti-footer');
+                        if (footer) {
+                            footer.remove();
+                        }
                         
                         // Show success message
-                        show_toastr('{{ __("Success") }}', '{{ __("All notifications cleared") }}', 'success');
+                        show_toastr('success', '{{ __("All notifications cleared") }}');
+                        
+                        // Close dropdown after successful clear
+                        setTimeout(() => {
+                            document.querySelector('[data-bs-toggle="dropdown"]').click();
+                        }, 500);
                     }
                 })
-                .catch(error => console.error('Error:', error));
-            });
+                .catch(error => {
+                    console.error('Error clearing notifications (inline):', error);
+                    show_toastr('error', 'Error clearing notifications');
+                });
+            }
+            
+            function clearAllNotifications() {
+                fetch('/notifications/clear-all', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-CSRF-TOKEN': csrfToken
+                    }
+                })
+                .then(response => response.json())
+                .then(data => {
+                    console.log('Clear all response:', data); // Debug log
+                    if (data.success) {
+                        // Clear all notifications from UI
+                        const notificationsList = document.getElementById('notifications-list');
+                        if (notificationsList) {
+                            notificationsList.innerHTML = `
+                                <div class="text-center p-4" id="no-notifications">
+                                    <i class="ti ti-bell-off fs-1 text-muted"></i>
+                                    <p class="mb-0 text-muted mt-2">{{ __('No notifications') }}</p>
+                                </div>
+                            `;
+                        }
+                        
+                        // Remove count badge
+                        const badge = document.getElementById('notification-count');
+                        if (badge) {
+                            badge.remove();
+                        }
+                        
+                        // Hide footer
+                        const footer = document.querySelector('.noti-footer');
+                        if (footer) {
+                            footer.remove();
+                        }
+                        
+                        // Show success message
+                        show_toastr('success', '{{ __("All notifications cleared") }}');
+                        
+                        // Close dropdown after successful clear
+                        setTimeout(() => {
+                            document.querySelector('[data-bs-toggle="dropdown"]').click();
+                        }, 500);
+                    }
+                })
+                .catch(error => {
+                    console.error('Error clearing notifications:', error);
+                    show_toastr('error', 'Error clearing notifications');
+                });
+            }
             
             // Function to update notification count
             function updateNotificationCount() {

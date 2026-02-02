@@ -63,14 +63,16 @@ class OffboardingController extends Controller
         // If no stages exist, create default ones
         if ($stages->isEmpty()) {
             $defaultStages = [
-                ['title' => 'Resignation / Initiated Exit', 'order' => 1],
-                ['title' => 'Access Removal Checklist', 'order' => 2],
-                ['title' => 'Asset Collection Checklist', 'order' => 3],
-                ['title' => 'Full & Final Settlement', 'order' => 4],
-                ['title' => 'Relieving & Experience Letter', 'order' => 5],
-                ['title' => 'HR Uploads / Downloads', 'order' => 6],
-                ['title' => 'HR Records Feedback', 'order' => 7],
-                ['title' => 'Offboarding Completed', 'order' => 8],
+                ['title' => 'Manager Approval', 'order' => 1],
+                ['title' => 'Resignation / Initiated Exit', 'order' => 2],
+                ['title' => 'HR Approval', 'order' => 3],
+                ['title' => 'Access Removal Checklist', 'order' => 4],
+                ['title' => 'Asset Collection Checklist', 'order' => 5],
+                ['title' => 'Full & Final Settlement', 'order' => 6],
+                ['title' => 'Relieving & Experience Letter', 'order' => 7],
+                ['title' => 'HR Uploads / Downloads', 'order' => 8],
+                ['title' => 'HR Records Feedback', 'order' => 9],
+                ['title' => 'Offboarding Completed', 'order' => 10],
             ];
 
             foreach ($defaultStages as $stageData) {
@@ -92,14 +94,16 @@ class OffboardingController extends Controller
             
             // Reorder existing stages to match new structure
             $stageTitles = [
-                1 => 'Resignation / Initiated Exit',
-                2 => 'Access Removal Checklist',
-                3 => 'Asset Collection Checklist',
-                4 => 'Full & Final Settlement',
-                5 => 'Relieving & Experience Letter',
-                6 => 'HR Uploads / Downloads',
-                7 => 'HR Records Feedback',
-                8 => 'Offboarding Completed',
+                1 => 'Manager Approval',
+                2 => 'Resignation / Initiated Exit',
+                3 => 'HR Approval',
+                4 => 'Access Removal Checklist',
+                5 => 'Asset Collection Checklist',
+                6 => 'Full & Final Settlement',
+                7 => 'Relieving & Experience Letter',
+                8 => 'HR Uploads / Downloads',
+                9 => 'HR Records Feedback',
+                10 => 'Offboarding Completed',
             ];
             
             foreach ($stageTitles as $order => $title) {
@@ -163,18 +167,23 @@ class OffboardingController extends Controller
             return response()->json(['error' => __('Process not found.')], 404);
         }
 
-        // Step 1 redirects to resignation page
+        // Step 1 - Manager Approval
         if ($step == 1) {
+            // Continue to show the manager approval view
+        }
+
+        // Step 2 redirects to resignation page
+        if ($step == 2) {
             return redirect()->route('resignation.index');
         }
 
-        // Step 5 redirects to termination page
-        if ($step == 5) {
+        // Step 7 redirects to termination page
+        if ($step == 7) {
             return redirect()->route('termination.index');
         }
 
-        // Step 6 - check if it's an AJAX request (for modal) or direct access (for redirect)
-        if ($step == 6) {
+        // Step 8 - check if it's an AJAX request (for modal) or direct access (for redirect)
+        if ($step == 8) {
             // If it's not an AJAX request, redirect to employee page
             if (!request()->ajax() && !request()->wantsJson()) {
                 if ($process->employee) {
@@ -209,7 +218,61 @@ class OffboardingController extends Controller
             ->keyBy('order');
 
         switch ($step) {
-            case 2: // Access Removal Checklist
+            case 1: // Manager Approval
+                $action = $request->input('action');
+                
+                if ($action === 'approve') {
+                    $process->manager_approved_by = Auth::user()->id;
+                    $process->manager_comment = $request->input('manager_comment');
+                    $process->manager_status = 'approved';
+                    $process->manager_approved_at = now();
+                    
+                    // Move to next stage (Resignation / Initiated Exit)
+                    if (isset($stages[2])) {
+                        $process->stage = $stages[2]->id;
+                    }
+                } elseif ($action === 'reject') {
+                    $process->manager_approved_by = Auth::user()->id;
+                    $process->manager_comment = $request->input('manager_comment');
+                    $process->manager_status = 'rejected';
+                    $process->manager_approved_at = now();
+                    
+                    // Don't move to next stage, stay in Manager Approval
+                    return response()->json(['success' => true, 'message' => __('Resignation rejected successfully.')]);
+                } else {
+                    return response()->json(['error' => __('Invalid action.')], 400);
+                }
+                break;
+
+            case 3: // HR Approval
+                $action = $request->input('action');
+                
+                if ($action === 'approve') {
+                    $process->hr_approved_by = Auth::user()->id;
+                    $process->hr_comment = $request->input('hr_comment');
+                    $process->last_working_day = $request->input('last_working_day');
+                    $process->notice_period_days = $request->input('notice_period_days');
+                    $process->hr_status = 'approved';
+                    $process->hr_approved_at = now();
+                    
+                    // Move to next stage (Access Removal Checklist)
+                    if (isset($stages[4])) {
+                        $process->stage = $stages[4]->id;
+                    }
+                } elseif ($action === 'reject') {
+                    $process->hr_approved_by = Auth::user()->id;
+                    $process->hr_comment = $request->input('hr_comment');
+                    $process->hr_status = 'rejected';
+                    $process->hr_approved_at = now();
+                    
+                    // Don't move to next stage, stay in HR Approval
+                    return response()->json(['success' => true, 'message' => __('Resignation rejected by HR successfully.')]);
+                } else {
+                    return response()->json(['error' => __('Invalid action.')], 400);
+                }
+                break;
+
+            case 4: // Access Removal Checklist
                 $checklist = $request->checklist ?? [];
                 // Convert to array format - handle both object and array formats
                 $checklistArray = [];
@@ -247,14 +310,14 @@ class OffboardingController extends Controller
                     }
                 }
                 
-                if ($allDone && isset($stages[3])) {
-                    $process->stage = $stages[3]->id; // Move to next stage
+                if ($allDone && isset($stages[5])) {
+                    $process->stage = $stages[5]->id; // Move to next stage
                 } else {
                     return response()->json(['error' => __('Please complete all checklist items before proceeding.')], 400);
                 }
                 break;
 
-            case 3: // Asset Collection Checklist
+            case 5: // Asset Collection Checklist
                 $checklist = $request->checklist ?? [];
                 // Convert to array format - handle both object and array formats
                 $checklistArray = [];
@@ -292,14 +355,14 @@ class OffboardingController extends Controller
                     }
                 }
                 
-                if ($allCollected && isset($stages[4])) {
-                    $process->stage = $stages[4]->id; // Move to next stage
+                if ($allCollected && isset($stages[6])) {
+                    $process->stage = $stages[6]->id; // Move to next stage
                 } else {
                     return response()->json(['error' => __('Please mark all assets as collected before proceeding.')], 400);
                 }
                 break;
 
-            case 4: // Full & Final Settlement
+            case 6: // Full & Final Settlement
                 // Validate required fields
                 if (empty($request->salary_settlement)) {
                     return response()->json(['error' => __('Salary settlement is required.')], 400);
@@ -315,18 +378,18 @@ class OffboardingController extends Controller
                 $process->settlement_completed_by = Auth::user()->id;
                 $process->settlement_completed_at = now();
                 
-                if (isset($stages[5])) {
-                    $process->stage = $stages[5]->id; // Move to next stage
+                if (isset($stages[6])) {
+                    $process->stage = $stages[6]->id; // Move to next stage
                 }
                 break;
 
-            case 5: // Relieving & Experience Letter
+            case 7: // Relieving & Experience Letter
                 // This step just redirects to termination page - no update needed
                 // The termination controller will handle moving to next step
                 return response()->json(['redirect' => route('termination.index')]);
                 break;
 
-            case 6: // HR Uploads / Downloads
+            case 8: // HR Uploads / Downloads
                 // Check if this is a confirmation request (document downloaded/sent)
                 if ($request->has('confirmed') && $request->confirmed == 'yes') {
                     $process->document_status = 'uploaded';
@@ -342,8 +405,8 @@ class OffboardingController extends Controller
                         ]);
                     }
                     
-                    if (isset($stages[7])) {
-                        $process->stage = $stages[7]->id; // Move to next stage
+                    if (isset($stages[9])) {
+                        $process->stage = $stages[9]->id; // Move to next stage
                     }
                 } else {
                     // If not confirmed, redirect to employee show page
@@ -353,13 +416,13 @@ class OffboardingController extends Controller
                 }
                 break;
 
-            case 7: // HR Records Feedback
+            case 9: // HR Records Feedback
                 $process->employee_feedback = $request->feedback;
                 $process->feedback_recorded_by = Auth::user()->id;
                 $process->feedback_recorded_at = now();
                 
-                if (isset($stages[8])) {
-                    $process->stage = $stages[8]->id; // Move to completed stage
+                if (isset($stages[10])) {
+                    $process->stage = $stages[10]->id; // Move to completed stage
                 }
                 break;
         }

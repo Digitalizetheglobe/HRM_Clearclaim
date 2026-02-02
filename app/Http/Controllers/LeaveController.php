@@ -93,41 +93,41 @@ class LeaveController extends Controller
     }
 
    public function create()
-{
-    if (\Auth::user()->can('Create Leave')) {
-        if (Auth::user()->type == 'employee') {
-            $employees = Employee::where('user_id', '=', \Auth::user()->id)->first();
-        } else {
-            $employees = Employee::where('created_by', '=', \Auth::user()->creatorId())->get()->pluck('name', 'id');
-        }
-        
-        // Check monthly paid leaves for employee
-        $monthlyLeaveInfo = null;
-        if (Auth::user()->type == 'employee' && $employees) {
-            $leave_type = $this->getDefaultLeaveType();
-            $now = now();
-            $monthlyPaidLeavesUsed = LocalLeave::where('employee_id', $employees->id)
-                ->where('leave_type_id', $leave_type->id)
-                ->where('is_paid', true)
-                ->where('status', 'Approved')
-                ->whereYear('start_date', $now->year)
-                ->whereMonth('start_date', $now->month)
-                ->sum('total_leave_days');
+    {
+        if (\Auth::user()->can('Create Leave')) {
+            if (Auth::user()->type == 'employee') {
+                $employees = Employee::where('user_id', '=', \Auth::user()->id)->first();
+            } else {
+                $employees = Employee::where('created_by', '=', \Auth::user()->creatorId())->get()->pluck('name', 'id');
+            }
             
-            $monthlyLimit = 2;
-            $monthlyLeaveInfo = [
-                'used' => $monthlyPaidLeavesUsed,
-                'limit' => $monthlyLimit,
-                'remaining' => max(0, $monthlyLimit - $monthlyPaidLeavesUsed),
-                'exceeded' => $monthlyPaidLeavesUsed >= $monthlyLimit
-            ];
+            // Check monthly paid leaves for employee
+            $monthlyLeaveInfo = null;
+            if (Auth::user()->type == 'employee' && $employees) {
+                $leave_type = $this->getDefaultLeaveType();
+                $now = now();
+                $monthlyPaidLeavesUsed = LocalLeave::where('employee_id', $employees->id)
+                    ->where('leave_type_id', $leave_type->id)
+                    ->where('is_paid', true)
+                    ->where('status', 'Approved')
+                    ->whereYear('start_date', $now->year)
+                    ->whereMonth('start_date', $now->month)
+                    ->sum('total_leave_days');
+                
+                $monthlyLimit = 2;
+                $monthlyLeaveInfo = [
+                    'used' => $monthlyPaidLeavesUsed,
+                    'limit' => $monthlyLimit,
+                    'remaining' => max(0, $monthlyLimit - $monthlyPaidLeavesUsed),
+                    'exceeded' => $monthlyPaidLeavesUsed >= $monthlyLimit
+                ];
+            }
+            
+            return view('leave.create', compact('employees', 'monthlyLeaveInfo'));
+        } else {
+            return response()->json(['error' => __('Permission denied.')], 401);
         }
-        
-        return view('leave.create', compact('employees', 'monthlyLeaveInfo'));
-    } else {
-        return response()->json(['error' => __('Permission denied.')], 401);
     }
-}
 
     /**
      * Get or create default leave type for the company
@@ -792,5 +792,218 @@ class LeaveController extends Controller
         }
 
         return $arrayJson;
+    }
+
+    public function leaveDetails(Request $request)
+    {
+        $currentUser = \Auth::user();
+        $isManagerAccess = false;
+        $managerDepartmentId = null;
+        
+        // Check if user has permission (Company user or HR department)
+        if ($currentUser->type != 'company' && 
+            !($currentUser->type == 'employee' && $currentUser->employee && $currentUser->employee->department && strcasecmp($currentUser->employee->department->name, 'Human Resources') == 0)) {
+            
+            // Check if current user is a reporting manager or has Manager designation
+            $currentEmployee = Employee::where('user_id', $currentUser->id)->first();
+            if ($currentEmployee) {
+                // Check if employee has Manager designation
+                $isManager = $currentEmployee->designation && 
+                            strcasecmp($currentEmployee->designation->name, 'Manager') == 0;
+                
+                $reportingEmployees = Employee::where('reporting_manager', $currentEmployee->id)
+                    ->where('created_by', $currentUser->creatorId())
+                    ->exists();
+                
+                if ($isManager || $reportingEmployees) {
+                    $isManagerAccess = true;
+                    // For Manager designation, restrict to their own department
+                    if ($isManager) {
+                        $managerDepartmentId = $currentEmployee->department_id;
+                    }
+                } else {
+                    return redirect()->back()->with('error', __('Permission denied.'));
+                }
+            } else {
+                return redirect()->back()->with('error', __('Permission denied.'));
+            }
+        }
+
+        $departments = \App\Models\Department::where('created_by', $currentUser->creatorId())->get();
+        
+        // If this is a Manager designation user, only show their own department
+        if ($isManagerAccess && $managerDepartmentId) {
+            $departments = $departments->where('id', $managerDepartmentId);
+        }
+        $employees = [];
+        $leaveDetails = [];
+
+        $selectedMonth = $request->get('month', date('m'));
+        $selectedYear = $request->get('year', date('Y'));
+        $selectedDepartment = $request->get('department');
+        $selectedEmployee = $request->get('employee');
+
+        // Get employees based on filters and user permissions
+        $query = Employee::where('created_by', $currentUser->creatorId());
+        
+        // Exclude terminated employees
+        $terminatedEmployees = \App\Models\Termination::pluck('employee_id')->toArray();
+        if (!empty($terminatedEmployees)) {
+            $query->whereNotIn('id', $terminatedEmployees);
+        }
+        
+        // If manager access, exclude the manager's own record
+        if ($isManagerAccess) {
+            $currentEmployee = Employee::where('user_id', $currentUser->id)->first();
+            if ($currentEmployee) {
+                $query->where('id', '!=', $currentEmployee->id);
+            }
+        }
+        
+        // If manager access, apply appropriate restrictions
+        if ($isManagerAccess) {
+            $currentEmployee = Employee::where('user_id', $currentUser->id)->first();
+            
+            // Check if this is a Manager designation (not just reporting manager)
+            $isManagerDesignation = $currentEmployee->designation && 
+                                  strcasecmp($currentEmployee->designation->name, 'Manager') == 0;
+            
+            if ($isManagerDesignation && $managerDepartmentId) {
+                // For Manager designation, restrict to their own department
+                $query->where('department_id', $managerDepartmentId);
+            } else {
+                // For reporting managers, show their reporting employees
+                $query->where('reporting_manager', $currentEmployee->id);
+            }
+        }
+        
+        if ($selectedDepartment) {
+            $query->where('department_id', $selectedDepartment);
+            $employees = $query->get();
+        } elseif ($selectedEmployee) {
+            $query->where('id', $selectedEmployee);
+            $employees = $query->get();
+        } else {
+            $employees = $query->get();
+        }
+
+        // Get leave type for calculations
+        $leaveType = $this->getDefaultLeaveType();
+
+        foreach ($employees as $employee) {
+            // Calculate yearly leaves (pro-rata)
+            $yearlyLeaves = $this->calculateProRataLeaves($employee->id);
+            
+            // Monthly leaves (fixed at 2)
+            $monthlyLeaves = 2;
+            
+            // Leaves taken this month
+            $leavesTakenThisMonth = LocalLeave::where('employee_id', $employee->id)
+                ->where('leave_type_id', $leaveType->id)
+                ->where('status', 'Approved')
+                ->whereYear('start_date', $selectedYear)
+                ->whereMonth('start_date', $selectedMonth)
+                ->sum('total_leave_days');
+            
+            // Pending leaves
+            $pendingLeaves = LocalLeave::where('employee_id', $employee->id)
+                ->where('leave_type_id', $leaveType->id)
+                ->where('status', 'Pending')
+                ->whereYear('start_date', $selectedYear)
+                ->whereMonth('start_date', $selectedMonth)
+                ->sum('total_leave_days');
+
+            $leaveDetails[] = [
+                'employee' => $employee,
+                'yearly_leaves' => $yearlyLeaves,
+                'monthly_leaves' => $monthlyLeaves,
+                'leaves_taken' => $leavesTakenThisMonth,
+                'pending_leaves' => $pendingLeaves,
+                'remaining_monthly' => $monthlyLeaves - $leavesTakenThisMonth,
+                'remaining_yearly' => $yearlyLeaves - $leavesTakenThisMonth
+            ];
+        }
+
+        return view('leave.leave_details', compact(
+            'leaveDetails', 
+            'departments', 
+            'employees',
+            'selectedMonth',
+            'selectedYear',
+            'selectedDepartment',
+            'selectedEmployee',
+            'isManagerAccess'
+        ));
+    }
+
+    public function getEmployeesByDepartment(Request $request)
+    {
+        $currentUser = \Auth::user();
+        $isManagerAccess = false;
+        $managerDepartmentId = null;
+        
+        // Check if this is manager access
+        if ($currentUser->type != 'company' && 
+            !($currentUser->type == 'employee' && $currentUser->employee && $currentUser->employee->department && strcasecmp($currentUser->employee->department->name, 'Human Resources') == 0)) {
+            
+            $currentEmployee = Employee::where('user_id', $currentUser->id)->first();
+            if ($currentEmployee) {
+                // Check if employee has Manager designation
+                $isManager = $currentEmployee->designation && 
+                            strcasecmp($currentEmployee->designation->name, 'Manager') == 0;
+                
+                $reportingEmployees = Employee::where('reporting_manager', $currentEmployee->id)
+                    ->where('created_by', $currentUser->creatorId())
+                    ->exists();
+                
+                if ($isManager || $reportingEmployees) {
+                    $isManagerAccess = true;
+                    // For Manager designation, restrict to their own department
+                    if ($isManager) {
+                        $managerDepartmentId = $currentEmployee->department_id;
+                    }
+                }
+            }
+        }
+        
+        $query = Employee::where('department_id', $request->get('department_id'))
+            ->where('created_by', $currentUser->creatorId());
+        
+        // Exclude terminated employees
+        $terminatedEmployees = \App\Models\Termination::pluck('employee_id')->toArray();
+        if (!empty($terminatedEmployees)) {
+            $query->whereNotIn('id', $terminatedEmployees);
+        }
+        
+        // If manager access, exclude the manager's own record
+        if ($isManagerAccess) {
+            $currentEmployee = Employee::where('user_id', $currentUser->id)->first();
+            if ($currentEmployee) {
+                $query->where('id', '!=', $currentEmployee->id);
+            }
+        }
+            
+        // If manager access, apply appropriate restrictions
+        if ($isManagerAccess) {
+            $currentEmployee = Employee::where('user_id', $currentUser->id)->first();
+            
+            // Check if this is a Manager designation (not just reporting manager)
+            $isManagerDesignation = $currentEmployee->designation && 
+                                  strcasecmp($currentEmployee->designation->name, 'Manager') == 0;
+            
+            if ($isManagerDesignation && $managerDepartmentId) {
+                // For Manager designation, only allow their own department
+                if ($request->get('department_id') != $managerDepartmentId) {
+                    return response()->json([]); // Return empty if trying to access other departments
+                }
+            } else {
+                // For reporting managers, show their reporting employees
+                $query->where('reporting_manager', $currentEmployee->id);
+            }
+        }
+        
+        $employees = $query->get(['id', 'name']);
+        
+        return response()->json($employees);
     }
 }
