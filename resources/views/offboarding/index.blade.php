@@ -86,6 +86,35 @@
 
             }(window.jQuery);
         @endif
+
+            // Function to show offboarding completed popup (called from iframe/popup and main page)
+            window.showOffboardingCompletedPopup = function() {
+            var modalHtml = '<div class="modal fade" id="offboarding-completed-modal" tabindex="-1" aria-labelledby="offboardingCompletedModalLabel" aria-hidden="true">' +
+                '<div class="modal-dialog modal-dialog-centered">' +
+                '<div class="modal-content">' +
+                '<div class="modal-header">' +
+                '<h5 class="modal-title" id="offboardingCompletedModalLabel">{{ __("Offboarding Completed") }}</h5>' +
+                '<button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>' +
+                '</div>' +
+                '<div class="modal-body text-center">' +
+                '<div class="mb-3">' +
+                '<i class="ti ti-circle-check" style="font-size: 48px; color: #28a745;"></i>' +
+                '</div>' +
+                '<p class="mb-0 fs-5">{{ __("This employee has been properly offboarded.") }}</p>' +
+                '</div>' +
+                '<div class="modal-footer">' +
+                '<button type="button" class="btn btn-secondary" data-bs-dismiss="modal">{{ __("Close") }}</button>' +
+                '</div>' +
+                '</div></div></div>';
+            
+            $('body').append(modalHtml);
+            $('#offboarding-completed-modal').modal('show');
+            
+            // Remove modal from DOM when hidden
+            $('#offboarding-completed-modal').on('hidden.bs.modal', function() {
+                $(this).remove();
+            });
+        };
     </script>
 @endpush
 
@@ -173,7 +202,7 @@
                                             foreach ($processes as $process) {
                                                 if ($stage->order == 10 && $process->updated_at) {
                                                     $daysSinceCompletion = now()->diffInDays($process->updated_at);
-                                                    if ($daysSinceCompletion <= 7) {
+                                                    if ($daysSinceCompletion <= 6) {
                                                         $visibleCount++;
                                                     }
                                                 } else {
@@ -190,11 +219,11 @@
                             <div class="card-body kanban-box" id="{{ $json[$key] }}" data-id="{{ $stage->id }}" data-status="{{ $stage->id }}">
                                 @foreach ($processes as $process)
                                     @php
-                                        // Check if card should be hidden (older than 7 days for completed stage)
+                                        // Check if card should be hidden (older than 6 days for completed stage)
                                         $shouldHideCard = false;
                                         if ($stage->order == 10 && $process->updated_at) {
                                             $daysSinceCompletion = now()->diffInDays($process->updated_at);
-                                            $shouldHideCard = $daysSinceCompletion > 7;
+                                            $shouldHideCard = $daysSinceCompletion > 6;
                                         }
                                     @endphp
                                     
@@ -393,6 +422,27 @@
             </div>
         </div>
     </div>
+
+    <!-- Offboarding Completed Modal -->
+    <div class="modal fade" id="offboardingCompletedModal" tabindex="-1" aria-labelledby="offboardingCompletedModalLabel" aria-hidden="true">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="offboardingCompletedModalLabel">{{ __("Offboarding Completed") }}</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body text-center">
+                    <div class="mb-3">
+                        <i class="ti ti-circle-check" style="font-size: 48px; color: #28a745;"></i>
+                    </div>
+                    <p class="mb-0 fs-5">{{ __("This employee has been properly offboarded.") }}</p>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">{{ __("Close") }}</button>
+                </div>
+            </div>
+        </div>
+    </div>
 @endsection
 
 @push('script-page')
@@ -409,7 +459,22 @@
             // Track when user clicks on employee link in step 8 (HR Uploads/Downloads)
             $(document).on('click', 'a.hr-uploads-link', function(e) {
                 var processId = $(this).data('process-id');
-                var employeeId = $(this).data('employee-id');
+                // Extract employee ID from the href URL
+                var href = $(this).attr('href');
+                var employeeId = null;
+                
+                // Extract employee ID from encrypted URL
+                if (href && href.includes('/employee/')) {
+                    var parts = href.split('/');
+                    var encryptedId = parts[parts.length - 1];
+                    employeeId = encryptedId;
+                }
+                
+                console.log('HR Uploads link clicked', {
+                    processId: processId,
+                    employeeId: employeeId,
+                    href: href
+                });
                 
                 // Store in sessionStorage that user is visiting employee page
                 if (processId && employeeId) {
@@ -481,7 +546,7 @@
                                         // Directly move to HR Records Feedback step (step 9)
                                         console.log('Attempting to move to step 9 for process:', processId);
                                         $.ajax({
-                                            url: '{{ url("offboarding") }}/' + processId + '/update-step/9',
+                                            url: '{{ route("offboarding.update-step", ["id" => ":id", "step" => 9]) }}'.replace(':id', processId),
                                             type: 'POST',
                                             data: {
                                                 confirmed: 'yes',
@@ -489,7 +554,8 @@
                                                 _token: $('meta[name="csrf-token"]').attr('content')
                                             },
                                             beforeSend: function() {
-                                                console.log('Sending AJAX request to:', '{{ url("offboarding") }}/' + processId + '/update-step/9');
+                                                var requestUrl = '{{ route("offboarding.update-step", ["id" => ":id", "step" => 9]) }}'.replace(':id', processId);
+                                                console.log('Sending AJAX request to:', requestUrl);
                                                 console.log('Data:', {
                                                     confirmed: 'yes',
                                                     document_type: 'experience_certificate',

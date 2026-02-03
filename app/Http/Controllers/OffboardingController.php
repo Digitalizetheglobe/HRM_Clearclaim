@@ -10,6 +10,7 @@ use App\Models\Termination;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Crypt;
+use Illuminate\Support\Facades\Log;
 
 class OffboardingController extends Controller
 {
@@ -237,7 +238,7 @@ class OffboardingController extends Controller
                     
                     // Move to next stage (Resignation / Initiated Exit)
                     if (isset($stages[2])) {
-                        $process->stage = $stages[2]->id;
+                        $process->stage = $stages[2];
                     }
                 } elseif ($action === 'reject') {
                     $process->manager_approved_by = Auth::user()->id;
@@ -265,7 +266,7 @@ class OffboardingController extends Controller
                     
                     // Move to next stage (Access Removal Checklist)
                     if (isset($stages[4])) {
-                        $process->stage = $stages[4]->id;
+                        $process->stage = $stages[4];
                     }
                 } elseif ($action === 'reject') {
                     $process->hr_approved_by = Auth::user()->id;
@@ -321,7 +322,7 @@ class OffboardingController extends Controller
                 }
                 
                 if ($allDone && isset($stages[5])) {
-                    $process->stage = $stages[5]->id; // Move to next stage
+                    $process->stage = $stages[5]; // Move to next stage
                 } else {
                     return response()->json(['error' => __('Please complete all checklist items before proceeding.')], 400);
                 }
@@ -366,7 +367,7 @@ class OffboardingController extends Controller
                 }
                 
                 if ($allCollected && isset($stages[6])) {
-                    $process->stage = $stages[6]->id; // Move to next stage
+                    $process->stage = $stages[6]; // Move to next stage
                 } else {
                     return response()->json(['error' => __('Please mark all assets as collected before proceeding.')], 400);
                 }
@@ -389,7 +390,7 @@ class OffboardingController extends Controller
                 $process->settlement_completed_at = now();
                 
                 if (isset($stages[7])) {
-                    $process->stage = $stages[7]->id; // Move to next stage
+                    $process->stage = $stages[7]; // Move to next stage
                 }
                 break;
 
@@ -416,7 +417,7 @@ class OffboardingController extends Controller
                     }
                     
                     if (isset($stages[9])) {
-                        $process->stage = $stages[9]->id; // Move to next stage
+                        $process->stage = $stages[9]; // Move to next stage
                     }
                 } else {
                     // If not confirmed, redirect to employee show page
@@ -442,7 +443,10 @@ class OffboardingController extends Controller
                         ]);
                     }
                     
-                    // Don't move to next stage yet, stay in HR Records Feedback for actual feedback
+                    // Move to HR Records Feedback stage (step 9)
+                    if (isset($stages[9])) {
+                        $process->stage = $stages[9];
+                    }
                 } else {
                     // Handle employee feedback
                     $process->employee_feedback = $request->feedback;
@@ -450,7 +454,7 @@ class OffboardingController extends Controller
                     $process->feedback_recorded_at = now();
                     
                     if (isset($stages[10])) {
-                        $process->stage = $stages[10]->id; // Move to completed stage
+                        $process->stage = $stages[10]; // Move to completed stage
                     }
                 }
                 break;

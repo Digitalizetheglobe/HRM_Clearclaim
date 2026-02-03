@@ -35,7 +35,7 @@
             @endif
         @endif
 
-        <form id="managerApprovalForm" method="POST" action="{{ route('offboarding.update.step', ['id' => $process->id, 'step' => 1]) }}">
+        <form id="managerApprovalForm" method="POST" action="{{ route('offboarding.update-step', ['id' => $process->id, 'step' => 1]) }}">
             @csrf
             <div class="mb-3">
                 <label for="manager_comment" class="form-label">{{ __('Manager Comment') }}</label>
