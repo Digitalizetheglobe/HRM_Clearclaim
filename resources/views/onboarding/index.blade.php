@@ -220,32 +220,38 @@
                                                     </button>
                                                     <div class="dropdown-menu dropdown-menu-end">
                                                         @if($stage->order == 1)
-                                                            <a href="{{ route('employee.show', \Crypt::encrypt($process->employee->id)) }}"
-                                                                class="dropdown-item onboarding-step-1-link"
-                                                                data-process-id="{{ $process->id }}"
-                                                                data-employee-id="{{ $process->employee->id }}"
-                                                                data-step="1"
-                                                                target="_blank"><i
-                                                                    class="ti ti-eye "></i><span
-                                                                    class="ms-2">{{ __('View Employee Details') }}</span></a>
+                                                            @if($process->employee)
+                                                                <a href="{{ route('employee.show', \Crypt::encrypt($process->employee->id)) }}"
+                                                                    class="dropdown-item onboarding-step-1-link"
+                                                                    data-process-id="{{ $process->id }}"
+                                                                    data-employee-id="{{ $process->employee->id }}"
+                                                                    data-step="1"
+                                                                    target="_blank"><i
+                                                                        class="ti ti-eye "></i><span
+                                                                        class="ms-2">{{ __('View Employee Details') }}</span></a>
+                                                            @endif
                                                         @elseif($stage->order == 2)
-                                                            <a href="{{ route('employee.edit', \Crypt::encrypt($process->employee->id)) }}"
-                                                                class="dropdown-item onboarding-step-2-link"
-                                                                data-process-id="{{ $process->id }}"
-                                                                data-employee-id="{{ $process->employee->id }}"
-                                                                data-step="2"
-                                                                target="_blank"><i
-                                                                    class="ti ti-edit "></i><span
-                                                                    class="ms-2">{{ __('Edit Employee') }}</span></a>
+                                                            @if($process->employee)
+                                                                <a href="{{ route('employee.edit', \Crypt::encrypt($process->employee->id)) }}"
+                                                                    class="dropdown-item onboarding-step-2-link"
+                                                                    data-process-id="{{ $process->id }}"
+                                                                    data-employee-id="{{ $process->employee->id }}"
+                                                                    data-step="2"
+                                                                    target="_blank"><i
+                                                                        class="ti ti-edit "></i><span
+                                                                        class="ms-2">{{ __('Edit Employee') }}</span></a>
+                                                            @endif
                                                         @else
-                                                            <a href="#" 
-                                                                data-url="{{ route('onboarding.step', ['id' => $process->id, 'step' => $stage->order]) }}"
-                                                                data-ajax-popup="true"
-                                                                data-size="lg"
-                                                                data-title="{{ $stage->title }} - {{ $process->employee ? $process->employee->name : 'N/A' }}"
-                                                                class="dropdown-item"><i
-                                                                    class="ti ti-eye "></i><span
-                                                                    class="ms-2">{{ __('View Details') }}</span></a>
+                                                            @if($process->employee)
+                                                                <a href="#" 
+                                                                    data-url="{{ route('onboarding.step', ['id' => $process->id, 'step' => $stage->order]) }}"
+                                                                    data-ajax-popup="true"
+                                                                    data-size="lg"
+                                                                    data-title="{{ $stage->title }} - {{ $process->employee->name }}"
+                                                                    class="dropdown-item"><i
+                                                                        class="ti ti-eye "></i><span
+                                                                        class="ms-2">{{ __('View Details') }}</span></a>
+                                                            @endif
                                                         @endif
                                                     </div>
                                                 </div>
