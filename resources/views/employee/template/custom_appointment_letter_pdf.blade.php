@@ -129,7 +129,7 @@
                         <div style="margin-top: 20px; display: flex; justify-content: space-between; align-items: flex-end;">
                             <div style="width: 45%; text-align: left;">
                                 <div style="margin-top: 20px;">
-                                    <img src="{{ public_path('storage/letter/sign.png') }}" alt="Signature" style="max-height: 60px; max-width: 150px;">
+                                    <img src="{{ asset('images/letter/sign.png') }}" alt="Sign" style="max-height: 80px; max-width: 80px;">
                                     <div style="border-top: 1px solid #000; width: 250px; margin-bottom: 5px;"></div>
                                 </div>
                                 <div style="margin-top: 10px;">
@@ -151,7 +151,7 @@
                         <div style="display: flex; justify-content: space-between; align-items: flex-end;">
                             <div style="width: 45%; text-align: left;">
                                 <div style="margin-top: 20px;">
-                                    <img src="{{ public_path('storage/letter/stamp.png') }}" alt="Stamp" style="max-height: 80px; max-width: 80px;">
+                                    <img src="{{ asset('images/letter/stamp.jpg') }}" alt="Stamp" style="max-height: 80px; max-width: 80px;">
                                 </div>
                             </div>
                         </div>
