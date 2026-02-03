@@ -1,0 +1,1 @@
+{"version":1,"defects":{"ResignationFlowTest::test_resignation_flow":8,"ResignationFlowTest::test_resignation_status_flow":8},"times":{"ResignationFlowTest::test_resignation_flow":1.078,"ResignationFlowTest::test_resignation_status_flow":0.373}}

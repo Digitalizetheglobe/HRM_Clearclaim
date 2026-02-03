@@ -446,7 +446,7 @@
                                     '<button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>' +
                                     '</div>' +
                                     '<div class="modal-body">' +
-                                    '<p class="mb-0">{{ __("Did you download something from the employee details page?") }}</p>' +
+                                    '<p class="mb-0">{{ __("Did you download Experience Certificate from the employee details page?") }}</p>' +
                                     '</div>' +
                                     '<div class="modal-footer">' +
                                     '<button type="button" class="btn btn-secondary" data-bs-dismiss="modal" id="download-confirm-cancel">{{ __("No") }}</button>' +
@@ -473,50 +473,47 @@
                                     sessionStorage.removeItem('offboarding_employee_visit');
                                 });
                                 
-                                // When confirmation modal closes, open step 8 modal if user clicked Yes
+                                // When confirmation modal closes, move to next step if user clicked Yes
                                 $('#download-confirm-modal').on('hidden.bs.modal', function() {
                                     $(this).remove();
                                     
                                     if (userClickedYes) {
-                                        // Open the step 8 modal for this process
-                                        var stepUrl = '{{ url("offboarding") }}/' + processId + '/step/8';
-                                        
-                                        // Create modal dynamically
+                                        // Directly move to HR Records Feedback step (step 9)
+                                        console.log('Attempting to move to step 9 for process:', processId);
                                         $.ajax({
-                                            url: stepUrl,
-                                            type: 'GET',
-                                            headers: {
-                                                'X-Requested-With': 'XMLHttpRequest'
+                                            url: '{{ url("offboarding") }}/' + processId + '/update-step/9',
+                                            type: 'POST',
+                                            data: {
+                                                confirmed: 'yes',
+                                                document_type: 'experience_certificate',
+                                                _token: $('meta[name="csrf-token"]').attr('content')
                                             },
-                                            success: function(response) {
-                                                // Create and show step 8 modal
-                                                var modalHtml = '<div class="modal fade" id="offboarding-confirm-modal" tabindex="-1" role="dialog">' +
-                                                    '<div class="modal-dialog modal-lg" role="document">' +
-                                                    '<div class="modal-content">' +
-                                                    response +
-                                                    '</div></div></div>';
-                                                
-                                                $('body').append(modalHtml);
-                                                
-                                                // Show modal using jQuery (compatible with Bootstrap 4 and 5)
-                                                $('#offboarding-confirm-modal').modal('show');
-                                                
-                                                // Remove from sessionStorage after showing
-                                                sessionStorage.removeItem('offboarding_employee_visit');
-                                                
-                                                // Clean up modals on close
-                                                $('#offboarding-confirm-modal').on('hidden.bs.modal', function() {
-                                                    $(this).remove();
+                                            beforeSend: function() {
+                                                console.log('Sending AJAX request to:', '{{ url("offboarding") }}/' + processId + '/update-step/9');
+                                                console.log('Data:', {
+                                                    confirmed: 'yes',
+                                                    document_type: 'experience_certificate',
+                                                    _token: $('meta[name="csrf-token"]').attr('content')
                                                 });
                                             },
-                                            error: function() {
-                                                show_toastr('Error', '{{ __("Unable to load confirmation form") }}', 'error');
-                                                sessionStorage.removeItem('offboarding_employee_visit');
+                                            success: function(data) {
+                                                console.log('AJAX success response:', data);
+                                                show_toastr('Success', data.message || 'Document confirmed successfully', 'success');
+                                                location.reload();
+                                            },
+                                            error: function(xhr, status, error) {
+                                                console.log('AJAX error:', {
+                                                    status: status,
+                                                    error: error,
+                                                    responseText: xhr.responseText,
+                                                    statusCode: xhr.status
+                                                });
+                                                var errorMsg = xhr.responseJSON && xhr.responseJSON.error ? xhr.responseJSON.error : 'An error occurred';
+                                                show_toastr('Error', errorMsg + ' (Status: ' + xhr.status + ')', 'error');
                                             }
                                         });
                                     }
                                 });
-                                
                             }, 500); // Small delay to ensure page is loaded
                         } else {
                             // Too much time passed, remove from storage

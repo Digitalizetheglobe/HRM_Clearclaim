@@ -1,34 +1,34 @@
-{{ Form::open(['route' => ['offboarding.update-step', $process->id, 3], 'method' => 'POST', 'id' => 'asset-collection-form']) }}
+{{ Form::open(['route' => ['offboarding.update-step', $process->id, 4], 'method' => 'POST', 'id' => 'access-removal-form']) }}
 <div class="modal-body">
     <div class="row">
         <div class="col-md-12">
-            <h6 class="mb-3">{{ __('Asset Collection Checklist') }}</h6>
+            <h6 class="mb-3">{{ __('Access Removal Checklist') }}</h6>
             @php
-                $defaultAssetItems = [
-                    ['name' => 'Laptop', 'key' => 'laptop'],
-                    ['name' => 'Charger', 'key' => 'charger'],
-                    ['name' => 'Mobile', 'key' => 'mobile'],
-                    ['name' => 'Mouse', 'key' => 'mouse'],
-                    ['name' => 'SIM card', 'key' => 'sim'],
-                    ['name' => 'ID card', 'key' => 'id_card'],
-                    ['name' => 'Other assets', 'key' => 'other'],
+                $defaultAccessItems = [
+                    ['name' => 'HRM Login', 'key' => 'hrm_login'],
+                    ['name' => 'Biometric Access', 'key' => 'biometric'],
+                    ['name' => 'Official Email', 'key' => 'email'],
+                    ['name' => 'CRM Access', 'key' => 'crm'],
+                    ['name' => 'Workdrive', 'key' => 'workdrive'],
+                    ['name' => 'WhatsApp', 'key' => 'whatsapp'],
+                    ['name' => 'Other System Accounts', 'key' => 'other'],
                 ];
-                $currentChecklist = is_array($process->asset_collection_checklist) ? $process->asset_collection_checklist : [];
+                $currentChecklist = is_array($process->access_removal_checklist) ? $process->access_removal_checklist : [];
             @endphp
             
             <div class="checklist-items">
-                @foreach($defaultAssetItems as $item)
+                @foreach($defaultAccessItems as $item)
                     @php
                         $existingItem = collect($currentChecklist)->firstWhere('key', $item['key']);
-                        $isCollected = $existingItem ? ($existingItem['collected'] ?? false) : false;
+                        $isDone = $existingItem ? ($existingItem['done'] ?? false) : false;
                     @endphp
                     <div class="form-check mb-3">
                         <input class="form-check-input" type="checkbox" 
-                            name="checklist[{{ $item['key'] }}][collected]" 
+                            name="checklist[{{ $item['key'] }}][done]" 
                             value="1" 
-                            id="asset_{{ $item['key'] }}"
-                            {{ $isCollected ? 'checked' : '' }}>
-                        <label class="form-check-label" for="asset_{{ $item['key'] }}">
+                            id="access_{{ $item['key'] }}"
+                            {{ $isDone ? 'checked' : '' }}>
+                        <label class="form-check-label" for="access_{{ $item['key'] }}">
                             {{ $item['name'] }}
                         </label>
                         <input type="hidden" name="checklist[{{ $item['key'] }}][key]" value="{{ $item['key'] }}">
@@ -46,15 +46,15 @@
 {{ Form::close() }}
 
 <script>
-    $('#asset-collection-form').on('submit', function(e) {
+    $('#access-removal-form').on('submit', function(e) {
         e.preventDefault();
         var checklist = {};
         $(this).find('input[type="checkbox"]').each(function() {
-            var key = $(this).attr('name').match(/\[([^\]]+)\]\[collected\]/)[1];
+            var key = $(this).attr('name').match(/\[([^\]]+)\]\[done\]/)[1];
             checklist[key] = {
                 'key': $(this).siblings('input[type="hidden"][name*="[key]"]').val(),
                 'name': $(this).siblings('input[type="hidden"][name*="[name]"]').val(),
-                'collected': $(this).is(':checked') ? true : false
+                'done': $(this).is(':checked') ? true : false
             };
         });
         

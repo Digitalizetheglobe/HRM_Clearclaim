@@ -203,21 +203,29 @@ class OffboardingController extends Controller
 
     public function updateStep(Request $request, $id, $step)
     {
-        $process = OffboardingProcess::where('id', $id)
-            ->where('created_by', Auth::user()->creatorId())
-            ->first();
+        try {
+            Log::info('updateStep called', [
+                'id' => $id,
+                'step' => $step,
+                'request_data' => $request->all(),
+                'user_id' => Auth::user()->id
+            ]);
 
-        if (!$process) {
-            return response()->json(['error' => __('Process not found.')], 404);
-        }
+            $process = OffboardingProcess::findOrFail($id);
+            
+            // Check if user has permission
+            if($process->created_by != Auth::user()->creatorId() && !Auth::user()->hasRole('company')) {
+                return response()->json(['error' => __('Permission denied.')], 403);
+            }
 
-        // Get all stages for reference
-        $stages = OffboardingStage::where('created_by', Auth::user()->creatorId())
-            ->orderBy('order', 'asc')
-            ->get()
-            ->keyBy('order');
+            $stages = OffboardingStage::where('created_by', Auth::user()->creatorId())
+                ->orderBy('order', 'asc')
+                ->pluck('id', 'order')
+                ->toArray();
 
-        switch ($step) {
+            Log::info('Stages found', ['stages' => $stages]);
+
+            switch ($step) {
             case 1: // Manager Approval
                 $action = $request->input('action');
                 
@@ -244,7 +252,7 @@ class OffboardingController extends Controller
                 }
                 break;
 
-            case 3: // HR Approval
+            case 2: // Resignation / Initiated Exit
                 $action = $request->input('action');
                 
                 if ($action === 'approve') {
@@ -265,18 +273,20 @@ class OffboardingController extends Controller
                     $process->hr_status = 'rejected';
                     $process->hr_approved_at = now();
                     
-                    // Don't move to next stage, stay in HR Approval
-                    return response()->json(['success' => true, 'message' => __('Resignation rejected by HR successfully.')]);
+                    // Don't move to next stage, stay in Resignation / Initiated Exit
+                    return response()->json(['success' => true, 'message' => __('Resignation rejected successfully.')]);
                 } else {
                     return response()->json(['error' => __('Invalid action.')], 400);
                 }
                 break;
 
+            case 3: // HR Approval
+
             case 4: // Access Removal Checklist
                 $checklist = $request->checklist ?? [];
                 // Convert to array format - handle both object and array formats
                 $checklistArray = [];
-                $defaultItems = ['biometric', 'email', 'crm', 'whatsapp', 'other'];
+                $defaultItems = ['hrm_login', 'biometric', 'email', 'crm', 'workdrive', 'whatsapp', 'other'];
                 
                 if (is_array($checklist)) {
                     foreach ($checklist as $key => $item) {
@@ -321,7 +331,7 @@ class OffboardingController extends Controller
                 $checklist = $request->checklist ?? [];
                 // Convert to array format - handle both object and array formats
                 $checklistArray = [];
-                $defaultItems = ['laptop', 'charger', 'mobile', 'mouse', 'sim', 'id_card', 'other'];
+                $defaultItems = ['laptop', 'charger', 'mobile', 'mobile_charger', 'mouse', 'sim', 'id_card', 'other'];
                 
                 if (is_array($checklist)) {
                     foreach ($checklist as $key => $item) {
@@ -378,8 +388,8 @@ class OffboardingController extends Controller
                 $process->settlement_completed_by = Auth::user()->id;
                 $process->settlement_completed_at = now();
                 
-                if (isset($stages[6])) {
-                    $process->stage = $stages[6]->id; // Move to next stage
+                if (isset($stages[7])) {
+                    $process->stage = $stages[7]->id; // Move to next stage
                 }
                 break;
 
@@ -417,12 +427,31 @@ class OffboardingController extends Controller
                 break;
 
             case 9: // HR Records Feedback
-                $process->employee_feedback = $request->feedback;
-                $process->feedback_recorded_by = Auth::user()->id;
-                $process->feedback_recorded_at = now();
-                
-                if (isset($stages[10])) {
-                    $process->stage = $stages[10]->id; // Move to completed stage
+                // Check if this is a document confirmation from step 8
+                if ($request->has('confirmed') && $request->confirmed == 'yes') {
+                    $process->document_status = 'uploaded';
+                    $process->document_uploaded_by = Auth::user()->id;
+                    $process->document_uploaded_at = now();
+                    
+                    // Update document details if provided
+                    if ($request->has('document_type')) {
+                        $existingDetails = is_array($process->document_details) ? $process->document_details : [];
+                        $process->document_details = array_merge($existingDetails, [
+                            'document_type' => $request->document_type,
+                            'notes' => $request->notes ?? '',
+                        ]);
+                    }
+                    
+                    // Don't move to next stage yet, stay in HR Records Feedback for actual feedback
+                } else {
+                    // Handle employee feedback
+                    $process->employee_feedback = $request->feedback;
+                    $process->feedback_recorded_by = Auth::user()->id;
+                    $process->feedback_recorded_at = now();
+                    
+                    if (isset($stages[10])) {
+                        $process->stage = $stages[10]->id; // Move to completed stage
+                    }
                 }
                 break;
         }
@@ -430,6 +459,16 @@ class OffboardingController extends Controller
         $process->save();
 
         return response()->json(['success' => true, 'message' => __('Step updated successfully.')]);
+        
+        } catch (\Exception $e) {
+            Log::error('Error in updateStep', [
+                'error' => $e->getMessage(),
+                'trace' => $e->getTraceAsString(),
+                'id' => $id,
+                'step' => $step
+            ]);
+            return response()->json(['error' => __('An error occurred: ') . $e->getMessage()], 500);
+        }
     }
 
     public function createFromResignation($resignationId)

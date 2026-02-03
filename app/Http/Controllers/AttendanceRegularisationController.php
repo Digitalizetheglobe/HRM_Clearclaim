@@ -162,6 +162,132 @@ class AttendanceRegularisationController extends Controller
     }
 
     /**
+     * Update the specified resource in storage.
+     */
+    public function update(Request $request, $id)
+    {
+        // Only employees can update their own requests
+        if (\Auth::user()->type != 'employee') {
+            $errorMsg = __('Permission denied. Only employees can edit their requests.');
+            if ($request->ajax() || $request->wantsJson()) {
+                return response()->json(['success' => false, 'message' => $errorMsg], 403);
+            }
+            return redirect()->back()->with('error', $errorMsg);
+        }
+
+        $validator = \Validator::make(
+            $request->all(),
+            [
+                'date' => 'required|date',
+                'punch_in_time' => 'required',
+                'punch_out_time' => 'required',
+                'reason' => 'required|in:Missed Punch,Technical Error,Other',
+                'remarks' => 'nullable|string|max:1000',
+            ]
+        );
+
+        if ($validator->fails()) {
+            $messages = $validator->getMessageBag();
+            $errorMsg = $messages->first();
+            if ($request->ajax() || $request->wantsJson()) {
+                return response()->json(['success' => false, 'message' => $errorMsg], 422);
+            }
+            return redirect()->back()->with('error', $errorMsg);
+        }
+
+        // Get employee
+        $employee = Employee::where('user_id', \Auth::user()->id)->first();
+        if (!$employee) {
+            $errorMsg = __('Employee not found.');
+            if ($request->ajax() || $request->wantsJson()) {
+                return response()->json(['success' => false, 'message' => $errorMsg], 404);
+            }
+            return redirect()->back()->with('error', $errorMsg);
+        }
+
+        // Find the regularisation request
+        $regularisation = AttendanceRegularisation::where('id', $id)
+            ->where('employee_id', $employee->id)
+            ->first();
+
+        if (!$regularisation) {
+            $errorMsg = __('Regularisation request not found or you do not have permission to edit it.');
+            if ($request->ajax() || $request->wantsJson()) {
+                return response()->json(['success' => false, 'message' => $errorMsg], 404);
+            }
+            return redirect()->back()->with('error', $errorMsg);
+        }
+
+        // Check if request is still pending
+        if ($regularisation->status != AttendanceRegularisation::STATUS_PENDING) {
+            $errorMsg = __('Only pending requests can be edited.');
+            if ($request->ajax() || $request->wantsJson()) {
+                return response()->json(['success' => false, 'message' => $errorMsg], 400);
+            }
+            return redirect()->back()->with('error', $errorMsg);
+        }
+
+        // Check if attendance already exists for this date (shouldn't happen for pending requests, but let's be safe)
+        $existingAttendance = AttendanceEmployee::where('employee_id', $employee->id)
+            ->where('date', $request->date)
+            ->first();
+
+        if ($existingAttendance) {
+            $errorMsg = __('Attendance already exists for this date. Please edit the existing attendance instead.');
+            if ($request->ajax() || $request->wantsJson()) {
+                return response()->json(['success' => false, 'message' => $errorMsg], 400);
+            }
+            return redirect()->back()->with('error', $errorMsg);
+        }
+
+        // Check if another regularisation request already exists for this date (excluding current one)
+        $existingRegularisation = AttendanceRegularisation::where('employee_id', $employee->id)
+            ->where('date', $request->date)
+            ->where('status', 'Pending')
+            ->where('id', '!=', $id)
+            ->first();
+
+        if ($existingRegularisation) {
+            $errorMsg = __('A pending regularisation request already exists for this date.');
+            if ($request->ajax() || $request->wantsJson()) {
+                return response()->json(['success' => false, 'message' => $errorMsg], 400);
+            }
+            return redirect()->back()->with('error', $errorMsg);
+        }
+
+        // Format times
+        $punchInTime = date('H:i:s', strtotime($request->punch_in_time));
+        $punchOutTime = date('H:i:s', strtotime($request->punch_out_time));
+
+        // Validate that punch out is after punch in
+        if (strtotime($punchOutTime) <= strtotime($punchInTime)) {
+            $errorMsg = __('Punch out time must be after punch in time.');
+            if ($request->ajax() || $request->wantsJson()) {
+                return response()->json(['success' => false, 'message' => $errorMsg], 400);
+            }
+            return redirect()->back()->with('error', $errorMsg);
+        }
+
+        // Update regularisation request
+        $regularisation->date = $request->date;
+        $regularisation->punch_in_time = $punchInTime;
+        $regularisation->punch_out_time = $punchOutTime;
+        $regularisation->reason = $request->reason;
+        $regularisation->remarks = $request->remarks;
+        $regularisation->save();
+
+        if ($request->ajax() || $request->wantsJson()) {
+            return response()->json([
+                'success' => true,
+                'message' => __('Attendance regularisation request updated successfully.'),
+                'redirect' => route('attendance-regularisation.index')
+            ]);
+        }
+
+        return redirect()->route('attendance-regularisation.index')->with('success', __('Attendance regularisation request updated successfully.'));
+    }
+
+    /**
      * Approve the regularisation request
      */
     public function approve(Request $request, $id)

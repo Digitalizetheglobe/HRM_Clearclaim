@@ -91,6 +91,25 @@
                                                     </div>
                                                 @endif
                                             @endif
+                                            
+                                            @if (\Auth::user()->type == 'employee')
+                                                @if ($regularisation->status == 'Pending')
+                                                    <div class="action-btn bg-warning ms-2">
+                                                        <a href="#" 
+                                                           class="mx-3 btn btn-sm align-items-center edit-regularisation" 
+                                                           data-id="{{ $regularisation->id }}"
+                                                           data-date="{{ $regularisation->date ? date('Y-m-d', strtotime($regularisation->date)) : '' }}"
+                                                           data-punch-in="{{ date('H:i', strtotime($regularisation->punch_in_time)) }}"
+                                                           data-punch-out="{{ date('H:i', strtotime($regularisation->punch_out_time)) }}"
+                                                           data-reason="{{ $regularisation->reason }}"
+                                                           data-remarks="{{ $regularisation->remarks }}"
+                                                           data-bs-toggle="tooltip" 
+                                                           title="{{ __('Edit') }}">
+                                                            <i class="ti ti-edit text-white"></i>
+                                                        </a>
+                                                    </div>
+                                                @endif
+                                            @endif
                                         </td>
                                     </tr>
                                 @empty
@@ -210,6 +229,64 @@
             </div>
         </div>
     </div>
+
+    <!-- Edit Regularisation Modal -->
+    <div class="modal fade" id="editRegularisationModal" tabindex="-1" aria-labelledby="editRegularisationModalLabel" aria-hidden="true">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="editRegularisationModalLabel">{{ __('Edit Attendance Regularisation') }}</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <form id="editRegularisationForm" method="POST">
+                    @csrf
+                    @method('PUT')
+                    <div class="modal-body">
+                        <div class="row">
+                            <div class="col-md-12">
+                                <div class="form-group">
+                                    <label for="edit_date" class="form-label">{{ __('Date') }} <span class="text-danger">*</span></label>
+                                    <input type="date" class="form-control" id="edit_date" name="date" required max="{{ date('Y-m-d') }}">
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="form-group">
+                                    <label for="edit_punch_in_time" class="form-label">{{ __('Punch In Time') }} <span class="text-danger">*</span></label>
+                                    <input type="time" class="form-control" id="edit_punch_in_time" name="punch_in_time" required>
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="form-group">
+                                    <label for="edit_punch_out_time" class="form-label">{{ __('Punch Out Time') }} <span class="text-danger">*</span></label>
+                                    <input type="time" class="form-control" id="edit_punch_out_time" name="punch_out_time" required>
+                                </div>
+                            </div>
+                            <div class="col-md-12">
+                                <div class="form-group">
+                                    <label for="edit_reason" class="form-label">{{ __('Reason') }} <span class="text-danger">*</span></label>
+                                    <select class="form-control" id="edit_reason" name="reason" required>
+                                        <option value="Missed Punch">{{ __('Missed Punch') }}</option>
+                                        <option value="Technical Error">{{ __('Technical Error') }}</option>
+                                        <option value="Other">{{ __('Other') }}</option>
+                                    </select>
+                                </div>
+                            </div>
+                            <div class="col-md-12">
+                                <div class="form-group">
+                                    <label for="edit_remarks" class="form-label">{{ __('Remarks') }}</label>
+                                    <textarea class="form-control" id="edit_remarks" name="remarks" rows="3" maxlength="1000"></textarea>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">{{ __('Cancel') }}</button>
+                        <button type="submit" class="btn btn-primary">{{ __('Update') }}</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
 @endsection
 
 @push('script-page')
@@ -274,6 +351,71 @@
                 $('#rejectForm').attr('action', '{{ url("attendance-regularisation") }}/' + id + '/reject');
                 $('#rejection_reason').val('');
                 $('#rejectModal').modal('show');
+            });
+
+            // Edit regularisation - Show edit modal with existing data
+            $(document).on('click', '.edit-regularisation', function(e) {
+                e.preventDefault();
+                var id = $(this).data('id');
+                var date = $(this).data('date');
+                var punchIn = $(this).data('punch-in');
+                var punchOut = $(this).data('punch-out');
+                var reason = $(this).data('reason');
+                var remarks = $(this).data('remarks');
+
+                // Populate form fields with existing data
+                $('#edit_date').val(date);
+                $('#edit_punch_in_time').val(punchIn);
+                $('#edit_punch_out_time').val(punchOut);
+                $('#edit_reason').val(reason);
+                $('#edit_remarks').val(remarks);
+
+                // Set form action
+                $('#editRegularisationForm').attr('action', '{{ url("attendance-regularisation") }}/' + id);
+
+                // Show modal
+                $('#editRegularisationModal').modal('show');
+            });
+
+            // Handle edit form submission
+            $('#editRegularisationForm').on('submit', function(e) {
+                e.preventDefault();
+                
+                var form = $(this);
+                var submitBtn = form.find('button[type="submit"]');
+                var originalText = submitBtn.html();
+                
+                submitBtn.prop('disabled', true).html('<i class="fas fa-spinner fa-spin"></i> {{ __("Updating...") }}');
+
+                $.ajax({
+                    url: form.attr('action'),
+                    type: 'PUT',
+                    data: form.serialize(),
+                    success: function(response) {
+                        $('#editRegularisationModal').modal('hide');
+                        if (response.success || response.redirect) {
+                            location.reload();
+                        } else {
+                            alert(response.message || '{{ __("Error updating request") }}');
+                            submitBtn.prop('disabled', false).html(originalText);
+                        }
+                    },
+                    error: function(xhr) {
+                        $('#editRegularisationModal').modal('hide');
+                        var errorMsg = '{{ __("Error updating request") }}';
+                        if (xhr.responseJSON && xhr.responseJSON.message) {
+                            errorMsg = xhr.responseJSON.message;
+                        }
+                        alert(errorMsg);
+                        submitBtn.prop('disabled', false).html(originalText);
+                    }
+                });
+            });
+
+            // Reset edit form when modal is closed
+            $('#editRegularisationModal').on('hidden.bs.modal', function() {
+                $('#editRegularisationForm')[0].reset();
+                $('#editRegularisationForm').find('button[type="submit"]').prop('disabled', false).html('{{ __("Update") }}');
             });
         });
     </script>

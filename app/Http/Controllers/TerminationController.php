@@ -136,9 +136,9 @@ class TerminationController extends Controller
                     // Update the process with termination_id
                     $offboardingProcess->termination_id = $termination->id;
                     
-                    // Move to HR Uploads/Downloads step (order 6)
+                    // Move to HR Uploads/Downloads step (order 8)
                     $hrUploadsStage = \App\Models\OffboardingStage::where('created_by', \Auth::user()->creatorId())
-                        ->where('order', 6)
+                        ->where('order', 8)
                         ->first();
                     
                     if ($hrUploadsStage) {
@@ -151,7 +151,7 @@ class TerminationController extends Controller
                 } else {
                     // If no process exists, create one (shouldn't happen, but handle it)
                     $hrUploadsStage = \App\Models\OffboardingStage::where('created_by', \Auth::user()->creatorId())
-                        ->where('order', 6)
+                        ->where('order', 8)
                         ->first();
                     
                     if ($hrUploadsStage) {
@@ -192,10 +192,10 @@ class TerminationController extends Controller
                 'termination_type'=>$request->termination_type, 
              ];
           $resp = Utility::sendEmailTemplate('employee_termination', [$employee->email], $uArr);
-           return redirect()->route('termination.index')->with('success', __('Termination  successfully created.'). ((!empty($resp) && $resp['is_success'] == false && !empty($resp['error'])) ? '<br> <span class="text-danger">' . $resp['error'] . '</span>' : ''));
+           return redirect()->route('offboarding.index')->with('success', __('Termination successfully created.'). ((!empty($resp) && $resp['is_success'] == false && !empty($resp['error'])) ? '<br> <span class="text-danger">' . $resp['error'] . '</span>' : ''));
             }
 
-            return redirect()->route('termination.index')->with('success', __('Termination  successfully created.'));
+            return redirect()->route('offboarding.index')->with('success', __('Termination successfully created.'));
         }
         else
         {

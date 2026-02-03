@@ -312,7 +312,16 @@ class ResignationController extends Controller
                     ->withInput();
             }
 
-            // Update dates if changed
+            // Check if this is HR approval (can only approve manager_approved resignations)
+            $user = \Auth::user();
+            $isHRUser = $user->type == 'company' || 
+                       ($user->type == 'employee' && $user->employee && $user->employee->department && strcasecmp($user->employee->department->name, 'Human Resources') == 0);
+            
+            if ($isHRUser && $resignation->status != 'manager_approved') {
+                return redirect()->back()->with('error', __('This resignation must be approved by manager first.'));
+            }
+
+            // Update dates if changed and set status to approved
             $resignation->update([
                 'notice_date' => $request->notice_date,
                 'resignation_date' => $request->resignation_date,
@@ -321,33 +330,33 @@ class ResignationController extends Controller
                 'approved_at' => now(),
             ]);
 
-            // Update offboarding process to move to HR Approval (step 3, order 3)
+            // Update offboarding process to move to Access Removal Checklist (step 4)
             try {
                 $offboardingProcess = \App\Models\OffboardingProcess::where('resignation_id', $resignation->id)
                     ->where('created_by', \Auth::user()->creatorId())
                     ->first();
                 
                 if ($offboardingProcess) {
-                    // Get HR Approval stage (order 3)
-                    $hrApprovalStage = \App\Models\OffboardingStage::where('created_by', \Auth::user()->creatorId())
-                        ->where('order', 3)
+                    // Get Access Removal Checklist stage (order 4)
+                    $accessRemovalStage = \App\Models\OffboardingStage::where('created_by', \Auth::user()->creatorId())
+                        ->where('order', 4)
                         ->first();
                     
-                    if ($hrApprovalStage) {
-                        $offboardingProcess->stage = $hrApprovalStage->id;
+                    if ($accessRemovalStage) {
+                        $offboardingProcess->stage = $accessRemovalStage->id;
                         $offboardingProcess->save();
                     }
                 } else {
-                    // If process doesn't exist, create it and move to step 3
-                    $hrApprovalStage = \App\Models\OffboardingStage::where('created_by', \Auth::user()->creatorId())
-                        ->where('order', 3)
+                    // If process doesn't exist, create it and move to step 4
+                    $accessRemovalStage = \App\Models\OffboardingStage::where('created_by', \Auth::user()->creatorId())
+                        ->where('order', 4)
                         ->first();
                     
-                    if ($hrApprovalStage) {
+                    if ($accessRemovalStage) {
                         \App\Models\OffboardingProcess::create([
                             'employee_id' => $resignation->employee_id,
                             'resignation_id' => $resignation->id,
-                            'stage' => $hrApprovalStage->id,
+                            'stage' => $accessRemovalStage->id,
                             'created_by' => \Auth::user()->creatorId(),
                         ]);
                     }
@@ -365,8 +374,97 @@ class ResignationController extends Controller
                  \Log::warning('Failed to queue resignation approval email: ' . $e->getMessage());
              }
              
-             return redirect()->route('resignation.index')
-                 ->with('success', __('Resignation approved successfully.'));
+             return redirect()->route('offboarding.index')
+                ->with('success', __('Resignation approved successfully.'));
+        }
+        return redirect()->back()->with('error', __('Permission denied.'));
+    }
+
+    public function managerApprove(Request $request, $id)
+    {
+        if(\Auth::user()->can('Manage Resignation')) {
+            $resignation = Resignation::findOrFail($id);
+            
+            // Check if user is a manager or company user
+            $user = \Auth::user();
+            $isManagerOrCompany = $user->type == 'company' || 
+                                ($user->type == 'employee' && $user->employee && $user->employee->designation && strcasecmp($user->employee->designation->name, 'Manager') == 0);
+            
+            if (!$isManagerOrCompany) {
+                return redirect()->back()->with('error', __('Only managers can approve resignations.'));
+            }
+            
+            // Check if resignation is pending
+            if ($resignation->status != 'pending') {
+                return redirect()->back()->with('error', __('This resignation has already been processed.'));
+            }
+            
+            $validator = \Validator::make($request->all(), [
+                'notice_date' => 'required',
+                'resignation_date' => 'required|after_or_equal:notice_date',
+            ]);
+
+            if($validator->fails()) {
+                return redirect()->back()
+                    ->withErrors($validator)
+                    ->withInput();
+            }
+
+            // Update dates if changed and set status to manager_approved
+            $resignation->update([
+                'notice_date' => $request->notice_date,
+                'resignation_date' => $request->resignation_date,
+                'status' => 'manager_approved',
+                'approved_by' => \Auth::id(),
+                'approved_at' => now(),
+            ]);
+
+            // Update offboarding process to move to Resignation / Initiated Exit (step 2)
+            try {
+                $offboardingProcess = \App\Models\OffboardingProcess::where('resignation_id', $resignation->id)
+                    ->where('created_by', \Auth::user()->creatorId())
+                    ->first();
+                
+                if ($offboardingProcess) {
+                    // Get Resignation / Initiated Exit stage (order 2)
+                    $resignationStage = \App\Models\OffboardingStage::where('created_by', \Auth::user()->creatorId())
+                        ->where('order', 2)
+                        ->first();
+                    
+                    if ($resignationStage) {
+                        $offboardingProcess->stage = $resignationStage->id;
+                        $offboardingProcess->save();
+                    }
+                } else {
+                    // If process doesn't exist, create it and move to step 2
+                    $resignationStage = \App\Models\OffboardingStage::where('created_by', \Auth::user()->creatorId())
+                        ->where('order', 2)
+                        ->first();
+                    
+                    if ($resignationStage) {
+                        \App\Models\OffboardingProcess::create([
+                            'employee_id' => $resignation->employee_id,
+                            'resignation_id' => $resignation->id,
+                            'stage' => $resignationStage->id,
+                            'created_by' => \Auth::user()->creatorId(),
+                        ]);
+                    }
+                }
+            } catch (\Exception $e) {
+                // Silently fail if offboarding stages don't exist yet
+            }
+
+             // Send manager approval email (non-blocking - don't fail if email fails)
+             try {
+                 SendResignationApprovalEmail::dispatch($resignation, $resignation->employee->email)
+                     ->onQueue('emails');
+             } catch (\Exception $e) {
+                 // Log email error but don't fail the approval
+                 \Log::warning('Failed to queue resignation manager approval email: ' . $e->getMessage());
+             }
+             
+             return redirect()->route('offboarding.index')
+                ->with('success', __('Resignation approved by manager successfully.'));
         }
         return redirect()->back()->with('error', __('Permission denied.'));
     }

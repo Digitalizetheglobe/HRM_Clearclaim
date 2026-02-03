@@ -45,6 +45,8 @@
                                     <td>
                                         @if($resignation->status == 'pending')
                                             <span class="badge bg-warning">{{ __('Pending') }}</span>
+                                        @elseif($resignation->status == 'manager_approved')
+                                            <span class="badge bg-info">{{ __('Manager Approved') }}</span>
                                         @else
                                             <span class="badge bg-success">{{ __('Approved') }}</span>
                                         @endif
@@ -56,8 +58,17 @@
                                                     <a href="{{ route('resignation.review', $resignation->id) }}" 
                                                     class="mx-3 btn btn-sm align-items-center" 
                                                     data-bs-toggle="tooltip" 
-                                                    title="{{ __('Review & Approve') }}">
+                                                    title="{{ __('Manager Approval Pending') }}">
                                                         <i class="ti ti-eye text-white"></i>
+                                                    </a>
+                                                </div>
+                                            @elseif($resignation->status == 'manager_approved')
+                                                <div class="action-btn bg-info ms-2">
+                                                    <a href="{{ route('resignation.review', $resignation->id) }}" 
+                                                    class="mx-3 btn btn-sm align-items-center" 
+                                                    data-bs-toggle="tooltip" 
+                                                    title="{{ __('View Details') }}">
+                                                        <i class="ti ti-check text-white"></i>
                                                     </a>
                                                 </div>
                                             @else

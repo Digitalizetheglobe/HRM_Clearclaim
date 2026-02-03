@@ -167,6 +167,7 @@ require __DIR__ . '/auth.php';
 Route::group(['middleware' => ['auth']], function () {
     Route::resource('resignation', ResignationController::class);
     Route::post('resignation/{id}/approve', [ResignationController::class, 'approve'])->name('resignation.approve');
+    Route::post('resignation/{id}/manager-approve', [ResignationController::class, 'managerApprove'])->name('resignation.manager-approve');
     Route::get('resignation/{id}/review', [ResignationController::class, 'review'])->name('resignation.review');
     Route::get('employee-resignations', [ResignationController::class, 'employeeResignationsIndex'])->name('employee-resignations.index');
 

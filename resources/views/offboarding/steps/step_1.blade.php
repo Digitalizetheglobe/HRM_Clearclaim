@@ -7,7 +7,7 @@
             <div class="mb-3">
                 <i class="ti ti-user-check" style="font-size: 48px; color: #ffc107;"></i>
             </div>
-            <h4 class="text-warning">{{ __('Pending Manager Approval') }}</h4>
+            <h4 class="text-warning">{{ __('Manager Approval Pending') }}</h4>
             <p class="text-muted">{{ __('This resignation is waiting for manager approval.') }}</p>
         </div>
 
