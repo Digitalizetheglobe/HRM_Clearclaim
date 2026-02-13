@@ -34,6 +34,18 @@
     .fc-daygrid-day.hours-incomplete {
         background-color: #f8d7da !important;
     }
+    
+    /* Fix for toastr error message text wrapping */
+    .toast-error {
+        min-width: 400px !important;
+        max-width: 500px !important;
+        white-space: nowrap !important;
+    }
+    
+    .toast-error .toast-body {
+        white-space: nowrap !important;
+        word-wrap: normal !important;
+    }
 </style>
 
 <div>

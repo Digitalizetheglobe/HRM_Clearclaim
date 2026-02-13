@@ -1037,6 +1037,7 @@ $currIncrementLetterLang = \App\Models\IncrementLetter::where('created_by',  \Au
                 $request->all(),
                 [
                     'ip' => 'required',
+                    'type' => 'required|in:local,public',
                 ]
             );
             if ($validator->fails()) {
@@ -1045,8 +1046,14 @@ $currIncrementLetterLang = \App\Models\IncrementLetter::where('created_by',  \Au
                 return redirect()->back()->with('error', $messages->first());
             }
 
+            // Additional IP format validation
+            if ($request->type === 'local' && !str_starts_with($request->ip, '192.168.') && !str_starts_with($request->ip, '10.') && !str_starts_with($request->ip, '172.')) {
+                return redirect()->back()->with('error', __('Local IP should start with 192.168.x.x, 10.x.x.x, or 172.x.x.x'));
+            }
+
             $ip             = new IpRestrict();
             $ip->ip         = $request->ip;
+            $ip->type       = $request->type;
             $ip->created_by = \Auth::user()->creatorId();
             $ip->save();
 
@@ -1070,6 +1077,7 @@ $currIncrementLetterLang = \App\Models\IncrementLetter::where('created_by',  \Au
                 $request->all(),
                 [
                     'ip' => 'required',
+                    'type' => 'required|in:local,public',
                 ]
             );
             if ($validator->fails()) {
@@ -1078,8 +1086,14 @@ $currIncrementLetterLang = \App\Models\IncrementLetter::where('created_by',  \Au
                 return redirect()->back()->with('error', $messages->first());
             }
 
-            $ip     = IpRestrict::find($id);
-            $ip->ip = $request->ip;
+            // Additional IP format validation
+            if ($request->type === 'local' && !str_starts_with($request->ip, '192.168.') && !str_starts_with($request->ip, '10.') && !str_starts_with($request->ip, '172.')) {
+                return redirect()->back()->with('error', __('Local IP should start with 192.168.x.x, 10.x.x.x, or 172.x.x.x'));
+            }
+
+            $ip       = IpRestrict::find($id);
+            $ip->ip   = $request->ip;
+            $ip->type = $request->type;
             $ip->save();
 
             return redirect()->back()->with('success', __('IP successfully updated.'));

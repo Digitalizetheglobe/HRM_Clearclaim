@@ -968,18 +968,54 @@ class AttendanceEmployeeController extends Controller
     {
         $settings = Utility::settings();
 
-        // IP Restriction Check (existing code)
+        // IP Restriction Check (updated for two-step validation)
         if (!empty($settings['ip_restrict']) && $settings['ip_restrict'] == 'on') {
             $userIp = request()->ip();
-            $ip = IpRestrict::where('created_by', \Auth::user()->creatorId())->whereIn('ip', [$userIp])->first();
-            if (empty($ip)) {
+            $creatorId = \Auth::user()->creatorId();
+            
+            // Step 1: Check if user is on office Wi-Fi (Local IP)
+            $isInOffice = false;
+            if ($this->isPrivateIP($userIp)) {
+                $localIpExists = IpRestrict::where('created_by', $creatorId)
+                    ->where('type', 'local')
+                    ->exists();
+                
+                if ($localIpExists) {
+                    $isInOffice = true;
+                }
+            }
+            
+            // Step 2: Check if company has any registered devices (Public IPs)
+            $isRegisteredDevice = false;
+            $hasPublicIps = IpRestrict::where('created_by', $creatorId)
+                ->where('type', 'public')
+                ->exists();
+            
+            if ($hasPublicIps) {
+                $isRegisteredDevice = true;
+            }
+            
+            // Validation Logic
+            if (!$isInOffice && !$isRegisteredDevice) {
+                $message = __('You are not in the office and this device is not registered. Please connect to office Wi-Fi or contact admin.');
+            } elseif (!$isInOffice && $isRegisteredDevice) {
+                $message = __('You are not in the office. Please connect to office Wi-Fi.');
+            } elseif ($isInOffice && !$isRegisteredDevice) {
+                $message = __('This device is not added. Contact admin.');
+            } else {
+                // Both conditions met - allow access
+                $message = null;
+            }
+            
+            // Show error if validation failed
+            if ($message) {
                 if ($request->ajax() || $request->wantsJson()) {
                     return response()->json([
                         'success' => false,
-                        'message' => __('This IP is not allowed to clock in & clock out.')
+                        'message' => $message
                     ]);
                 }
-                return redirect()->back()->with('error', __('This IP is not allowed to clock in & clock out.'));
+                return redirect()->back()->with('error', $message);
             }
         }
 
@@ -2331,6 +2367,17 @@ class AttendanceEmployeeController extends Controller
         }
     }
     
-    
+    /**
+     * Check if an IP address is private/local
+     */
+    private function isPrivateIP($ip)
+    {
+        return (
+            !filter_var($ip, FILTER_VALIDATE_IP, FILTER_FLAG_NO_PRIV_RANGE | FILTER_FLAG_NO_RES_RANGE) ||
+            strpos($ip, '192.168.') === 0 ||
+            strpos($ip, '10.') === 0 ||
+            strpos($ip, '172.') === 0
+        );
+    }
    
 }

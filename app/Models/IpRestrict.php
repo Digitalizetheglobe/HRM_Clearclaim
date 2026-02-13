@@ -8,6 +8,7 @@ class IpRestrict extends Model
 {
     protected $fillable = [
         'ip',
+        'type',
         'created_by',
     ];
 }
