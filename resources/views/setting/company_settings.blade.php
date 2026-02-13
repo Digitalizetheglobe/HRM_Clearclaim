@@ -1113,8 +1113,7 @@
                                     <table class="table" id="pc-dt-simple">
                                         <thead>
                                             <tr>
-                                                <th class="w-50"> {{ __('IP') }}</th>
-                                                <th class="w-25"> {{ __('Type') }}</th>
+                                                <th class="w-75"> {{ __('IP') }}</th>
                                                 <th width="200px"> {{ 'Action' }}</th>
                                             </tr>
                                         </thead>
@@ -1123,13 +1122,6 @@
                                             @foreach ($ips as $ip)
                                                 <tr class="Action">
                                                     <td class="sorting_1">{{ $ip->ip }}</td>
-                                                    <td>
-                                                        @if($ip->type === 'public')
-                                                            <span class="badge bg-success">{{ __('Public IP') }}</span>
-                                                        @else
-                                                            <span class="badge bg-info">{{ __('Local IP') }}</span>
-                                                        @endif
-                                                    </td>
                                                     <td class="">
                                                         @can('Manage Company Settings')
                                                             <div class="action-btn bg-info ms-2">

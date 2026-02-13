@@ -12,7 +12,7 @@ return new class extends Migration
     public function up(): void
     {
         Schema::table('ip_restricts', function (Blueprint $table) {
-            $table->enum('type', ['local', 'public'])->default('public')->after('ip');
+            //
         });
     }
 
@@ -22,7 +22,7 @@ return new class extends Migration
     public function down(): void
     {
         Schema::table('ip_restricts', function (Blueprint $table) {
-            $table->dropColumn('type');
+            //
         });
     }
 };

@@ -34,26 +34,6 @@
     .fc-daygrid-day.hours-incomplete {
         background-color: #f8d7da !important;
     }
-    
-    /* Fix for toastr error message text wrapping */
-    .toast-error {
-        min-width: 400px !important;
-        max-width: 500px !important;
-        white-space: nowrap !important;
-    }
-    
-    .toast-error .toast-body {
-        white-space: nowrap !important;
-        word-wrap: normal !important;
-    }
-    
-    /* Fix for single-line error alerts */
-    .alert-single-line {
-        min-width: 400px !important;
-        max-width: 600px !important;
-        white-space: nowrap !important;
-        display: inline-block !important;
-    }
 </style>
 
 <div>
@@ -61,12 +41,6 @@
         @if (session('status'))
             <div class="alert alert-success" role="alert">
                 {{ session('status') }}
-            </div>
-        @endif
-        
-        @if (session('error'))
-            <div class="alert alert-danger alert-single-line" role="alert">
-                {{ session('error') }}
             </div>
         @endif
 
