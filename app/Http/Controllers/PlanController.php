@@ -47,41 +47,36 @@ class PlanController extends Controller
     public function store(Request $request)
     {
         if (\Auth::user()->can('Create Plan')) {
-            $admin_payment_setting = Utility::getAdminPaymentSetting();
-            if (!empty($admin_payment_setting) && ($admin_payment_setting['is_manually_enabled'] == 'on' || $admin_payment_setting['is_banktransfer_enabled'] == 'on' || $admin_payment_setting['is_stripe_enabled'] == 'on' || $admin_payment_setting['is_paypal_enabled'] == 'on' || $admin_payment_setting['is_paystack_enabled'] == 'on' || $admin_payment_setting['is_flutterwave_enabled'] == 'on' || $admin_payment_setting['is_razorpay_enabled'] == 'on' || $admin_payment_setting['is_mercado_enabled'] == 'on' || $admin_payment_setting['is_paytm_enabled'] == 'on' || $admin_payment_setting['is_mollie_enabled'] == 'on' || $admin_payment_setting['is_skrill_enabled'] == 'on' || $admin_payment_setting['is_coingate_enabled'] == 'on' || $admin_payment_setting['is_paymentwall_enabled'] == 'on' || $admin_payment_setting['is_toyyibpay_enabled'] == 'on' || $admin_payment_setting['is_payfast_enabled'] == 'on' || $admin_payment_setting['is_iyzipay_enabled'] == 'on' || $admin_payment_setting['is_sspay_enabled'] == 'on' || $admin_payment_setting['is_paytab_enabled'] == 'on' || $admin_payment_setting['is_benefit_enabled'] == 'on' || $admin_payment_setting['is_cashfree_enabled'] == 'on' || $admin_payment_setting['is_aamarpay_enabled'] == 'on' || $admin_payment_setting['is_paytr_enabled'] == 'on' || $admin_payment_setting['is_yookassa_enabled'] == 'on' || $admin_payment_setting['is_midtrans_enabled'] == 'on' || $admin_payment_setting['is_xendit_enabled'] == 'on' || $admin_payment_setting['is_nepalste_enabled'] == 'on' || $admin_payment_setting['is_paiementpro_enabled'] == 'on' || $admin_payment_setting['is_fedapay_enabled'] == 'on' || $admin_payment_setting['is_payhere_enabled'] == 'on' || $admin_payment_setting['is_cinetpay_enabled'] == 'on')) {
-                $validator = \Validator::make(
-                    $request->all(),
-                    [
-                        'name' => 'required|unique:plans',
-                        'price' => 'required|numeric|min:0',
-                        'duration' => 'required',
-                        'max_users' => 'required|numeric',
-                        'max_employees' => 'required|numeric',
-                        'storage_limit' => 'required',
-                    ]
-                );
-                if ($validator->fails()) {
-                    $messages = $validator->getMessageBag();
+            $validator = \Validator::make(
+                $request->all(),
+                [
+                    'name' => 'required|unique:plans',
+                    'price' => 'required|numeric|min:0',
+                    'duration' => 'required',
+                    'max_users' => 'required|numeric',
+                    'max_employees' => 'required|numeric',
+                    'storage_limit' => 'required',
+                ]
+            );
+            if ($validator->fails()) {
+                $messages = $validator->getMessageBag();
 
-                    return redirect()->back()->with('error', $messages->first());
-                }
+                return redirect()->back()->with('error', $messages->first());
+            }
 
-                $post = $request->all();
-                if (!isset($request->enable_chatgpt)) {
-                    $post['enable_chatgpt'] = 'off';
-                }
+            $post = $request->all();
+            if (!isset($request->enable_chatgpt)) {
+                $post['enable_chatgpt'] = 'off';
+            }
 
-                if ($request->trial == 1) {
-                    $post['trial_days'] = !empty($post['trial_days']) ? $post['trial_days'] : 0;
-                }
+            if ($request->trial == 1) {
+                $post['trial_days'] = !empty($post['trial_days']) ? $post['trial_days'] : 0;
+            }
 
-                if (Plan::create($post)) {
-                    return redirect()->back()->with('success', __('Plan Successfully created.'));
-                } else {
-                    return redirect()->back()->with('error', __('Something is wrong.'));
-                }
+            if (Plan::create($post)) {
+                return redirect()->back()->with('success', __('Plan Successfully created.'));
             } else {
-                return redirect()->back()->with('error', __('Please set stripe/paypal api key & secret key for add new plan'));
+                return redirect()->back()->with('error', __('Something is wrong.'));
             }
         } else {
             return redirect()->back()->with('error', __('Permission denied.'));
@@ -105,57 +100,52 @@ class PlanController extends Controller
     public function update(Request $request, $plan_id)
     {
         if (\Auth::user()->can('Edit Plan')) {
-            $admin_payment_setting = Utility::getAdminPaymentSetting();
-            if (!empty($admin_payment_setting) &&  ($admin_payment_setting['is_manually_enabled'] == 'on' || $admin_payment_setting['is_banktransfer_enabled'] == 'on' || $admin_payment_setting['is_stripe_enabled'] == 'on' || $admin_payment_setting['is_paypal_enabled'] == 'on' || $admin_payment_setting['is_paystack_enabled'] == 'on' || $admin_payment_setting['is_flutterwave_enabled'] == 'on' || $admin_payment_setting['is_razorpay_enabled'] == 'on' || $admin_payment_setting['is_mercado_enabled'] == 'on' || $admin_payment_setting['is_paytm_enabled'] == 'on' || $admin_payment_setting['is_mollie_enabled'] == 'on' || $admin_payment_setting['is_skrill_enabled'] == 'on' || $admin_payment_setting['is_coingate_enabled'] == 'on' || $admin_payment_setting['is_paymentwall_enabled'] == 'on' || $admin_payment_setting['is_toyyibpay_enabled'] == 'on' || $admin_payment_setting['is_payfast_enabled'] == 'on' || $admin_payment_setting['is_iyzipay_enabled'] == 'on' || $admin_payment_setting['is_sspay_enabled'] == 'on' || $admin_payment_setting['is_paytab_enabled'] == 'on' || $admin_payment_setting['is_benefit_enabled'] == 'on' || $admin_payment_setting['is_cashfree_enabled'] == 'on' || $admin_payment_setting['is_aamarpay_enabled'] == 'on' || $admin_payment_setting['is_paytr_enabled'] == 'on' || $admin_payment_setting['is_yookassa_enabled'] == 'on' || $admin_payment_setting['is_midtrans_enabled'] == 'on' || $admin_payment_setting['is_xendit_enabled'] == 'on' || $admin_payment_setting['is_nepalste_enabled'] == 'on' || $admin_payment_setting['is_paiementpro_enabled'] == 'on' || $admin_payment_setting['is_fedapay_enabled'] == 'on' || $admin_payment_setting['is_payhere_enabled'] == 'on' || $admin_payment_setting['is_cinetpay_enabled'] == 'on')) {
-                $plan = Plan::find($plan_id);
-                if (!empty($plan)) {
+            $plan = Plan::find($plan_id);
+            if (!empty($plan)) {
 
-                    $rules = [
-                        'name' => 'required|unique:plans,name,' . $plan_id,
-                        'max_users' => 'required|numeric',
-                        'max_employees' => 'required|numeric',
-                        'storage_limit' => 'required',
+                $rules = [
+                    'name' => 'required|unique:plans,name,' . $plan_id,
+                    'max_users' => 'required|numeric',
+                    'max_employees' => 'required|numeric',
+                    'storage_limit' => 'required',
+                ];
+                if ($plan_id != 1) {
+                    $rules['duration'] = [
+                        'required',
                     ];
-                    if ($plan_id != 1) {
-                        $rules['duration'] = [
-                            'required',
-                        ];
-                    }
+                }
 
-                    $validator = \Validator::make(
-                        $request->all(),
-                        $rules
-                    );
+                $validator = \Validator::make(
+                    $request->all(),
+                    $rules
+                );
 
-                    if ($validator->fails()) {
-                        $messages = $validator->getMessageBag();
+                if ($validator->fails()) {
+                    $messages = $validator->getMessageBag();
 
-                        return redirect()->back()->with('error', $messages->first());
-                    }
+                    return redirect()->back()->with('error', $messages->first());
+                }
 
-                    $post = $request->all();
+                $post = $request->all();
 
-                    if (!isset($request->enable_chatgpt)) {
-                        $post['enable_chatgpt'] = 'off';
-                    }
+                if (!isset($request->enable_chatgpt)) {
+                    $post['enable_chatgpt'] = 'off';
+                }
 
-                    if ($request->trial == 1) {
-                        $post['trial_days'] = !empty($post['trial_days']) ? $post['trial_days'] : 0;
-                    } else {
-                        $post['trial'] = 0;
-                        $post['trial_days'] = 0;
-                    }
-
-                    if ($plan->update($post)) {
-                        return redirect()->back()->with('success', __('Plan successfully updated.'));
-                    } else {
-                        return redirect()->back()->with('error', __('Something is wrong.'));
-                    }
+                if ($request->trial == 1) {
+                    $post['trial_days'] = !empty($post['trial_days']) ? $post['trial_days'] : 0;
                 } else {
-                    return redirect()->back()->with('error', __('Plan not found.'));
+                    $post['trial'] = 0;
+                    $post['trial_days'] = 0;
+                }
+
+                if ($plan->update($post)) {
+                    return redirect()->back()->with('success', __('Plan successfully updated.'));
+                } else {
+                    return redirect()->back()->with('error', __('Something is wrong.'));
                 }
             } else {
-                return redirect()->back()->with('error', __('Please set stripe/paypal api key & secret key for add new plan'));
+                return redirect()->back()->with('error', __('Plan not found.'));
             }
         } else {
             return redirect()->back()->with('error', __('Permission denied.'));

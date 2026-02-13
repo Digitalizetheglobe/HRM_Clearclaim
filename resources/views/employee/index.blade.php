@@ -17,6 +17,10 @@
         <i class="ti ti-file-export"></i>
     </a>
 
+    <a href="#" data-bs-toggle="modal" data-bs-target="#importModal" data-bs-placement="top"
+        data-bs-original-title="{{ __('Import') }}" class="btn btn-sm btn-primary">
+        <i class="ti ti-file-import"></i>
+    </a>
 
     @can('Create Assets')
             <a href="{{ route('employee.create') }}" 
@@ -211,6 +215,19 @@
                         </div>
                     </div>
                 </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Import Modal -->
+    <div class="modal fade" id="importModal" tabindex="-1" aria-labelledby="importModalLabel" aria-hidden="true">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="importModalLabel">{{ __('Import Employees') }}</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                @include('employee.import')
             </div>
         </div>
     </div>

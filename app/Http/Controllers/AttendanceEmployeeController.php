@@ -971,7 +971,7 @@ class AttendanceEmployeeController extends Controller
         // IP Restriction Check (existing code)
         if (!empty($settings['ip_restrict']) && $settings['ip_restrict'] == 'on') {
             $userIp = request()->ip();
-            $ip = IpRestrict::where('created_by', Auth::user()->creatorId())->whereIn('ip', [$userIp])->first();
+            $ip = IpRestrict::where('created_by', \Auth::user()->creatorId())->whereIn('ip', [$userIp])->first();
             if (empty($ip)) {
                 if ($request->ajax() || $request->wantsJson()) {
                     return response()->json([

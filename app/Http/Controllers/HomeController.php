@@ -22,7 +22,6 @@ use App\Models\DailyQuote;
 use App\Models\Department; 
 use App\Models\Site;
 use App\Models\LeaveType;  
-use App\Models\Project;  
 use App\Models\ToDoList;  
 use Carbon\Carbon;
 use App\Models\Deposit;
@@ -508,28 +507,11 @@ class HomeController extends Controller
 
                  $totalleaves = LeaveType::where('created_by', '=', \Auth::user()->creatorId())->count();
 
-                 $projects = Project::all(); // Gets all projects without any conditions
-
-                 // With this:
-                 // Get all projects
-                 $projects = Project::where('created_by', '=', \Auth::user()->creatorId())->get();
                  
-                 // Prepare employee data for projects (similar to ProjectController)
                  $departmentIds = [];
                  $employeeIds = [];
                  
-                 foreach ($projects as $project) {
-                     if (is_array($project->assigned_data)) {
-                         foreach ($project->assigned_data as $assignment) {
-                             if (!empty($assignment['department_id'])) {
-                                 $departmentIds[] = $assignment['department_id'];
-                             }
-                             if (!empty($assignment['employee_ids']) && is_array($assignment['employee_ids'])) {
-                                 $employeeIds = array_merge($employeeIds, $assignment['employee_ids']);
-                             }
-                         }
-                     }
-                 }
+
                  
                  // Get unique IDs
                  $departmentIds = array_unique($departmentIds);
@@ -540,7 +522,6 @@ class HomeController extends Controller
                  $employees = Employee::with('user')->whereIn('id', $employeeIds)->get()->keyBy('id');
                  
                  
-                 $totalProjects = Project::count();
 
                  $totalHolidays = Holiday::count();
 
@@ -689,7 +670,7 @@ class HomeController extends Controller
 
 
 
-                return view('dashboard.company', compact('allEvents', 'employeesNotWorkingToday', 'todayEnquiryCount','notices','totalHolidays', 'arrEvents', 'announcements', 'employees', 'activeJob', 'inActiveJOb', 'meetings', 'countEmployee', 'countUser', 'countTicket', 'countOpenTicket', 'countCloseTicket', 'notClockIns','onLeaveEmployees', 'accountBalance', 'totalPayee', 'totalPayer', 'users', 'plan', 'storage_limit', 'quote','attendancePercentage', 'presentEmployeesWithClockIn', 'totalEmployees', 'totalDepartment', 'totalleaves', 'projects', 'todos','chartData', 'totalProjects'));
+                return view('dashboard.company', compact('allEvents', 'employeesNotWorkingToday', 'todayEnquiryCount','notices','totalHolidays', 'arrEvents', 'announcements', 'employees', 'activeJob', 'inActiveJOb', 'meetings', 'countEmployee', 'countUser', 'countTicket', 'countOpenTicket', 'countCloseTicket', 'notClockIns','onLeaveEmployees', 'accountBalance', 'totalPayee', 'totalPayer', 'users', 'plan', 'storage_limit', 'quote','attendancePercentage', 'presentEmployeesWithClockIn', 'totalEmployees', 'totalDepartment', 'totalleaves', 'todos','chartData',));
             }
         } 
     }

@@ -603,6 +603,31 @@
             return view('employee.import');
         }
 
+        public function import(Request $request)
+        {
+            if (\Auth::user()->can('Create Employee')) {
+                $rules = [
+                    'file' => 'required|mimes:xlsx,xls,csv|max:2048',
+                ];
+
+                $validator = \Validator::make($request->all(), $rules);
+
+                if ($validator->fails()) {
+                    return redirect()->back()->with('error', $validator->messages()->first());
+                }
+
+                try {
+                    Excel::import(new EmployeesImport, $request->file('file'));
+                    
+                    return redirect()->route('employee.index')->with('success', __('Employee successfully imported.'));
+                } catch (\Exception $e) {
+                    return redirect()->back()->with('error', __('Error importing file: ') . $e->getMessage());
+                }
+            } else {
+                return redirect()->back()->with('error', __('Permission denied.'));
+            }
+        }
+
 
 
         public function profile(Request $request)

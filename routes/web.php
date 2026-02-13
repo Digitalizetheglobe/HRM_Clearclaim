@@ -7,6 +7,7 @@ use App\Http\Controllers\UserController;
 use App\Http\Controllers\SearchController;
 use App\Http\Controllers\AwardController;
 use App\Http\Controllers\HomeController;
+use App\Http\Controllers\HierarchyChartController;
 use App\Http\Controllers\SettingsController;
 use App\Http\Controllers\EmployeeController;
 use App\Http\Controllers\RoleController;
@@ -434,6 +435,7 @@ Route::group(['middleware' => ['verified']], function () {
 
 
     Route::get('/dashboard', [HomeController::class, 'index'])->middleware(['auth', 'XSS'])->name('dashboard');
+    Route::get('/hierarchy/chart', [HierarchyChartController::class, 'index'])->middleware(['auth', 'XSS'])->name('hierarchy.chart');
     // Route::get('/home', [HomeController::class, 'index'])->name('home')->middleware(
     //     [
     //         'auth',

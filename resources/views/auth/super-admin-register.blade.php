@@ -4,7 +4,7 @@
 <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
-    <title>{{ __('Login') }}</title>
+    <title>{{ __('Super Admin Register') }}</title>
     <link href="{{ asset('css/app.css') }}" rel="stylesheet">
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
 
@@ -124,6 +124,29 @@
             background-color: #0056b3;
         }
 
+        .alert {
+            padding: 10px;
+            margin-bottom: 20px;
+            border-radius: 5px;
+        }
+
+        .alert-success {
+            background-color: #d4edda;
+            color: #155724;
+            border: 1px solid #c3e6cb;
+        }
+
+        .alert-danger {
+            background-color: #f8d7da;
+            color: #721c24;
+            border: 1px solid #f5c6cb;
+        }
+
+        .text-danger {
+            color: #dc3545;
+            font-size: 12px;
+        }
+
         @media (max-width: 768px) {
             .login-container {
                 flex-direction: column-reverse;
@@ -208,14 +231,23 @@
                 </div>
             @endif
             
-            <form method="POST" action="{{ route('login') }}" autocomplete="off" style="margin-top: 25px;">
+            <form method="POST" action="{{ route('super-admin.register.store') }}" autocomplete="off" style="margin-top: 25px;">
                 @csrf
                 <input type="hidden" name="timestamp" value="{{ time() }}">
                 
                 <div class="form-group">
+                    <label>{{ __('Name') }}</label>
+                    <input id="name" type="text" class="form-control @error('name') is-invalid @enderror"
+                        name="name" placeholder="{{ __('Enter your name') }}" required autofocus value="{{ old('name') }}">
+                    @error('name')
+                        <span class="text-danger"><small>{{ $message }}</small></span>
+                    @enderror
+                </div>
+                
+                <div class="form-group">
                     <label>{{ __('Email') }}</label>
                     <input id="email" type="email" class="form-control @error('email') is-invalid @enderror"
-                        name="email" placeholder="{{ __('Enter your email') }}" required autofocus value="{{ old('email') }}">
+                        name="email" placeholder="{{ __('Enter your email') }}" required value="{{ old('email') }}">
                     @error('email')
                         <span class="text-danger"><small>{{ $message }}</small></span>
                     @enderror
@@ -230,19 +262,23 @@
                         <span class="text-danger"><small>{{ $message }}</small></span>
                     @enderror
                 </div>
-                
-                <div class="form-group" style="display: flex; align-items: center; margin-bottom: 20px;">
-                    <input type="checkbox" name="remember" id="remember" {{ old('remember') ? 'checked' : '' }} style="margin-right: 5px;">
-                    <label for="remember" style="margin: 0;">{{ __('Remember Me') }}</label>
+
+                <div class="form-group">
+                    <label>{{ __('Confirm Password') }}</label>
+                    <input id="password-confirm" type="password" class="form-control @error('password_confirmation') is-invalid @enderror"
+                        name="password_confirmation" placeholder="{{ __('Confirm Password') }}" required autocomplete="new-password">
+                    <i class="fa fa-eye eye-icon" id="toggleConfirmPassword" style="top: 65%;"></i>
+                    @error('password_confirmation')
+                        <span class="text-danger"><small>{{ $message }}</small></span>
+                    @enderror
                 </div>
-                <button type="submit" class="btn">{{ __('Login') }}</button>
+                
+                <button type="submit" class="btn">{{ __('Register as Super Admin') }}</button>
             </form>
             
-            @if(!\App\Models\User::where('type', 'super admin')->exists())
-            <p class="my-4 text-center">
-                <a href="{{ route('super-admin.register') }}" tabindex="0" style="color: #007bff;">{{ __('Register as Super Admin') }}</a>
+            <p class="my-4 text-center">{{ __('Already have an account?') }}
+                <a href="{{ route('login') }}" tabindex="0">{{ __('Login') }}</a>
             </p>
-            @endif
         </div>
     </div>
 
@@ -250,6 +286,8 @@
         // Password visibility toggle
         const togglePassword = document.getElementById('togglePassword');
         const password = document.getElementById('password');
+        const toggleConfirmPassword = document.getElementById('toggleConfirmPassword');
+        const confirmPassword = document.getElementById('password-confirm');
 
         togglePassword.addEventListener('click', function () {
             const type = password.getAttribute('type') === 'password' ? 'text' : 'password';
@@ -258,47 +296,11 @@
             this.classList.toggle('fa-eye-slash');
         });
 
-        // Auto-fill from localStorage
-        document.addEventListener('DOMContentLoaded', function () {
-            const emailInput = document.getElementById('email');
-            const passwordInput = document.getElementById('password');
-            const rememberCheckbox = document.getElementById('remember');
-
-            // Fill from localStorage if exists
-            const savedEmail = localStorage.getItem('savedEmail');
-            const savedPassword = localStorage.getItem('savedPassword');
-
-            if (savedEmail) {
-                emailInput.value = savedEmail;
-                rememberCheckbox.checked = true;
-            }
-
-            if (savedPassword) {
-                passwordInput.value = savedPassword;
-            }
-
-            // Optional: force reload if loaded from cache
-            if (window.performance && performance.navigation.type === 2) {
-                window.location.reload();
-            }
-
-            // Optional: Clear sessionStorage
-            sessionStorage.clear();
-        });
-
-        // On form submit, store email (and optionally password)
-        document.querySelector('form').addEventListener('submit', function () {
-            const email = document.getElementById('email').value;
-            const password = document.getElementById('password').value;
-            const remember = document.getElementById('remember').checked;
-
-            if (remember) {
-                localStorage.setItem('savedEmail', email);
-                localStorage.setItem('savedPassword', password); // Optional, remove if insecure
-            } else {
-                localStorage.removeItem('savedEmail');
-                localStorage.removeItem('savedPassword');
-            }
+        toggleConfirmPassword.addEventListener('click', function () {
+            const type = confirmPassword.getAttribute('type') === 'password' ? 'text' : 'password';
+            confirmPassword.setAttribute('type', type);
+            this.classList.toggle('fa-eye');
+            this.classList.toggle('fa-eye-slash');
         });
 
         // Prevent form resubmission on refresh
@@ -306,30 +308,5 @@
             window.history.replaceState(null, null, window.location.href);
         }
     </script>
-
-
-@if (Auth::check())
-<script>
-    document.addEventListener("deviceready", function () {
-        var ss = new cordova.plugins.SecureStorage(
-            function () {
-                ss.remove(function () {
-                    console.log("🔓 Token cleared on logout.");
-                }, function (error) {
-                    console.error("Error clearing token: " + error);
-                }, 'login_token');
-            },
-            function (error) {
-                console.error("SecureStorage init error: " + error);
-            },
-            'connect360_storage'
-        );
-    }, false);
-</script>
-
-
-@endif
-
-
 </body>
 </html>

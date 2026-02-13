@@ -11,26 +11,40 @@
             <div class="card mt-5" id="printTable" style="margin-left: 180px;margin-right: -57px; padding: 20px;">
                 <div class="card-body" id="boxes">
                     <div style="padding: 50px;">
-                        <h2 class="text-center">Increment Letter</h2>
+                        <div class="letter-header mb-4">
+                            <div class="d-flex justify-content-start align-items-start">
+                                <div>
+                                    @if($company_logo)
+                                        <img src="{{ $logo . '/' . $company_logo }}" 
+                                            alt="Clearclaim" 
+                                            style="max-height: 60px; max-width: 150px;">
+                                    @else
+                                        <img src="{{ asset('storage/uploads/logo/logo.svg') }}" 
+                                            alt="Clearclaim" 
+                                            style="max-height: 60px; max-width: 150px;">
+                                    @endif
+                                </div>
+                            </div>
+                        </div>
+                        
 
                         <div style="display: flex; justify-content: space-between; width: 100%;">
                             <div>
-                                <p>To,<br>
+                                {{ \Carbon\Carbon::parse($increment->created_at)->format('d/m/Y') }}<br>
                                 {{ $employee->name }}<br>
                                 {{ $employee->designation->name ?? '' }}<br>
                                 {{ $employee->department->name ?? '' }}</p>
                             </div>
-                            <div style="text-align: right;">
-                                <p>Date: {{ \Carbon\Carbon::parse($increment->created_at)->format('d/m/Y') }}</p>
-                            </div>
                         </div>
 
+                        <h2 class="text-center">Increment Letter</h2>
 
-                        <p>Dear {{ $employee->name }},</p>
+
+                        <p>Dear {{ explode(' ', $employee->name)[0] }},</p>
 
                         <p>
                             We are pleased to inform you that in recognition of your continued dedication and performance, 
-                            your salary has been revised effective from <strong>{{ $increment->month_of_effective_date }}</strong>.
+                            your salary has been revised effective from <strong>{{ $increment->month_of_effective_date ? \Carbon\Carbon::parse($increment->month_of_effective_date)->format('d/m/Y') : 'N/A' }}</strong>.
                         </p>
 
                         <p>
@@ -43,7 +57,7 @@
 
                         <p>
                             Please note that this change will be reflected in your salary from 
-                            <strong>{{ $increment->month_of_effective_date }}</strong> onwards.
+                            <strong>{{ $increment->month_of_effective_date ? \Carbon\Carbon::parse($increment->month_of_effective_date)->format('d/m/Y') : 'N/A' }}</strong> onwards.
                         </p>
 
                         <p>
@@ -52,13 +66,43 @@
 
                         <br><br>
 
-                        <p>Best regards,</p>
+                        {{-- Signature Block --}}
+                        <div style="margin-top: 20px; display: flex; justify-content: space-between; align-items: flex-end;">
+                            <div style="width: 45%; text-align: left;">
+                                <div style="margin-top: 20px;">
+                                    <img src="{{ asset('images/letter/sign.png') }}" alt="Sign" style="max-height: 80px; max-width: 80px;">
+                                    <div style="border-top: 1px solid #000; width: 250px; margin-bottom: 5px;"></div>
+                                </div>
+                                <div style="margin-top: 10px;">
+                                    <strong>Shrikant Pandore</strong><br>
+                                    Authorized Signatory
+                                </div>
+                            </div>
 
-                        <p>
-                            <strong>{{ \Auth::user()->name }}</strong><br>
-                            <strong>{{ \Auth::user()->designation->name ?? 'HR' }}</strong><br>
-                            <strong>{{ $app_name }}</strong>
-                        </p>
+                            <div style="width: 45%; text-align: right; margin-top: 20px;">
+                                <div>
+                                    <div style="border-top: 1px solid #000; width: 250px; margin-left: auto; margin-bottom: 5px;"></div>
+                                    <div><strong>{{ $employee->name }}</strong></div>
+                                    <div>Accepted and Acknowledged</div>
+                                    <div>Must be signed on {{ $employee->company_doj ? \Auth::user()->dateFormat($employee->company_doj) : __('Not Set') }}</div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div style="display: flex; justify-content: space-between; align-items: flex-end;">
+                            <div style="width: 45%; text-align: left;">
+                                <div style="margin-top: 20px;">
+                                    <img src="{{ asset('images/letter/stamp.jpg') }}" alt="Stamp" style="max-height: 80px; max-width: 80px;">
+                                </div>
+                            </div>
+                        </div>
+
+                        {{-- Footer with Company Info --}}
+                        <div style="margin-top: 50px; font-size: 11px; text-align: center;">
+                            <div><strong>Clearclaim Ventures Private Limited</strong></div>
+                            <div>Office No 201, 2nd floor, Vantage Tower, NDA Pashan Road, Bavdhan Pune 411021, India. Phone No. 9156701900</div>
+                            <div>Website: www.clearclaim.in Email: hr@clearclaim.in</div>
+                        </div>
                     </div>
                 </div>
             </div>
@@ -72,7 +116,7 @@
 <script>
     function closeScript() {
         setTimeout(function () {
-            window.open(window.location, '_self').close();
+            window.location.href = '/setsalary';
         }, 1000);
     }
 

@@ -276,6 +276,11 @@ class SetSalaryController extends Controller
         $app_name = env('APP_NAME');
         $date = date('d-m-Y'); // or your preferred format
 
+        // Get company logo settings
+        $settings = \App\Models\Utility::settings();
+        $company_logo = isset($settings['company_logo']) ? $settings['company_logo'] : null;
+        $logo = 'storage/uploads/logo/';
+
         // Get the increment letter template (you'll need to create this)
         $incrementLetter = IncrementLetter::where('created_by', \Auth::user()->creatorId())
                                         ->where('lang', \Auth::user()->currentLanguage())
@@ -299,7 +304,9 @@ class SetSalaryController extends Controller
             'employee' => $employee,
             'increment' => $increment,
             'app_name' => $app_name,
-            'date' => $date
+            'date' => $date,
+            'company_logo' => $company_logo,
+            'logo' => $logo
         ]);
     }
 

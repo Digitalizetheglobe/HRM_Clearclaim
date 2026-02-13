@@ -11,5 +11,5 @@ class DailyQuote extends Model
 {
     use HasFactory;
 
-    protected $fillable = ['quote'];
+    protected $fillable = ['quote', 'author'];
 }

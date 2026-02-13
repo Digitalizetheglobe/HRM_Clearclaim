@@ -11,12 +11,10 @@ return new class extends Migration
      */
     public function up(): void
     {
-        Schema::create('notices', function (Blueprint $table) {
+        Schema::create('increment_letters', function (Blueprint $table) {
             $table->id();
-            $table->string('title');
-            $table->text('description');
-            $table->date('notice_startdate');
-            $table->date('notice_enddate');
+            $table->string('lang')->default('en');
+            $table->text('content')->nullable();
             $table->unsignedBigInteger('created_by');
             $table->timestamps();
             
@@ -29,6 +27,6 @@ return new class extends Migration
      */
     public function down(): void
     {
-        Schema::dropIfExists('notices');
+        Schema::dropIfExists('increment_letters');
     }
 };

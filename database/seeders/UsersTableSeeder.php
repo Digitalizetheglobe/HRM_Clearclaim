@@ -1904,16 +1904,38 @@ class UsersTableSeeder extends Seeder
                 "created_at" => date('Y-m-d H:i:s'),
                 "updated_at" => date('Y-m-d H:i:s'),
             ],
+            [
+                "name" => "Manage Enquiry",
+                "guard_name" => "web",
+                "created_at" => date('Y-m-d H:i:s'),
+                "updated_at" => date('Y-m-d H:i:s'),
+            ],
+            [
+                "name" => "Create Enquiry",
+                "guard_name" => "web",
+                "created_at" => date('Y-m-d H:i:s'),
+                "updated_at" => date('Y-m-d H:i:s'),
+            ],
+            [
+                "name" => "Edit Enquiry",
+                "guard_name" => "web",
+                "created_at" => date('Y-m-d H:i:s'),
+                "updated_at" => date('Y-m-d H:i:s'),
+            ],
+            [
+                "name" => "Delete Enquiry",
+                "guard_name" => "web",
+                "created_at" => date('Y-m-d H:i:s'),
+                "updated_at" => date('Y-m-d H:i:s'),
+            ],
 
         ];
         Permission::insert($arrPermissions);
 
         // Super admin
-        $superAdminRole        = Role::create(
-            [
-                'name' => 'super admin',
-                'created_by' => 0,
-            ]
+        $superAdminRole = Role::firstOrCreate(
+            ['name' => 'super admin'],
+            ['created_by' => 0]
         );
         $superAdminPermissions = [
             ["name" => "Manage User"],

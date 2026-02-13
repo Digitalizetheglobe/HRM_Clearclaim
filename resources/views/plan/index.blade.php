@@ -15,102 +15,11 @@
 
 @section('action-button')
     @can('Create Plan')
-        @if (
-            !empty($admin_payment_setting) &&
-                ($admin_payment_setting['is_manually_enabled'] == 'on' ||
-                    ($admin_payment_setting['is_banktransfer_enabled'] == 'on' &&
-                        !empty($admin_payment_setting['bank_details'])) ||
-                    ($admin_payment_setting['is_stripe_enabled'] == 'on' &&
-                        !empty($admin_payment_setting['stripe_key']) &&
-                        !empty($admin_payment_setting['stripe_secret'])) ||
-                    ($admin_payment_setting['is_paypal_enabled'] == 'on' &&
-                        !empty($admin_payment_setting['paypal_client_id']) &&
-                        !empty($admin_payment_setting['paypal_secret_key'])) ||
-                    ($admin_payment_setting['is_paystack_enabled'] == 'on' &&
-                        !empty($admin_payment_setting['paystack_public_key']) &&
-                        !empty($admin_payment_setting['paystack_secret_key'])) ||
-                    ($admin_payment_setting['is_flutterwave_enabled'] == 'on' &&
-                        !empty($admin_payment_setting['flutterwave_public_key']) &&
-                        !empty($admin_payment_setting['flutterwave_secret_key'])) ||
-                    ($admin_payment_setting['is_razorpay_enabled'] == 'on' &&
-                        !empty($admin_payment_setting['razorpay_public_key']) &&
-                        !empty($admin_payment_setting['razorpay_secret_key'])) ||
-                    ($admin_payment_setting['is_paytm_enabled'] == 'on' &&
-                        !empty($admin_payment_setting['paytm_merchant_id']) &&
-                        !empty($admin_payment_setting['paytm_merchant_key'])) ||
-                    ($admin_payment_setting['is_mercado_enabled'] == 'on' &&
-                        !empty($admin_payment_setting['mercado_access_token'])) ||
-                    ($admin_payment_setting['is_mollie_enabled'] == 'on' &&
-                        !empty($admin_payment_setting['mollie_api_key']) &&
-                        !empty($admin_payment_setting['mollie_profile_id']) &&
-                        !empty($admin_payment_setting['mollie_partner_id'])) ||
-                    ($admin_payment_setting['is_skrill_enabled'] == 'on' && !empty($admin_payment_setting['skrill_email'])) ||
-                    ($admin_payment_setting['is_coingate_enabled'] == 'on' &&
-                        !empty($admin_payment_setting['coingate_auth_token'])) ||
-                    ($admin_payment_setting['is_paymentwall_enabled'] == 'on' &&
-                        !empty($admin_payment_setting['paymentwall_public_key']) &&
-                        !empty($admin_payment_setting['paymentwall_secret_key'])) ||
-                    ($admin_payment_setting['is_toyyibpay_enabled'] == 'on' &&
-                        !empty($admin_payment_setting['toyyibpay_category_code']) &&
-                        !empty($admin_payment_setting['toyyibpay_secret_key'])) ||
-                    ($admin_payment_setting['is_payfast_enabled'] == 'on' &&
-                        !empty($admin_payment_setting['payfast_merchant_id']) &&
-                        !empty($admin_payment_setting['payfast_merchant_key']) &&
-                        !empty($admin_payment_setting['payfast_signature'])) ||
-                    ($admin_payment_setting['is_iyzipay_enabled'] == 'on' &&
-                        !empty($admin_payment_setting['iyzipay_public_key']) &&
-                        !empty($admin_payment_setting['iyzipay_secret_key'])) ||
-                    ($admin_payment_setting['is_sspay_enabled'] == 'on' &&
-                        !empty($admin_payment_setting['sspay_category_code']) &&
-                        !empty($admin_payment_setting['sspay_secret_key'])) ||
-                    ($admin_payment_setting['is_paytab_enabled'] == 'on' &&
-                        !empty($admin_payment_setting['paytab_profile_id']) &&
-                        !empty($admin_payment_setting['paytab_server_key']) &&
-                        !empty($admin_payment_setting['paytab_region'])) ||
-                    ($admin_payment_setting['is_benefit_enabled'] == 'on' &&
-                        !empty($admin_payment_setting['benefit_api_key']) &&
-                        !empty($admin_payment_setting['benefit_secret_key'])) ||
-                    ($admin_payment_setting['is_cashfree_enabled'] == 'on' &&
-                        !empty($admin_payment_setting['cashfree_api_key']) &&
-                        !empty($admin_payment_setting['cashfree_secret_key'])) ||
-                    ($admin_payment_setting['is_aamarpay_enabled'] == 'on' &&
-                        !empty($admin_payment_setting['aamarpay_store_id']) &&
-                        !empty($admin_payment_setting['aamarpay_signature_key']) &&
-                        !empty($admin_payment_setting['aamarpay_description'])) ||
-                    ($admin_payment_setting['is_paytr_enabled'] == 'on' &&
-                        !empty($admin_payment_setting['paytr_merchant_id']) &&
-                        !empty($admin_payment_setting['paytr_merchant_key']) &&
-                        !empty($admin_payment_setting['paytr_merchant_salt'])) ||
-                    ($admin_payment_setting['is_yookassa_enabled'] == 'on' &&
-                        !empty($admin_payment_setting['yookassa_shop_id']) &&
-                        !empty($admin_payment_setting['yookassa_secret'])) ||
-                    ($admin_payment_setting['is_midtrans_enabled'] == 'on' &&
-                        !empty($admin_payment_setting['midtrans_secret'])) ||
-                    ($admin_payment_setting['is_xendit_enabled'] == 'on' &&
-                        !empty($admin_payment_setting['xendit_api']) &&
-                        !empty($admin_payment_setting['xendit_token'])) ||
-                    ($admin_payment_setting['is_nepalste_enabled'] == 'on' &&
-                        !empty($admin_payment_setting['nepalste_public_key']) &&
-                        !empty($admin_payment_setting['nepalste_secret_key'])) ||
-                    ($admin_payment_setting['is_paiementpro_enabled'] == 'on' &&
-                        !empty($admin_payment_setting['paiementpro_merchant_id'])) ||
-                    ($admin_payment_setting['is_fedapay_enabled'] == 'on' &&
-                        !empty($admin_payment_setting['fedapay_public_key']) &&
-                        !empty($admin_payment_setting['fedapay_secret_key'])) ||
-                    ($admin_payment_setting['is_payhere_enabled'] == 'on' &&
-                        !empty($admin_payment_setting['payhere_merchant_id']) &&
-                        !empty($admin_payment_setting['payhere_merchant_secret']) &&
-                        !empty($admin_payment_setting['payhere_app_id']) &&
-                        !empty($admin_payment_setting['payhere_app_secret'])) ||
-                    ($admin_payment_setting['is_cinetpay_enabled'] == 'on' &&
-                        !empty($admin_payment_setting['cinetpay_api_key']) &&
-                        !empty($admin_payment_setting['cinetpay_site_id']))))
-            <a href="#" data-url="{{ route('plans.create') }}" data-size="md" data-ajax-popup="true"
-                data-title="{{ __('Create New Plan') }}" data-bs-toggle="tooltip" title="" class="btn btn-sm btn-primary"
-                data-bs-original-title="{{ __('Create') }}">
-                <i class="ti ti-plus"></i>
-            </a>
-        @endif
+        <a href="#" data-url="{{ route('plans.create') }}" data-size="md" data-ajax-popup="true"
+            data-title="{{ __('Create New Plan') }}" data-bs-toggle="tooltip" title="" class="btn btn-sm btn-primary"
+            data-bs-original-title="{{ __('Create') }}">
+            <i class="ti ti-plus"></i>
+        </a>
     @endcan
 @endsection
 

@@ -770,7 +770,7 @@
 
 
             <!--chats-->
-            <!-- @if (\Auth::user()->type != 'super admin')
+            @if (\Auth::user()->type != 'super admin')
                 <li class="dash-item {{ Request::segment(1) == 'chats' ? 'active' : '' }}">
                     <a href="{{ url('chats') }}" class="dash-link text-white hover:text-white hover:bg-[#001a3b] text-lg flex items-center space-x-2"><span class="dash-micon text-white text-[30px] shadow-none" style="background: none;"><i
                                 class="ti ti-messages text-white text-[30px]"></i></span><span
@@ -787,7 +787,7 @@
                 </li>
             @endif
 
-            @if (\Auth::user()->type == 'super admin')
+             @if (\Auth::user()->type == 'super admin')
                 @if (Gate::check('Manage Plan'))
                     <li class="dash-item ">
                         <a href="{{ route('plans.index') }}" class="dash-link text-white hover:text-white hover:bg-[#001a3b] text-lg flex items-center space-x-2"><span class="dash-micon text-white text-[30px] shadow-none" style="background: none;">
@@ -805,8 +805,6 @@
 
                 </li>
             @endif
-
-
             @if (\Auth::user()->type == 'super admin')
                 <li class="dash-item dash-hasmenu  {{ Request::segment(1) == '' ? 'active' : '' }}">
                     <a href="{{ route('referral-program.index') }}" class="dash-link text-white hover:text-white hover:bg-[#001a3b] text-lg flex items-center space-x-2"><span class="dash-micon text-white text-[30px] shadow-none" style="background: none;">
@@ -815,7 +813,6 @@
                     </a>
                 </li>
             @endif
-
             @if (Auth::user()->type == 'super admin')
                 @if (Gate::check('manage coupon'))
                     <li
@@ -837,7 +834,7 @@
 
                 </li>
                 {{-- @endif --}}
-            @endif -->
+            @endif
 
             @if (\Auth::user()->type == 'super admin')
                 <!--  -->
@@ -900,6 +897,16 @@
             @endif
 
             <!--------------------- End System Setup ----------------------------------->
+
+            <!-- Hierarchy Chart -->
+            <!-- <li class="dash-item">
+                <a href="{{ route('hierarchy.chart') }}" class="dash-link text-white hover:text-white hover:bg-[#001a3b] text-lg flex items-center space-x-2">
+                    <span class="dash-micon text-white text-[30px] shadow-none" style="background: none;">
+                        <i class="ti ti-chart-hierarchy text-white text-[30px]"></i>
+                    </span>
+                    <span class="dash-mtext">{{ __('Hierarchy Chart') }}</span>
+                </a>
+            </li> -->
 </ul>
 
 </div>

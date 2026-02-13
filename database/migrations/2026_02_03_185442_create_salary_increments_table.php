@@ -11,15 +11,17 @@ return new class extends Migration
      */
     public function up(): void
     {
-        Schema::create('notices', function (Blueprint $table) {
+        Schema::create('salary_increments', function (Blueprint $table) {
             $table->id();
-            $table->string('title');
-            $table->text('description');
-            $table->date('notice_startdate');
-            $table->date('notice_enddate');
+            $table->unsignedBigInteger('employee_id');
+            $table->decimal('old_salary', 10, 2);
+            $table->decimal('new_salary', 10, 2);
+            $table->decimal('increment_amount', 10, 2);
+            $table->date('month_of_effective_date');
             $table->unsignedBigInteger('created_by');
             $table->timestamps();
             
+            $table->foreign('employee_id')->references('id')->on('employees')->onDelete('cascade');
             $table->foreign('created_by')->references('id')->on('users')->onDelete('cascade');
         });
     }
@@ -29,6 +31,6 @@ return new class extends Migration
      */
     public function down(): void
     {
-        Schema::dropIfExists('notices');
+        Schema::dropIfExists('salary_increments');
     }
 };
