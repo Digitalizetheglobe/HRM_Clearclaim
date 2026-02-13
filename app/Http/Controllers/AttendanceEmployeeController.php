@@ -973,13 +973,6 @@ class AttendanceEmployeeController extends Controller
             $userIp = request()->ip();
             $creatorId = \Auth::user()->creatorId();
             
-            // Debug: Log detected IP and server info
-            \Log::info('Detected IP: ' . $userIp);
-            \Log::info('Server REMOTE_ADDR: ' . ($_SERVER['REMOTE_ADDR'] ?? 'not set'));
-            \Log::info('Server HTTP_X_FORWARDED_FOR: ' . ($_SERVER['HTTP_X_FORWARDED_FOR'] ?? 'not set'));
-            \Log::info('Server HTTP_X_REAL_IP: ' . ($_SERVER['HTTP_X_REAL_IP'] ?? 'not set'));
-            \Log::info('isPrivateIP result: ' . ($this->isPrivateIP($userIp) ? 'true' : 'false'));
-            
             // Step 1: Check if user is on office Wi-Fi (Local IP)
             $isInOffice = false;
             if ($this->isPrivateIP($userIp)) {
@@ -992,9 +985,6 @@ class AttendanceEmployeeController extends Controller
                 }
             }
             
-            // Debug: Log office detection
-            \Log::info('Is in office: ' . ($isInOffice ? 'true' : 'false'));
-            
             // Step 2: Check if company has any registered devices (Public IPs)
             $isRegisteredDevice = false;
             $hasPublicIps = IpRestrict::where('created_by', $creatorId)
@@ -1004,9 +994,6 @@ class AttendanceEmployeeController extends Controller
             if ($hasPublicIps) {
                 $isRegisteredDevice = true;
             }
-            
-            // Debug: Log device registration
-            \Log::info('Is registered device: ' . ($isRegisteredDevice ? 'true' : 'false'));
             
             // Validation Logic
             if (!$isInOffice && !$isRegisteredDevice) {
