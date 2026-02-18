@@ -3,6 +3,8 @@
 namespace App\Http\Requests\Auth;
 
 use App\Models\User;
+use App\Models\Utility;
+use App\Models\IpRestrict;
 use Illuminate\Auth\Events\Lockout;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Support\Facades\Auth;
@@ -78,6 +80,28 @@ class LoginRequest extends FormRequest
                             'email' => __("Your account is disabled from company."),
                         ]);
                     }
+
+                    // IP Restriction Check for login
+                    $settings = Utility::settings();
+                    if (!empty($settings['ip_restrict']) && $settings['ip_restrict'] == 'on') {
+                        $userIp = $this->getRealClientIp();
+                        $ipRestrictions = IpRestrict::where('created_by', $user->creatorId())->get();
+                        
+                        $isAllowed = false;
+                        foreach ($ipRestrictions as $ipRestriction) {
+                            if ($ipRestriction->matchesIp($userIp)) {
+                                $isAllowed = true;
+                                break;
+                            }
+                        }
+                        
+                        if (!$isAllowed) {
+                            throw ValidationException::withMessages([
+                                'email' => __("Your IP address is not allowed to access this system."),
+                            ]);
+                        }
+                    }
+
                     $id = $user->id;
                     break;
                 }
@@ -133,5 +157,48 @@ class LoginRequest extends FormRequest
     public function throttleKey()
     {
         return Str::lower($this->input('email')).'|'.$this->ip();
+    }
+
+    /**
+     * Get real client IP address (not localhost)
+     */
+    private function getRealClientIp()
+    {
+        // Check for forwarded IP headers
+        $ipKeys = ['HTTP_X_FORWARDED_FOR', 'HTTP_X_REAL_IP', 'HTTP_CLIENT_IP', 'REMOTE_ADDR'];
+        
+        foreach ($ipKeys as $key) {
+            if (array_key_exists($key, $_SERVER) === true) {
+                foreach (explode(',', $_SERVER[$key]) as $ip) {
+                    $ip = trim($ip);
+                    
+                    // Validate IP and skip private/local IPs
+                    if (filter_var($ip, FILTER_VALIDATE_IP, FILTER_FLAG_NO_PRIV_RANGE | FILTER_FLAG_NO_RES_RANGE) !== false) {
+                        return $ip;
+                    }
+                }
+            }
+        }
+        
+        // Fallback to request IP but check if it's localhost
+        $ip = $this->ip();
+        
+        // If it's localhost, try to get external IP
+        if ($ip === '127.0.0.1' || $ip === '::1') {
+            // Try to get real IP from external service
+            $context = stream_context_create([
+                'http' => [
+                    'timeout' => 2,
+                    'user_agent' => 'Mozilla/5.0'
+                ]
+            ]);
+            
+            $externalIp = @file_get_contents('https://api.ipify.org?format=text', false, $context);
+            if ($externalIp && filter_var($externalIp, FILTER_VALIDATE_IP)) {
+                return trim($externalIp);
+            }
+        }
+        
+        return $ip;
     }
 }

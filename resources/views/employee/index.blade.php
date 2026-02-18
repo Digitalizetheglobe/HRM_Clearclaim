@@ -63,6 +63,7 @@
                                             <th>{{ __('Email') }}</th>
                                             <th>{{ __('Department') }}</th>
                                             <th>{{ __('Designation') }}</th>
+                                            <th>{{ __('Reporting Manager') }}</th>
                                             <th>{{ __('Date Of Joining') }}</th>
                                             @if (Auth::user()->type != 'hr' && (Gate::check('Edit Employee') || Gate::check('Delete Employee')))
                                                 <th width="100px">{{ __('Action') }}</th>
@@ -95,6 +96,11 @@
                                                 <td>
                                                     <span class="">
                                                         {{ $employee->designation?->name ?? '-' }}
+                                                    </span>
+                                                </td>
+                                                <td>
+                                                    <span class="">
+                                                        {{ $employee->reportingManager?->name ?? '-' }}
                                                     </span>
                                                 </td>
                                                 <td>{{ \Auth::user()->dateFormat($employee->company_doj) }}</td>
@@ -149,6 +155,7 @@
                                             <th>{{ __('Branch') }}</th>
                                             <th>{{ __('Department') }}</th>
                                             <th>{{ __('Designation') }}</th>
+                                            <th>{{ __('Reporting Manager') }}</th>
                                             <th>{{ __('Date Of Joining') }}</th>
                                             <th>{{ __('Termination Date') }}</th>
                                             @if (Auth::user()->type != 'hr' && Gate::check('Show Employee'))
@@ -185,6 +192,11 @@
                                                 <td>
                                                     <span class="">
                                                         {{ $employee->designation?->name ?? '-' }}
+                                                    </span>
+                                                </td>
+                                                <td>
+                                                    <span class="">
+                                                        {{ $employee->reportingManager?->name ?? '-' }}
                                                     </span>
                                                 </td>
                                                 <td>{{ \Auth::user()->dateFormat($employee->company_doj) }}</td>
@@ -273,7 +285,7 @@
                                 // Handle empty table state
                                 if ($('#pc-dt-simple tbody tr').length === 0) {
                                     $('#pc-dt-simple tbody').append(
-                                        '<tr><td colspan="8" class="text-center">No employees found</td></tr>'
+                                        '<tr><td colspan="9" class="text-center">No employees found</td></tr>'
                                     );
                                 }
                             });

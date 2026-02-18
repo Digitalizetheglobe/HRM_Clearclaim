@@ -1045,6 +1045,31 @@ $currIncrementLetterLang = \App\Models\IncrementLetter::where('created_by',  \Au
                 return redirect()->back()->with('error', $messages->first());
             }
 
+            // Basic IP validation (more flexible)
+            $ip = $request->ip;
+            
+            // Remove leading zeros from each octet
+            $ipParts = explode('.', $ip);
+            if (count($ipParts) === 4) {
+                $cleanedParts = [];
+                foreach ($ipParts as $part) {
+                    // Remove leading zeros but keep the zero if it's the only digit
+                    $cleanedParts[] = ltrim($part, '0') === '' ? '0' : ltrim($part, '0');
+                }
+                $cleanedIp = implode('.', $cleanedParts);
+                
+                if (!filter_var($cleanedIp, FILTER_VALIDATE_IP)) {
+                    return redirect()->back()->with('error', __('Invalid IP address format.'));
+                }
+                
+                // Store the cleaned IP
+                $request->merge(['ip' => $cleanedIp]);
+            } else {
+                if (!filter_var($ip, FILTER_VALIDATE_IP)) {
+                    return redirect()->back()->with('error', __('Invalid IP address format.'));
+                }
+            }
+
             $ip             = new IpRestrict();
             $ip->ip         = $request->ip;
             $ip->created_by = \Auth::user()->creatorId();
@@ -1076,6 +1101,31 @@ $currIncrementLetterLang = \App\Models\IncrementLetter::where('created_by',  \Au
                 $messages = $validator->getMessageBag();
 
                 return redirect()->back()->with('error', $messages->first());
+            }
+
+            // Basic IP validation (more flexible)
+            $ip = $request->ip;
+            
+            // Remove leading zeros from each octet
+            $ipParts = explode('.', $ip);
+            if (count($ipParts) === 4) {
+                $cleanedParts = [];
+                foreach ($ipParts as $part) {
+                    // Remove leading zeros but keep the zero if it's the only digit
+                    $cleanedParts[] = ltrim($part, '0') === '' ? '0' : ltrim($part, '0');
+                }
+                $cleanedIp = implode('.', $cleanedParts);
+                
+                if (!filter_var($cleanedIp, FILTER_VALIDATE_IP)) {
+                    return redirect()->back()->with('error', __('Invalid IP address format.'));
+                }
+                
+                // Store the cleaned IP
+                $request->merge(['ip' => $cleanedIp]);
+            } else {
+                if (!filter_var($ip, FILTER_VALIDATE_IP)) {
+                    return redirect()->back()->with('error', __('Invalid IP address format.'));
+                }
             }
 
             $ip     = IpRestrict::find($id);

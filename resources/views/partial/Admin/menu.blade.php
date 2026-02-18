@@ -896,17 +896,6 @@
                 @endif
             @endif
 
-            <!--------------------- End System Setup ----------------------------------->
-
-            <!-- Hierarchy Chart -->
-            <!-- <li class="dash-item">
-                <a href="{{ route('hierarchy.chart') }}" class="dash-link text-white hover:text-white hover:bg-[#001a3b] text-lg flex items-center space-x-2">
-                    <span class="dash-micon text-white text-[30px] shadow-none" style="background: none;">
-                        <i class="ti ti-chart-hierarchy text-white text-[30px]"></i>
-                    </span>
-                    <span class="dash-mtext">{{ __('Hierarchy Chart') }}</span>
-                </a>
-            </li> -->
 </ul>
 
 </div>

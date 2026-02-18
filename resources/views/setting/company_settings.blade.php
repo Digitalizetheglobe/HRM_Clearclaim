@@ -1113,7 +1113,7 @@
                                     <table class="table" id="pc-dt-simple">
                                         <thead>
                                             <tr>
-                                                <th class="w-75"> {{ __('IP') }}</th>
+                                                <th class="w-75"> {{ __('IP Address') }}</th>
                                                 <th width="200px"> {{ 'Action' }}</th>
                                             </tr>
                                         </thead>

@@ -2155,6 +2155,7 @@ Route::group(['middleware' => ['verified']], function () {
     Route::get('/notifications/count', [App\Http\Controllers\NotificationController::class, 'getCount'])->middleware(['auth'])->name('notifications.count');
 
     Route::post('/dashboard/filter', [HomeController::class, 'filterDashboardData'])->name('dashboard.filter');
+    Route::get('/organization/hierarchy', [HomeController::class, 'getOrganizationHierarchy'])->name('organization.hierarchy')->middleware(['auth', 'XSS']);
 
 Route::get('/offline', function () {
     return view('offline');

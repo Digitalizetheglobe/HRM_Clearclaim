@@ -9,175 +9,6 @@
     <li class="breadcrumb-item">{{ __('Hierarchy Chart') }}</li>
 @endsection
 
-@push('styles')
-<style>
-.executive-level {
-    text-align: center;
-}
-
-.executive-box {
-    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-    color: white;
-    padding: 20px;
-    border-radius: 15px;
-    margin-bottom: 20px;
-    box-shadow: 0 4px 15px rgba(0,0,0,0.1);
-    transition: transform 0.3s ease;
-}
-
-.executive-box:hover {
-    transform: translateY(-5px);
-}
-
-.ceo-level {
-    background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
-}
-
-.c-level {
-    background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%);
-}
-
-.executive-avatar {
-    font-size: 3rem;
-    margin-bottom: 10px;
-}
-
-.executive-title {
-    font-weight: bold;
-    font-size: 1.2rem;
-    margin-bottom: 5px;
-}
-
-.executive-dept {
-    font-size: 0.9rem;
-    opacity: 0.9;
-    margin-bottom: 5px;
-}
-
-.executive-name {
-    font-size: 0.85rem;
-}
-
-.department-hierarchy {
-    margin-top: 30px;
-}
-
-.hierarchy-level {
-    margin-bottom: 30px;
-}
-
-.level-title {
-    text-align: center;
-    font-weight: bold;
-    color: #495057;
-    margin-bottom: 20px;
-    font-size: 1.1rem;
-    text-transform: uppercase;
-    letter-spacing: 1px;
-}
-
-.employee-box {
-    background: white;
-    border: 2px solid #e9ecef;
-    border-radius: 10px;
-    padding: 15px;
-    margin: 0 10px;
-    box-shadow: 0 2px 10px rgba(0,0,0,0.1);
-    transition: all 0.3s ease;
-}
-
-.employee-box:hover {
-    transform: translateY(-3px);
-    box-shadow: 0 4px 20px rgba(0,0,0,0.15);
-}
-
-.employee-box.current-user {
-    border-color: #007bff;
-    background: linear-gradient(135deg, #e3f2fd 0%, #bbdefb 100%);
-}
-
-.employee-header {
-    display: flex;
-    align-items: center;
-    margin-bottom: 10px;
-}
-
-.employee-avatar {
-    font-size: 2rem;
-    margin-right: 15px;
-}
-
-.employee-info {
-    flex: 1;
-}
-
-.employee-name {
-    font-weight: bold;
-    color: #495057;
-    margin-bottom: 5px;
-}
-
-.employee-designation {
-    color: #6c757d;
-    font-size: 0.9rem;
-}
-
-.subordinates-info, .peers-info {
-    margin-top: 10px;
-    padding-top: 10px;
-    border-top: 1px solid #e9ecef;
-}
-
-.legend {
-    background: #f8f9fa;
-    padding: 20px;
-    border-radius: 10px;
-    margin-top: 30px;
-}
-
-.legend-item {
-    display: flex;
-    align-items: center;
-    margin-bottom: 5px;
-}
-
-.legend-box {
-    width: 20px;
-    height: 20px;
-    border-radius: 3px;
-    margin-right: 10px;
-    display: inline-block;
-}
-
-.legend-box.current-user {
-    background: linear-gradient(135deg, #e3f2fd 0%, #bbdefb 100%);
-    border: 2px solid #007bff;
-}
-
-.legend-box.regular-employee {
-    background: white;
-    border: 2px solid #e9ecef;
-}
-
-hr {
-    border: 0;
-    height: 2px;
-    background: linear-gradient(to right, transparent, #ccc, transparent);
-    margin: 40px 0;
-}
-
-@media (max-width: 768px) {
-    .executive-box {
-        margin-bottom: 15px;
-    }
-    
-    .employee-box {
-        margin: 5px 0;
-    }
-}
-</style>
-@endpush
-
 @section('content')
     <div class="row">
         <div class="col-3">
@@ -197,82 +28,102 @@ hr {
                 <div class="card-body">
                     @if(isset($hierarchyData))
                         <!-- Executive Level -->
-                        <div class="executive-level mb-5">
-                            <div class="row justify-content-center">
-                                <div class="col-md-2 text-center">
-                                    <div class="executive-box ceo-level">
-                                        <div class="executive-avatar">
-                                            👨‍💼
+                        <div class="text-center mb-12 relative" style="min-height: 300px;">
+                            <!-- CEO Card -->
+                            <div class="row justify-content-center mb-10">
+                                <div class="col-md-3 text-center">
+                                    <div class="bg-gradient-to-br from-blue-50 to-white border-2 border-blue-300 rounded-xl p-4 mx-1 mb-3 shadow-lg transition-all duration-300 min-h-36 flex flex-col relative overflow-hidden hover:-translate-y-2 hover:shadow-xl hover:border-blue-400 z-10">
+                                        <div class="absolute top-2 right-2 text-2xl">👔</div>
+                                        <div class="font-bold text-gray-800 mb-2 text-lg text-center">
+                                            CEO
                                         </div>
-                                        <div class="executive-title">CEO</div>
-                                        @if($hierarchyData['executive_level']['CEO'])
-                                            <div class="executive-name">{{ $hierarchyData['executive_level']['CEO']->name }}</div>
+                                        @if(isset($hierarchyData['executive_level']['CEO']) && $hierarchyData['executive_level']['CEO'])
+                                            <div class="text-gray-700 text-base text-center font-medium mb-3">
+                                                {{ $hierarchyData['executive_level']['CEO']->name }}
+                                            </div>
+                                        @else
+                                            <div class="text-gray-500 text-base text-center font-medium mb-3 opacity-75">
+                                                No CEO
+                                            </div>
                                         @endif
                                     </div>
                                 </div>
                             </div>
                             
-                            <div class="row justify-content-center mt-4">
-                                @foreach(['COO', 'CFO', 'CHRO', 'CSO', 'CAO'] as $executive)
-                                    @if($hierarchyData['executive_level'][$executive])
-                                        <div class="col-md-2 text-center mb-3">
-                                            <div class="executive-box c-level">
-                                                <div class="executive-avatar">
-                                                    {{ $executive == 'CHRO' ? '👩‍💼' : '👨‍💼' }}
-                                                </div>
-                                                <div class="executive-title">{{ $executive }}</div>
-                                                <div class="executive-dept">
-                                                    {{ App\Http\Controllers\HierarchyChartController::getExecutiveDepartment($executive) }}
-                                                </div>
-                                                <div class="executive-name">
+                            <!-- Connecting Lines -->
+                            <div class="absolute left-1/2 transform -translate-x-1/2 top-40 w-1 h-24 bg-gray-500 z-0"></div>
+                            <div class="absolute left-1/2 transform -translate-x-1/2 top-64 w-3/4 h-1 bg-gray-500 z-0"></div>
+                            
+                            <!-- Executive Cards with Lines -->
+                            <div class="row justify-content-center mt-16 relative">
+                                @foreach(['COO', 'CFO', 'CHRO', 'CSO', 'CAO'] as $index => $executive)
+                                    <div class="col-md-3 text-center relative">
+                                        <!-- Vertical connecting line -->
+                                        <div class="absolute top-0 left-1/2 transform -translate-x-1/2 -top-20 w-1 h-20 bg-gray-500 z-0"></div>
+                                        <!-- Connection node -->
+                                        <div class="absolute top-0 left-1/2 transform -translate-x-1/2 -top-2 w-3 h-3 bg-gray-500 rounded-full z-10"></div>
+                                        
+                                        <div class="bg-white border border-gray-300 rounded-lg p-3 mx-1 mb-2 shadow-md transition-all duration-300 min-h-32 flex flex-col relative overflow-hidden hover:-translate-y-1 hover:shadow-lg hover:border-blue-300 z-10">
+                                            <div class="font-bold text-gray-700 mb-1 text-ms text-center">
+                                                {{ $executive }}
+                                            </div>
+                                            <div class="text-gray-600 text-md text-center font-medium mb-2">
+                                                {{ App\Http\Controllers\HierarchyChartController::getExecutiveDepartment($executive) }}
+                                            </div>
+                                            @if(isset($hierarchyData['executive_level'][$executive]) && $hierarchyData['executive_level'][$executive])
+                                                <div class="text-gray-600 text-5md text-center font-medium mb-2">
                                                     {{ $hierarchyData['executive_level'][$executive]->name }}
                                                 </div>
-                                            </div>
+                                            @else
+                                                <div class="text-gray-600 text-md text-center font-medium mb-2 opacity-75">
+                                                    No {{ $executive }}
+                                                </div>
+                                            @endif
                                         </div>
-                                    @endif
+                                    </div>
                                 @endforeach
                             </div>
                         </div>
 
-                        <hr class="my-5">
+                        <hr class="border-0 h-0.5 bg-gradient-to-r from-transparent via-gray-300 to-transparent my-10">
 
                         <!-- Department Hierarchy -->
-                        <div class="department-hierarchy">
+                        <div class="mt-8">
                             <h4 class="text-center mb-4">
                                 <i class="fas fa-building me-2"></i>
                                 {{ $department->name }} DIVISION
                             </h4>
 
                             @foreach($hierarchyData['hierarchy_levels'] as $level => $employees)
-                                <div class="hierarchy-level mb-4">
-                                    <div class="level-title">
+                                <div class="mb-8">
+                                    <div class="text-center font-bold text-gray-700 mb-5 text-lg uppercase tracking-wide flex items-center justify-center min-h-10">
                                         {{ App\Http\Controllers\HierarchyChartController::getLevelName($level) }}
                                     </div>
                                     
                                     <div class="row justify-content-center">
                                         @foreach($employees as $employeeData)
                                             <div class="col-md-3 mb-3">
-                                                <div class="employee-box {{ $employeeData['is_current_user'] ? 'current-user' : '' }}">
-                                                    <div class="employee-header">
-                                                        <div class="employee-avatar">
+                                                <div class="bg-gradient-to-br from-white to-blue-50 border border-blue-200 rounded-lg p-3 mx-1 mb-2 shadow-md transition-all duration-300 min-h-32 flex flex-col relative overflow-hidden hover:-translate-y-1 hover:shadow-lg hover:border-blue-300 {{ $employeeData['is_current_user'] ? 'border-blue-500 bg-gradient-to-br from-blue-100 to-blue-200 shadow-lg' : '' }}">
+                                                    <div class="flex items-center mb-2 text-center flex-col">
+                                                        <div class="text-2xl mb-1">
                                                             {{ $employeeData['is_current_user'] ? '👤' : '👥' }}
                                                         </div>
-                                                        <div class="employee-info">
-                                                            <div class="employee-name">
+                                                        <div class="text-center w-full">
+                                                            <div class="font-semibold text-gray-700 mb-1 text-sm text-center">
                                                                 {{ $employeeData['employee']->name }}
                                                                 @if($employeeData['is_current_user'])
-                                                                    <span class="badge bg-primary ms-2">YOU</span>
+                                                                    <span class="badge bg-primary ms-1 text-xs">YOU</span>
                                                                 @endif
                                                             </div>
-                                                            <div class="employee-designation">
+                                                            <div class="text-gray-600 text-xs text-center font-medium mb-2">
                                                                 {{ $employeeData['employee']->designation->name ?? 'N/A' }}
                                                             </div>
                                                         </div>
                                                     </div>
                                                     
                                                     @if(!empty($employeeData['subordinates']))
-                                                        <div class="subordinates-info">
-                                                            <small class="text-muted">
+                                                        <div class="mt-auto pt-1 border-t border-gray-200 text-center">
+                                                            <small class="text-muted text-xs">
                                                                 <i class="fas fa-users me-1"></i>
                                                                 {{ count($employeeData['subordinates']) }} Direct Reports
                                                             </small>
@@ -280,8 +131,8 @@ hr {
                                                     @endif
                                                     
                                                     @if(!empty($employeeData['peers']))
-                                                        <div class="peers-info">
-                                                            <small class="text-muted">
+                                                        <div class="mt-auto pt-1 border-t border-gray-200 text-center">
+                                                            <small class="text-muted text-xs">
                                                                 <i class="fas fa-user-friends me-1"></i>
                                                                 {{ count($employeeData['peers']) }} Peers
                                                             </small>

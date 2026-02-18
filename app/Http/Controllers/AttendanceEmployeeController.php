@@ -962,17 +962,76 @@ class AttendanceEmployeeController extends Controller
         }
     }
 
-
+    /**
+     * Get real client IP address (not localhost)
+     */
+    private function getRealClientIp()
+    {
+        // Check for forwarded IP headers
+        $ipKeys = ['HTTP_X_FORWARDED_FOR', 'HTTP_X_REAL_IP', 'HTTP_CLIENT_IP', 'REMOTE_ADDR'];
+        
+        foreach ($ipKeys as $key) {
+            if (array_key_exists($key, $_SERVER) === true) {
+                foreach (explode(',', $_SERVER[$key]) as $ip) {
+                    $ip = trim($ip);
+                    
+                    // Validate IP and skip private/local IPs
+                    if (filter_var($ip, FILTER_VALIDATE_IP, FILTER_FLAG_NO_PRIV_RANGE | FILTER_FLAG_NO_RES_RANGE) !== false) {
+                        return $ip;
+                    }
+                }
+            }
+        }
+        
+        // Fallback to request IP but check if it's localhost
+        $ip = request()->ip();
+        
+        // If it's localhost, try to get external IP
+        if ($ip === '127.0.0.1' || $ip === '::1') {
+            // Try to get real IP from external service
+            $context = stream_context_create([
+                'http' => [
+                    'timeout' => 2,
+                    'user_agent' => 'Mozilla/5.0'
+                ]
+            ]);
+            
+            $externalIp = @file_get_contents('https://api.ipify.org?format=text', false, $context);
+            if ($externalIp && filter_var($externalIp, FILTER_VALIDATE_IP)) {
+                return trim($externalIp);
+            }
+        }
+        
+        return $ip;
+    }
 
     public function attendance(Request $request)
     {
         $settings = Utility::settings();
 
-        // IP Restriction Check (existing code)
+        // IP Restriction Check (updated for IP ranges)
         if (!empty($settings['ip_restrict']) && $settings['ip_restrict'] == 'on') {
-            $userIp = request()->ip();
-            $ip = IpRestrict::where('created_by', \Auth::user()->creatorId())->whereIn('ip', [$userIp])->first();
-            if (empty($ip)) {
+            // Get real client IP (not localhost)
+            $userIp = $this->getRealClientIp();
+            $ipRestrictions = IpRestrict::where('created_by', \Auth::user()->creatorId())->get();
+            
+            // Debug: Log the IPs being compared
+            \Log::info('IP Restriction Check:', [
+                'user_ip' => $userIp,
+                'allowed_ips' => $ipRestrictions->pluck('ip')->toArray()
+            ]);
+            
+            $isAllowed = false;
+            foreach ($ipRestrictions as $ipRestriction) {
+                if ($ipRestriction->matchesIp($userIp)) {
+                    $isAllowed = true;
+                    \Log::info('IP Match found:', ['allowed_ip' => $ipRestriction->ip, 'user_ip' => $userIp]);
+                    break;
+                }
+            }
+            
+            if (!$isAllowed) {
+                \Log::warning('IP Access Denied:', ['user_ip' => $userIp]);
                 if ($request->ajax() || $request->wantsJson()) {
                     return response()->json([
                         'success' => false,

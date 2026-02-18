@@ -675,6 +675,345 @@ class HomeController extends Controller
         } 
     }
 
+    /**
+     * Get organization hierarchy data for AJAX requests
+     *
+     * @param \Illuminate\Http\Request $request
+     * @return \Illuminate\Http\JsonResponse
+     */
+    public function getOrganizationHierarchy(Request $request)
+    {
+        $employeeId = $request->input('employee_id');
+        $creatorId = \Auth::user()->creatorId();
+        
+        // Get current logged-in employee
+        $currentUser = Employee::where('user_id', \Auth::id())->first();
+        
+        if (!$currentUser) {
+            return response()->json(['error' => 'Employee not found'], 404);
+        }
+        
+        // Get ALL employees from all departments for full organizational view
+        $employees = Employee::where('created_by', $creatorId)
+            ->with(['designation', 'department', 'reportingManager'])
+            ->get();
+        
+        // Find CEO (employee with CEO designation) - search across all departments
+        $ceo = Employee::where('created_by', $creatorId)
+            ->with(['designation', 'department', 'reportingManager'])
+            ->get()
+            ->first(function($employee) {
+                return stripos($employee->designation->name ?? '', 'CEO') !== false;
+            });
+        
+        // Build hierarchy data
+        $hierarchyData = $this->buildHierarchyData($employees, $ceo, $employeeId);
+        
+        // Add department name to response
+        $hierarchyData['department_name'] = 'All Departments';
+        
+        // Add current logged-in employee ID for highlighting
+        $hierarchyData['current_employee_id'] = $currentUser->id;
+        
+        // Add current employee data for display
+        $hierarchyData['current_employee'] = [
+            'id' => $currentUser->id,
+            'name' => $currentUser->name,
+            'designation' => $currentUser->designation->name ?? '',
+            'level' => 'current-employee',
+            'avatar' => $this->getEmployeeInitials($currentUser)
+        ];
+        
+        return response()->json($hierarchyData);
+    }
+    
+    /**
+     * Build hierarchy data based on employee selection
+     *
+     * @param \Illuminate\Support\Collection $employees
+     * @param \App\Models\Employee|null $ceo
+     * @param int|null $selectedEmployeeId
+     * @return array
+     */
+    private function buildHierarchyData($employees, $ceo, $selectedEmployeeId = null)
+    {
+        // If no specific employee selected, show full hierarchy starting from CEO
+        if (!$selectedEmployeeId) {
+            return $this->buildFullHierarchy($employees, $ceo);
+        }
+        
+        // Show hierarchy for selected employee
+        $selectedEmployee = $employees->find($selectedEmployeeId);
+        if (!$selectedEmployee) {
+            return $this->buildFullHierarchy($employees, $ceo);
+        }
+        
+        return $this->buildEmployeeHierarchy($employees, $selectedEmployee, $ceo);
+    }
+    
+    /**
+     * Build full organization hierarchy
+     *
+     * @param \Illuminate\Support\Collection $employees
+     * @param \App\Models\Employee|null $ceo
+     * @return array
+     */
+    private function buildFullHierarchy($employees, $ceo)
+    {
+        $hierarchy = [];
+        
+        if ($employees->isEmpty()) {
+            return ['hierarchy' => $hierarchy, 'type' => 'full'];
+        }
+        
+        // Always add CEO first if exists (even if not in same department, for reference)
+        if ($ceo) {
+            $hierarchy[] = [
+                'id' => $ceo->id,
+                'name' => $ceo->name,
+                'designation' => $ceo->designation->name ?? '',
+                'level' => 'ceo',
+                'avatar' => $this->getEmployeeInitials($ceo)
+            ];
+        }
+        
+        // Find top person in department (person with no reporting manager or highest designation)
+        $topPerson = $employees->first(function($employee) {
+            return $employee->reporting_manager === null;
+        });
+        
+        if (!$topPerson) {
+            $topPerson = $this->findHighestDesignation($employees);
+        }
+        
+        if ($topPerson && (!$ceo || $topPerson->id !== $ceo->id)) {
+            $hierarchy[] = [
+                'id' => $topPerson->id,
+                'name' => $topPerson->name,
+                'designation' => $topPerson->designation->name ?? '',
+                'level' => 'manager',
+                'avatar' => $this->getEmployeeInitials($topPerson)
+            ];
+        }
+        
+        // Get all employees except top person and CEO
+        $otherEmployees = $employees->where('id', '!=', $topPerson->id ?? 0);
+        if ($ceo) {
+            $otherEmployees = $otherEmployees->where('id', '!=', $ceo->id);
+        }
+        
+        // Group by reporting manager
+        $groupedByManager = $otherEmployees->groupBy('reporting_manager');
+        
+        foreach ($groupedByManager as $managerId => $subordinates) {
+            if ($managerId === null) {
+                // Employees reporting directly to top person (no manager assigned)
+                foreach ($subordinates as $employee) {
+                    $hierarchy[] = [
+                        'id' => $employee->id,
+                        'name' => $employee->name,
+                        'designation' => $employee->designation->name ?? '',
+                        'level' => 'employee',
+                        'avatar' => $this->getEmployeeInitials($employee)
+                    ];
+                }
+            } else {
+                // Find manager
+                $manager = $employees->find($managerId);
+                if ($manager && $manager->id !== $topPerson->id && (!$ceo || $manager->id !== $ceo->id)) {
+                    // Add manager card if not already added
+                    if (!in_array($manager->id, array_column($hierarchy, 'id'))) {
+                        $hierarchy[] = [
+                            'id' => $manager->id,
+                            'name' => $manager->name,
+                            'designation' => $manager->designation->name ?? '',
+                            'level' => 'manager',
+                            'avatar' => $this->getEmployeeInitials($manager)
+                        ];
+                    }
+                    
+                    // Add all subordinates of this manager
+                    foreach ($subordinates as $subordinate) {
+                        $hierarchy[] = [
+                            'id' => $subordinate->id,
+                            'name' => $subordinate->name,
+                            'designation' => $subordinate->designation->name ?? '',
+                            'level' => 'employee',
+                            'avatar' => $this->getEmployeeInitials($subordinate)
+                        ];
+                    }
+                }
+            }
+        }
+        
+        return ['hierarchy' => $hierarchy, 'type' => 'full'];
+    }
+    
+    /**
+     * Find employee with highest designation
+     *
+     * @param \Illuminate\Support\Collection $employees
+     * @return \App\Models\Employee|null
+     */
+    private function findHighestDesignation($employees)
+    {
+        $designationPriority = [
+            'CEO' => 1,
+            'Director' => 2,
+            'VP' => 3,
+            'Vice President' => 3,
+            'Head' => 4,
+            'Manager' => 5,
+            'Lead' => 6,
+            'Senior' => 7,
+        ];
+        
+        $highestEmployee = null;
+        $highestPriority = 999;
+        
+        foreach ($employees as $employee) {
+            $designation = strtolower($employee->designation->name ?? '');
+            $priority = 999;
+            
+            foreach ($designationPriority as $pattern => $prio) {
+                if (strpos($designation, strtolower($pattern)) !== false) {
+                    $priority = $prio;
+                    break;
+                }
+            }
+            
+            if ($priority < $highestPriority) {
+                $highestPriority = $priority;
+                $highestEmployee = $employee;
+            }
+        }
+        
+        return $highestEmployee;
+    }
+    
+    /**
+     * Build hierarchy for specific employee
+     *
+     * @param \Illuminate\Support\Collection $employees
+     * @param \App\Models\Employee $selectedEmployee
+     * @param \App\Models\Employee|null $ceo
+     * @return array
+     */
+    private function buildEmployeeHierarchy($employees, $selectedEmployee, $ceo)
+    {
+        $hierarchy = [];
+        $chain = [];
+        
+        // If CEO is selected, get ALL employees from all departments
+        if ($ceo && $selectedEmployee->id === $ceo->id) {
+            $allEmployees = Employee::where('created_by', \Auth::user()->creatorId())
+                ->with(['designation', 'department', 'reportingManager'])
+                ->get();
+            
+            $hierarchy[] = [
+                'id' => $ceo->id,
+                'name' => $ceo->name,
+                'designation' => $ceo->designation->name ?? '',
+                'level' => 'selected',
+                'avatar' => $this->getEmployeeInitials($ceo)
+            ];
+            
+            // Add all employees who report directly to CEO (no reporting_manager)
+            $directReports = $allEmployees->where('reporting_manager', null);
+            foreach ($directReports as $directReport) {
+                if ($directReport->id !== $ceo->id) {
+                    $hierarchy[] = [
+                        'id' => $directReport->id,
+                        'name' => $directReport->name,
+                        'designation' => $directReport->designation->name ?? '',
+                        'level' => 'subordinate',
+                        'avatar' => $this->getEmployeeInitials($directReport)
+                    ];
+                }
+            }
+            
+            return ['hierarchy' => $hierarchy, 'type' => 'employee'];
+        }
+        
+        // For non-CEO employees, build vertical chain
+        // Build reporting chain up to CEO
+        $current = $selectedEmployee;
+        $visitedIds = []; // Prevent infinite loops
+        
+        while ($current && !in_array($current->id, $visitedIds)) {
+            $visitedIds[] = $current->id;
+            
+            $level = 'employee';
+            if ($current->id === $selectedEmployee->id) {
+                $level = 'selected';
+            } elseif ($current->reporting_manager === null && $ceo && $current->id !== $ceo->id) {
+                $level = 'manager'; // This person reports directly to CEO
+            } elseif ($current->reporting_manager !== null) {
+                $level = 'manager';
+            }
+            
+            array_unshift($chain, [
+                'id' => $current->id,
+                'name' => $current->name,
+                'designation' => $current->designation->name ?? '',
+                'level' => $level,
+                'avatar' => $this->getEmployeeInitials($current)
+            ]);
+            
+            // Find next person in chain
+            if ($current->reporting_manager === null) {
+                // This person reports directly to CEO
+                if ($ceo && $current->id !== $ceo->id) {
+                    // Add CEO if not already in chain
+                    if (!in_array($ceo->id, $visitedIds)) {
+                        array_unshift($chain, [
+                            'id' => $ceo->id,
+                            'name' => $ceo->name,
+                            'designation' => $ceo->designation->name ?? '',
+                            'level' => 'ceo',
+                            'avatar' => $this->getEmployeeInitials($ceo)
+                        ]);
+                    }
+                }
+                break;
+            } else {
+                $current = $employees->find($current->reporting_manager);
+            }
+        }
+        
+        $hierarchy = array_merge($hierarchy, $chain);
+        
+        // Add subordinates of the selected employee at the bottom
+        $subordinates = $employees->where('reporting_manager', $selectedEmployee->id);
+        foreach ($subordinates as $subordinate) {
+            $hierarchy[] = [
+                'id' => $subordinate->id,
+                'name' => $subordinate->name,
+                'designation' => $subordinate->designation->name ?? '',
+                'level' => 'subordinate',
+                'avatar' => $this->getEmployeeInitials($subordinate)
+            ];
+        }
+        
+        return ['hierarchy' => $hierarchy, 'type' => 'employee'];
+    }
+    
+    /**
+     * Get employee initials for avatar
+     *
+     * @param \App\Models\Employee $employee
+     * @return string
+     */
+    private function getEmployeeInitials($employee)
+    {
+        $nameParts = explode(' ', trim($employee->name));
+        if (count($nameParts) >= 2) {
+            return strtoupper(substr($nameParts[0], 0, 1) . substr($nameParts[1], 0, 1));
+        } elseif (count($nameParts) === 1) {
+            return strtoupper(substr($nameParts[0], 0, 2));
+        }
+        return 'EE';
+    }
 
    public function filterDashboardData(Request $request)
 {

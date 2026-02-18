@@ -302,34 +302,16 @@
                     <div class="col-xl-12">
                         <div class="card">
                             <div class="card-header card-body table-border-style">
-                                <h5 style="font-size:20px;color:black">{{ __('Meeting List') }}</h5>
+                                <h5 style="font-size:20px;color:black">{{ __('Organization Hierarchy Chart') }}</h5>
                             </div>
                             <div class="card-body" style="height: 324px; overflow:auto;">
-                                <div class="table-responsive">
-                                    <table class="table">
-                                        <thead>
-                                            <tr>
-                                                <th>{{ __('Meeting Title') }}</th>
-                                                <th>{{ __('Date') }}</th>
-                                                <th>{{ __('Time') }}</th>
-                                            </tr>
-                                        </thead>
-                                        <tbody>
-                                            @foreach ($meetings as $meeting)
-                                                <tr>
-                                                    <td>{{ $meeting->title }}</td>
-                                                    <td>{{ \Auth::user()->dateFormat($meeting->date) }}</td>
-                                                    <td>{{ \Auth::user()->timeFormat($meeting->time) }}</td>
-                                                </tr>
-                                            @endforeach
-
-                                            @if ($meetings->isEmpty())
-                                                <tr>
-                                                    <td colspan="3" class="text-center">{{ __('No meetings found') }}</td>
-                                                </tr>
-                                            @endif
-                                        </tbody>
-                                    </table>
+                                <div id="organization-hierarchy" class="hierarchy-container">
+                                    <div class="text-center py-4">
+                                        <div class="spinner-border text-primary" role="status">
+                                            <span class="sr-only">Loading...</span>
+                                        </div>
+                                        <p class="mt-2 text-muted">{{ __('Loading organization hierarchy...') }}</p>
+                                    </div>
                                 </div>
                             </div>
                         </div>
@@ -1628,4 +1610,370 @@ function updateProgressBarRealTime() {
 #attendanceLoading {
     display: none;
 }
+
+/* Organization Hierarchy Styles */
+.hierarchy-container {
+    padding: 20px;
+    min-height: 300px;
+}
+
+.hierarchy-level {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    margin-bottom: 30px;
+}
+
+.hierarchy-cards {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: center;
+    gap: 15px;
+    margin-top: 15px;
+}
+
+/* Vertical hierarchy layout */
+.hierarchy-vertical {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 0;
+    padding: 20px 0;
+}
+
+.hierarchy-connector {
+    width: 2px;
+    height: 20px;
+    background: #ccc;
+    margin: 0 auto;
+}
+
+.employee-card {
+    background: white;
+    border: 1px solid #e0e0e0;
+    border-radius: 8px;
+    padding: 15px;
+    min-width: 200px;
+    max-width: 250px;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+}
+
+.employee-card:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 8px rgba(0,0,0,0.15);
+    border-color: #007bff;
+}
+
+.employee-card.ceo {
+    background: #f8f9fa;
+    border: 2px solid #007bff;
+}
+
+.employee-card.selected {
+    background: #e3f2fd;
+    border: 2px solid #2196f3;
+}
+
+.employee-card.manager {
+    background: #f3e5f5;
+    border: 1px solid #9c27b0;
+}
+
+.employee-card.subordinate {
+    background: #e8f5e8;
+    border: 1px solid #4caf50;
+}
+
+.employee-card.current-employee {
+    background: #fff3cd;
+    border: 2px solid #ff9800;
+    box-shadow: 0 0 10px rgba(255, 152, 0, 0.3);
+    transform: scale(1.05);
+}
+
+.employee-avatar {
+    width: 50px;
+    height: 50px;
+    border-radius: 50%;
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: white;
+    font-weight: bold;
+    font-size: 16px;
+    margin: 0 auto 10px;
+}
+
+.employee-name {
+    font-weight: 600;
+    font-size: 14px;
+    text-align: center;
+    margin-bottom: 5px;
+    color: #333;
+}
+
+.hierarchy-subordinates .hierarchy-title {
+    text-align: center;
+    margin-bottom: 20px;
+    font-size: 16px;
+    color: #555;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+}
+
+.employee-designation {
+    font-size: 12px;
+    text-align: center;
+    color: #666;
+    line-height: 1.3;
+}
+
+.hierarchy-connector {
+    width: 2px;
+    height: 20px;
+    background: #ccc;
+    margin: 10px auto;
+}
 </style>
+
+<script>
+// Organization Hierarchy JavaScript
+document.addEventListener('DOMContentLoaded', function() {
+    // Initial load of hierarchy for current employee
+    // First, load current employee data to get their ID
+    fetch('/organization/hierarchy')
+        .then(response => response.json())
+        .then(data => {
+            // Store current employee ID for highlighting
+            window.currentEmployeeId = data.current_employee_id;
+            // Load hierarchy showing current employee's reporting chain
+            loadOrganizationHierarchy(window.currentEmployeeId);
+        })
+        .catch(error => {
+            console.error('Error loading current employee:', error);
+            // Fallback to regular hierarchy
+            loadOrganizationHierarchy();
+        });
+});
+
+function loadOrganizationHierarchy(employeeId = null) {
+    const container = document.getElementById('organization-hierarchy');
+    
+    // Show loading state
+    container.innerHTML = `
+        <div class="text-center py-4">
+            <div class="spinner-border text-primary" role="status">
+                <span class="sr-only">Loading...</span>
+            </div>
+            <p class="mt-2 text-muted">Loading organization hierarchy...</p>
+        </div>
+    `;
+    
+    // Fetch hierarchy data
+    const url = employeeId ? `/organization/hierarchy?employee_id=${employeeId}` : '/organization/hierarchy';
+    
+    console.log('Fetching hierarchy from:', url);
+    
+    fetch(url)
+        .then(response => {
+            console.log('Response status:', response.status);
+            return response.json();
+        })
+        .then(data => {
+            console.log('Hierarchy data received:', data);
+            // Store current employee ID for highlighting
+            window.currentEmployeeId = data.current_employee_id;
+            renderHierarchy(data);
+        })
+        .catch(error => {
+            console.error('Error loading hierarchy:', error);
+            container.innerHTML = `
+                <div class="text-center py-4">
+                    <p class="text-danger">Error loading organization hierarchy</p>
+                </div>
+            `;
+        });
+}
+
+function renderHierarchy(data) {
+    const container = document.getElementById('organization-hierarchy');
+    const hierarchy = data.hierarchy;
+    
+    console.log('Rendering hierarchy:', data);
+    console.log('Hierarchy length:', hierarchy ? hierarchy.length : 0);
+    
+    if (!hierarchy || hierarchy.length === 0) {
+        container.innerHTML = `
+            <div class="text-center py-4">
+                <p class="text-muted">No hierarchy data available for your department</p>
+            </div>
+        `;
+        return;
+    }
+    
+    let html = '';
+    
+    if (data.type === 'full') {
+        // Full hierarchy view
+        const groupedByLevel = groupByLevel(hierarchy);
+        
+        // Add department name if available
+        if (data.department_name) {
+           html += `<div class="hierarchy-title mb-4" style="font-size: 14px; color: #333;">${data.department_name} Department</div>`;
+        }
+        
+        Object.keys(groupedByLevel).forEach(level => {
+            const employees = groupedByLevel[level];
+            const levelTitle = getLevelTitle(level);
+            
+            console.log(`Level ${level}:`, employees);
+            
+            html += `
+                <div class="hierarchy-level">
+                    <div class="hierarchy-title">${levelTitle}</div>
+                    <div class="hierarchy-cards">
+                        ${employees.map(emp => createEmployeeCard(emp)).join('')}
+                    </div>
+                </div>
+            `;
+        });
+    } else {
+        // Employee-specific hierarchy view
+        const selectedEmployee = hierarchy.find(emp => emp.level === 'selected');
+        
+        // Always show vertical reporting chain first
+        html += '<div class="hierarchy-vertical">';
+        
+        // Show only the reporting chain (CEO → Manager → Selected Employee)
+        const chainEmployees = hierarchy.filter(emp => emp.level !== 'subordinate');
+        chainEmployees.forEach((emp, index) => {
+            html += createEmployeeCard(emp);
+            
+            // Add vertical connector between cards (except after last card)
+            if (index < chainEmployees.length - 1) {
+                html += '<div class="hierarchy-connector"></div>';
+            }
+        });
+        
+        html += '</div>';
+        
+        // Add subordinates horizontally below the selected person
+        if (selectedEmployee) {
+            const subordinates = data.hierarchy.filter(emp => emp.level === 'subordinate');
+            if (subordinates.length > 0) {
+                html += '<div class="hierarchy-subordinates">';
+                html += '<div class="hierarchy-title">Team Members :</div>';
+                html += '<div class="hierarchy-cards">';
+                
+                subordinates.forEach(subordinate => {
+                    html += createEmployeeCard(subordinate);
+                });
+                
+                html += '</div></div>';
+            }
+        }
+        
+        // Always add current employee card at bottom if not already in hierarchy
+        if (window.currentEmployeeId && !hierarchy.some(emp => emp.id === window.currentEmployeeId)) {
+            const currentEmployeeData = data.current_employee || {
+                id: window.currentEmployeeId,
+                name: 'You',
+                designation: 'Loading...',
+                level: 'current-employee',
+                avatar: 'ME'
+            };
+            html += '<div class="hierarchy-connector"></div>';
+            html += createEmployeeCard(currentEmployeeData);
+        }
+    }
+    
+    console.log('Final HTML length:', html.length);
+    container.innerHTML = html;
+    
+    // Add click handlers
+    addCardClickHandlers();
+}
+
+function groupByLevel(employees) {
+    const grouped = {};
+    
+    employees.forEach(emp => {
+        let level = emp.level;
+        
+        // Group similar levels
+        if (level === 'ceo') {
+            level = 'ceo';
+        } else if (level === 'manager') {
+            level = 'managers';
+        } else {
+            level = 'employees';
+        }
+        
+        if (!grouped[level]) {
+            grouped[level] = [];
+        }
+        grouped[level].push(emp);
+    });
+    
+    return grouped;
+}
+
+function getLevelTitle(level) {
+    const titles = {
+        'ceo': 'CEO',
+        'managers': 'Managers',
+        'employees': 'Team Members'
+    };
+    
+    return titles[level] || level;
+}
+
+function createEmployeeCard(employee) {
+    const cardClass = getCardClass(employee.level);
+    
+    // Check if this is the current logged-in employee
+    const isCurrentEmployee = employee.id === window.currentEmployeeId;
+    const currentClass = isCurrentEmployee ? 'current-employee' : '';
+    
+    return `
+        <div class="employee-card ${cardClass} ${currentClass}" data-employee-id="${employee.id}">
+            <div class="employee-avatar">${employee.avatar}</div>
+            <div class="employee-name">${employee.name}</div>
+            <div class="employee-designation">${employee.designation}</div>
+        </div>
+    `;
+}
+
+function getCardClass(level) {
+    const classes = {
+        'ceo': 'ceo',
+        'selected': 'selected',
+        'manager': 'manager',
+        'subordinate': 'subordinate',
+        'employee': ''
+    };
+    
+    return classes[level] || '';
+}
+
+function addCardClickHandlers() {
+    const cards = document.querySelectorAll('.employee-card');
+    
+    cards.forEach(card => {
+        card.addEventListener('click', function() {
+            const employeeId = this.getAttribute('data-employee-id');
+            
+            // Don't reload if clicking current employee (no action needed)
+            if (employeeId == window.currentEmployeeId) {
+                return;
+            }
+            
+            loadOrganizationHierarchy(employeeId);
+        });
+    });
+}
+</script>
