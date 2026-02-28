@@ -1,13 +1,6 @@
 @extends('layouts.admin')
 @push('css-page')
-    @include('Chatify::layouts.headLinks')
-
     <style>
-        .cards {
-            /* background-color: #fff;
-                    padding: 25px 25px; */
-        }
-
         .card-body {
             box-shadow: 0 4px 8px 0 rgba(0, 0, 0, 0.2), 0 6px 20px 0 rgba(0, 0, 0, 0.19);
 
@@ -71,6 +64,10 @@
 @endif
 
 @section('content')
+    @php
+        $route = $route ?? 'user';
+    @endphp
+    @include('Chatify::layouts.headLinks', ['route' => $route])
     <div class="cards rounded-12 mt-4 p-0">
         <div class="card-body">
             <div class="messenger rounded min-h-750 overflow-hidden">

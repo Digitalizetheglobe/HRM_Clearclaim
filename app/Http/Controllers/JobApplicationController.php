@@ -643,6 +643,41 @@ class JobApplicationController extends Controller
             );
     }
 
+    public function resumePreview($id)
+    {
+        if (\Auth::user()->can('Show Job Application')) {
+            $jobApplication = JobApplication::find($id);
+            
+            if (!$jobApplication || empty($jobApplication->resume)) {
+                return response()->json(['error' => 'Resume file not found'], 404);
+            }
+            
+            $resumePath = 'uploads/job/resume/' . $jobApplication->resume;
+            
+            // Check both possible paths where file might be stored
+            $fileContent = null;
+            $mimeType = 'application/pdf';
+            
+            if (\Storage::disk('public')->exists($resumePath)) {
+                $fileContent = \Storage::disk('public')->get($resumePath);
+                $mimeType = \Storage::disk('public')->mimeType($resumePath);
+            } elseif (file_exists(storage_path($resumePath))) {
+                $fileContent = file_get_contents(storage_path($resumePath));
+                $mimeType = mime_content_type(storage_path($resumePath));
+            }
+            
+            if ($fileContent === null) {
+                return response()->json(['error' => 'Resume file not found on server'], 404);
+            }
+            
+            return response($fileContent)
+                ->header('Content-Type', $mimeType)
+                ->header('Content-Disposition', 'inline; filename="' . $jobApplication->resume . '"');
+        } else {
+            return response()->json(['error' => 'Permission denied'], 403);
+        }
+    }
+
     public function offerletterPdf($id)
     {
         $users = \Auth::user();

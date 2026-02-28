@@ -261,8 +261,14 @@
                         <dd class="col-sm-8">
                             @php
                                 $resumes = \App\Models\Utility::get_file('uploads/job/resume');
+                                $resumePath = 'uploads/job/resume/' . $jobApplication->resume;
+                                // Check both possible paths where file might be stored
+                                $resumeExists = !empty($jobApplication->resume) && (
+                                    \Storage::disk('public')->exists($resumePath) || 
+                                    file_exists(storage_path($resumePath))
+                                );
                             @endphp
-                            @if (!empty($jobApplication->resume))
+                            @if ($resumeExists)
                                 <span class="text-sm action-btn bg-primary ms-2">
                                     <a href="{{ $resumes . '/' . $jobApplication->resume }}" data-bs-toggle="tooltip"
                                         data-bs-original-title="{{ __('download') }}" download=""><i
@@ -270,13 +276,17 @@
                                 </span>
                                 <div class="action-btn bg-secondary ms-2">
                                     <a class="mx-3 btn btn-sm align-items-center"
-                                        href="{{ $resumes . '/' . $jobApplication->resume }}" target="_blank">
+                                        href="{{ route('job.application.resume.preview', $jobApplication->id) }}" target="_blank">
                                         <i class="ti ti-crosshair text-white" data-bs-toggle="tooltip"
                                             data-bs-original-title="{{ __('Preview') }}"></i>
                                     </a>
                                 </div>
                             @else
-                                -
+                                @if (!empty($jobApplication->resume))
+                                    <span class="text-danger text-sm">{{ __('Resume file not found') }}</span>
+                                @else
+                                    <span class="text-sm">-</span>
+                                @endif
                             @endif
 
                         </dd>

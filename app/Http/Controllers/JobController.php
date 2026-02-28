@@ -351,7 +351,7 @@ class JobController extends Controller
 
         if (!empty($request->profile)) {
             $image_size = $request->file('profile')->getSize();
-            $result = Utility::updateStorageLimit(\Auth::user()->creatorId(), $image_size);
+            $result = Utility::updateStorageLimit($job->created_by, $image_size);
             if ($result == 1) {
                 $filenameWithExt = $request->file('profile')->getClientOriginalName();
                 $filename        = pathinfo($filenameWithExt, PATHINFO_FILENAME);
@@ -376,7 +376,7 @@ class JobController extends Controller
         if (!empty($request->resume)) {
 
             $image_size = $request->file('resume')->getSize();
-            $result = Utility::updateStorageLimit(\Auth::user()->creatorId(), $image_size);
+            $result = Utility::updateStorageLimit($job->created_by, $image_size);
 
             if ($result == 1) {
                 $filenameWithExt1 = $request->file('resume')->getClientOriginalName();

@@ -1263,16 +1263,17 @@ class AttendanceEmployeeController extends Controller
                         }
                     }
 
-                    // Fill in 'absent' ONLY for current month dates
+                    // Fill in 'absent' ONLY for current month dates (excluding Sundays)
                     $monthStart = $currentDate->copy()->startOfMonth();
                     $monthEnd = $currentDate->copy()->endOfMonth();
                     $today = \Carbon\Carbon::today();
                     
                     for ($date = $monthStart->copy(); $date->lte($monthEnd); $date->addDay()) {
                         $dateFormatted = $date->format('Y-m-d');
+                        $dayOfWeek = $date->dayOfWeek; // 0 = Sunday, 6 = Saturday
 
                         if (!isset($employeeData[$dateFormatted])) {
-                            if ($date->lte($today)) {
+                            if ($date->lte($today) && $dayOfWeek != 0) { // Skip marking absent on Sundays
                                 $employeeData[$dateFormatted] = ['type' => 'absent'];
                             }
                             // Future dates remain unmarked

@@ -194,7 +194,7 @@
                 </div>
                 <div class="modal-body">
                     <p>{{ __('Are you sure you want to approve this regularisation request?') }}</p>
-                    <p class="text-muted"><small>{{ __('This will create an attendance record for the selected date.') }}</small></p>
+                    <p class="text-muted"><small>{{ __('This will create or update the attendance record for the selected date with the approved times.') }}</small></p>
                 </div>
                 <div class="modal-footer">
                     <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">{{ __('Cancel') }}</button>
@@ -293,6 +293,74 @@
     <script>
         $(document).ready(function() {
             var currentRegularisationId = null;
+
+            // Fetch attendance data when date is selected
+            $('#date').on('change', function() {
+                var selectedDate = $(this).val();
+                if (!selectedDate) {
+                    // Clear fields if no date selected
+                    $('#punch_in_time').val('');
+                    $('#punch_out_time').val('');
+                    return;
+                }
+
+                // Show loading indicator
+                $('#punch_in_time').prop('disabled', true);
+                $('#punch_out_time').prop('disabled', true);
+
+                $.ajax({
+                    url: '{{ route("attendance-regularisation.fetch-attendance") }}',
+                    type: 'POST',
+                    data: {
+                        date: selectedDate,
+                        _token: '{{ csrf_token() }}'
+                    },
+                    success: function(response) {
+                        if (response.success && response.has_attendance) {
+                            // Populate fields with existing attendance data
+                            $('#punch_in_time').val(response.data.punch_in_time);
+                            $('#punch_out_time').val(response.data.punch_out_time);
+                            
+                            // Show info message about existing attendance
+                            var infoMsg = '{{ __("Existing attendance found for this date. Times have been auto-populated. You can edit them if needed.") }}';
+                            showInfoMessage(infoMsg);
+                        } else {
+                            // Clear fields for new attendance
+                            $('#punch_in_time').val('');
+                            $('#punch_out_time').val('');
+                        }
+                    },
+                    error: function(xhr) {
+                        var errorMsg = '{{ __("Error fetching attendance data") }}';
+                        if (xhr.responseJSON && xhr.responseJSON.message) {
+                            errorMsg = xhr.responseJSON.message;
+                        }
+                        console.error(errorMsg);
+                    },
+                    complete: function() {
+                        // Re-enable fields
+                        $('#punch_in_time').prop('disabled', false);
+                        $('#punch_out_time').prop('disabled', false);
+                    }
+                });
+            });
+
+            // Function to show info message (similar to alert but styled)
+            function showInfoMessage(message) {
+                // Create a temporary info alert
+                var alertHtml = '<div class="alert alert-info alert-dismissible fade show" role="alert">' +
+                               '<i class="ti ti-info-circle"></i> ' + message +
+                               '<button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>' +
+                               '</div>';
+                
+                // Insert after the modal header
+                $('.modal-header').after(alertHtml);
+                
+                // Auto-remove after 5 seconds
+                setTimeout(function() {
+                    $('.alert-info').alert('close');
+                }, 5000);
+            }
 
             // Approve regularisation - Show confirmation modal
             $(document).on('click', '.approve-regularisation', function(e) {

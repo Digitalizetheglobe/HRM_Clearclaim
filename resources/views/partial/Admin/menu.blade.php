@@ -684,7 +684,7 @@
 
                         @can('Manage Career')
                             <li class="dash-item">
-                                <a class="dash-link text-white hover:text-white hover:bg-[#001a3b] text-lg" href="{{ route('career', [\Auth::user()->creatorId(), $lang]) }}"
+                                <a class="dash-link text-white hover:text-white hover:bg-[#001a3b] text-lg" href="{{ route('career', [\Auth::user()->creatorId(), !empty($lang) ? $lang : 'en']) }}"
                                     target="_blank">{{ __('Career') }}</a>
                             </li>
                         @endcan

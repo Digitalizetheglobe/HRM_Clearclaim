@@ -247,13 +247,6 @@ Route::get('/get-latest-attendance', function() {
 })->middleware('auth:api');
 
 
-
-
-
-
-
-
-
 Route::middleware(['auth'])->group(function () {
 
 
@@ -1289,6 +1282,12 @@ Route::group(['middleware' => ['verified']], function () {
             'XSS',
         ]
     );
+    Route::post('attendance-regularisation/fetch-attendance', [\App\Http\Controllers\AttendanceRegularisationController::class, 'fetchAttendanceData'])->name('attendance-regularisation.fetch-attendance')->middleware(
+        [
+            'auth',
+            'XSS',
+        ]
+    );
 
         // Route::resource('timesheet', TimeSheetController::class)->middleware(
         //     [
@@ -1734,6 +1733,12 @@ Route::group(['middleware' => ['verified']], function () {
         ]
     );
     Route::delete('job-application/{id}/note/destroy', [JobApplicationController::class, 'destroyNote'])->name('job.application.note.destroy')->middleware(
+        [
+            'auth',
+            'XSS',
+        ]
+    );
+    Route::get('job-application/{id}/resume/preview', [JobApplicationController::class, 'resumePreview'])->name('job.application.resume.preview')->middleware(
         [
             'auth',
             'XSS',

@@ -42,6 +42,7 @@
                     @if($selectedEmployee)
                         <div class="d-flex flex-wrap mt-2 gap-2" style="font-size: 0.85em;">
                             <span class="badge bg-success">Present</span>
+                            <span class="badge bg-warning text-dark">Half Day</span>
                             <span class="badge bg-danger">Absent</span>
                             <span class="badge bg-warning">Leave</span>
                             <span class="badge" style="background-color: #e3342f;">LATE</span>
@@ -490,6 +491,41 @@
                 min-width: 36px;
             }
         }
+        
+        /* Attendance Status Background Colors */
+        .present {
+            background-color: rgba(34, 197, 94, 0.1) !important;
+        }
+        
+        .half-day {
+            background-color: rgba(245, 158, 11, 0.1) !important;
+        }
+        
+        .absent {
+            background-color: rgba(239, 68, 68, 0.1) !important;
+        }
+        
+        .leave {
+            background-color: rgba(246, 173, 85, 0.1) !important;
+        }
+        
+        /* Late mark styling */
+        .late-mark {
+            border: 2px solid #e3342f !important;
+        }
+        
+        /* Hours completion styling */
+        .hours-complete {
+            background-color: rgba(212, 237, 218, 0.3) !important;
+        }
+        
+        .hours-incomplete {
+            background-color: rgba(255, 243, 205, 0.3) !important;
+        }
+        
+        .half-day-background {
+            background-color: rgba(245, 158, 11, 0.2) !important;
+        }
     </style>
 @endpush
 
@@ -660,6 +696,21 @@
                         }
                         
                         var dateStr = info.date.toISOString().split('T')[0];
+                        var dayOfWeek = info.date.getDay(); // 0 = Sunday, 1 = Monday, etc.
+                        
+                        // Check if it's Sunday and add Sunday badge
+                        if (dayOfWeek === 0) { // Sunday
+                            var sundayDetailsEl = document.createElement('div');
+                            sundayDetailsEl.className = 'status-details';
+                            
+                            var isMobile = window.innerWidth <= 768;
+                            var sundayBadgeSize = isMobile ? '10px' : '15px';
+                            
+                            sundayDetailsEl.innerHTML = `<span class="badge" style="background-color: #6c757d; color: white; padding: 3px 6px; border-radius: 3px; display: inline-block; font-size: ${sundayBadgeSize}; font-weight: 600;">
+                                Sunday</span>`;
+                            
+                            info.el.querySelector('.fc-daygrid-day-frame').appendChild(sundayDetailsEl);
+                        }
                         
                         // Check if we have data for the selected employee
                         if (attendanceData['{{ $selectedEmployee->id }}'] && 
@@ -731,6 +782,80 @@
                                 var badgeSize = isMobile ? '10px' : '15px';
                                 detailsEl.innerHTML = `<span class="badge" style="background-color: #e3342f; color: white; padding: 3px 6px; border-radius: 3px; display: inline-block; font-size: ${badgeSize}; font-weight: 600;">
                                     Absent</span>`;
+                            } else if (status === 'half_day') {
+                                var clockIn = attendanceData['{{ $selectedEmployee->id }}'].data[dateStr].clock_in;
+                                var clockOut = attendanceData['{{ $selectedEmployee->id }}'].data[dateStr].clock_out;
+                                var isLate = attendanceData['{{ $selectedEmployee->id }}'].data[dateStr].is_late || false;
+                                
+                                var formattedIn = formatTime12Hour(clockIn);
+                                var formattedOut = formatTime12Hour(clockOut);
+                                var totalTime = calculateTotalTime(clockIn, clockOut);
+                                
+                                // Calculate total hours worked
+                                var totalHours = calculateTotalHours(clockIn, clockOut);
+                                
+                                // Highlight late marks in red
+                                if (isLate) {
+                                    info.el.classList.add('late-mark');
+                                }
+                                
+                                // Apply yellow background for half day
+                                info.el.classList.add('half-day-background');
+                                
+                                // Responsive badge sizes
+                                var isMobile = window.innerWidth <= 768;
+                                var lateBadgeSize = isMobile ? '8px' : '11px';
+                                var halfDayBadgeSize = isMobile ? '10px' : '15px';
+                                var timeInfoSize = isMobile ? '9px' : '11px';
+                                
+                                var lateBadge = isLate ? '<span class="badge" style="background-color: #e3342f; color: white; padding: 2px 4px; border-radius: 3px; display: inline-block; font-size: ' + lateBadgeSize + '; font-weight: 600; margin-bottom: 2px;">LATE</span><br>' : '';
+                                
+                                // Check if clock_out is actual or calculated (00:00:00 means calculated)
+                                var isCalculatedClockOut = !clockOut || clockOut === '00:00:00' || clockOut === '00:00';
+                                var actualClockOutDisplay = '';
+                                var displayClockOut = formattedOut;
+                                
+                                if (isCalculatedClockOut && clockIn && clockIn !== '00:00:00' && clockIn !== '00:00') {
+                                    // Calculate the actual clock out time (4.5 hours after clock in)
+                                    var clockInParts = clockIn.split(':');
+                                    var inHours = parseInt(clockInParts[0]);
+                                    var inMinutes = parseInt(clockInParts[1]);
+                                    
+                                    var outTotalMinutes = (inHours * 60 + inMinutes) + 270; // 4.5 hours = 270 minutes
+                                    var outHours = Math.floor(outTotalMinutes / 60) % 24;
+                                    var outMinutes = outTotalMinutes % 60;
+                                    
+                                    var calculatedClockOut = (outHours < 10 ? '0' : '') + outHours + ':' + (outMinutes < 10 ? '0' : '') + outMinutes;
+                                    displayClockOut = formatTime12Hour(calculatedClockOut);
+                                    
+                                    // If there's an actual clock out time (different from calculated), show it in brackets
+                                    if (clockOut && clockOut !== '00:00:00' && clockOut !== '00:00') {
+                                        var formattedActualClockOut = formatTime12Hour(clockOut);
+                                        actualClockOutDisplay = '<br><small style="color: #666; font-size: 90%;">(Actual: ' + formattedActualClockOut + ')</small>';
+                                    }
+                                }
+                                
+                                // On mobile, show compact version
+                                var mobileHtml = '';
+                                if (isMobile) {
+                                    mobileHtml = `${lateBadge}<span class="badge" style="background-color: #f59e0b; color: white; padding: 1px 3px; border-radius: 2px; display: block; font-size: ${halfDayBadgeSize}; font-weight: 600; margin-bottom: 1px; width: fit-content;">
+                                        HD</span>
+                                        <div class="time-info" style="font-size: ${timeInfoSize}; line-height: 1.2;">
+                                            ${formattedIn}<br>${displayClockOut}${actualClockOutDisplay}
+                                        </div>`;
+                                } else {
+                                    mobileHtml = `${lateBadge}<span class="badge" style="background-color: #f59e0b; color: white; padding: 3px 6px; border-radius: 3px; display: inline-block; font-size: ${halfDayBadgeSize}; font-weight: 600; margin-bottom: 2px;">
+                                        Half Day</span>
+                                        <div class="time-info" style="font-size: ${timeInfoSize};">
+                                            In: ${formattedIn}<br>
+                                            Out: ${displayClockOut}<br>
+                                            Total: ${totalTime}${actualClockOutDisplay}
+                                        </div>`;
+                                }
+                                
+                                var html = mobileHtml;
+                                
+                                detailsEl.innerHTML = html;
                             } else if (status === 'leave') {
                                 var isMobile = window.innerWidth <= 768;
                                 var badgeSize = isMobile ? '10px' : '15px';

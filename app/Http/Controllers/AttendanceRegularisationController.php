@@ -92,14 +92,13 @@ class AttendanceRegularisationController extends Controller
             return redirect()->back()->with('error', __('Only employees can create regularisation requests.'));
         }
 
-        // Check if attendance already exists for this date
+        // Check if attendance already exists for this date (we'll allow it now)
         $existingAttendance = AttendanceEmployee::where('employee_id', $employee->id)
             ->where('date', $request->date)
             ->first();
 
-        if ($existingAttendance) {
-            return redirect()->back()->with('error', __('Attendance already exists for this date. Please edit the existing attendance instead.'));
-        }
+        // Store whether this is an update to existing attendance
+        $isUpdatingExisting = !empty($existingAttendance);
 
         // Check if a regularisation request already exists for this date
         $existingRegularisation = AttendanceRegularisation::where('employee_id', $employee->id)
@@ -130,6 +129,7 @@ class AttendanceRegularisationController extends Controller
         $regularisation->remarks = $request->remarks;
         $regularisation->status = AttendanceRegularisation::STATUS_PENDING;
         $regularisation->created_by = \Auth::user()->creatorId();
+        $regularisation->is_updating_existing = $isUpdatingExisting;
         $regularisation->save();
 
         // Send notifications to Company and HR users
@@ -227,18 +227,13 @@ class AttendanceRegularisationController extends Controller
             return redirect()->back()->with('error', $errorMsg);
         }
 
-        // Check if attendance already exists for this date (shouldn't happen for pending requests, but let's be safe)
+        // Check if attendance already exists for this date (we'll allow it for editing)
         $existingAttendance = AttendanceEmployee::where('employee_id', $employee->id)
             ->where('date', $request->date)
             ->first();
 
-        if ($existingAttendance) {
-            $errorMsg = __('Attendance already exists for this date. Please edit the existing attendance instead.');
-            if ($request->ajax() || $request->wantsJson()) {
-                return response()->json(['success' => false, 'message' => $errorMsg], 400);
-            }
-            return redirect()->back()->with('error', $errorMsg);
-        }
+        // Store whether this is an update to existing attendance
+        $isUpdatingExisting = !empty($existingAttendance);
 
         // Check if another regularisation request already exists for this date (excluding current one)
         $existingRegularisation = AttendanceRegularisation::where('employee_id', $employee->id)
@@ -274,6 +269,7 @@ class AttendanceRegularisationController extends Controller
         $regularisation->punch_out_time = $punchOutTime;
         $regularisation->reason = $request->reason;
         $regularisation->remarks = $request->remarks;
+        $regularisation->is_updating_existing = $isUpdatingExisting;
         $regularisation->save();
 
         if ($request->ajax() || $request->wantsJson()) {
@@ -326,15 +322,12 @@ class AttendanceRegularisationController extends Controller
             ->first();
 
         if ($existingAttendance) {
-            $errorMsg = __('Attendance already exists for this date.');
-            if ($request->ajax() || $request->wantsJson()) {
-                return response()->json(['success' => false, 'message' => $errorMsg], 400);
-            }
-            return redirect()->back()->with('error', $errorMsg);
+            // Update existing attendance record
+            $this->updateAttendanceFromRegularisation($regularisation, $existingAttendance);
+        } else {
+            // Create new attendance record
+            $this->createAttendanceFromRegularisation($regularisation);
         }
-
-        // Create attendance record
-        $this->createAttendanceFromRegularisation($regularisation);
 
         // Update regularisation status
         $regularisation->status = AttendanceRegularisation::STATUS_APPROVED;
@@ -348,12 +341,12 @@ class AttendanceRegularisationController extends Controller
         if ($request->ajax() || $request->wantsJson()) {
             return response()->json([
                 'success' => true,
-                'message' => __('Attendance regularisation request approved and attendance record created.'),
+                'message' => __('Attendance regularisation request approved successfully.'),
                 'redirect' => route('attendance-regularisation.index')
             ]);
         }
 
-        return redirect()->route('attendance-regularisation.index')->with('success', __('Attendance regularisation request approved and attendance record created.'));
+        return redirect()->route('attendance-regularisation.index')->with('success', __('Attendance regularisation request approved successfully.'));
     }
 
     /**
@@ -495,6 +488,61 @@ class AttendanceRegularisationController extends Controller
 
             $employee->user->notify(new AttendanceRegularisationNotification($notificationData));
         }
+    }
+
+    /**
+     * Update existing attendance record from approved regularisation
+     */
+    private function updateAttendanceFromRegularisation($regularisation, $existingAttendance)
+    {
+        // Get date as string (Y-m-d format)
+        $date = is_string($regularisation->date) ? $regularisation->date : $regularisation->date->format('Y-m-d');
+        
+        // Get times as strings (H:i:s format)
+        $clockIn = is_string($regularisation->punch_in_time) ? $regularisation->punch_in_time : $regularisation->punch_in_time;
+        $clockOut = is_string($regularisation->punch_out_time) ? $regularisation->punch_out_time : $regularisation->punch_out_time;
+        
+        // Ensure times are in H:i:s format
+        if (strlen($clockIn) == 5) {
+            $clockIn = $clockIn . ':00'; // Add seconds if missing
+        }
+        if (strlen($clockOut) == 5) {
+            $clockOut = $clockOut . ':00'; // Add seconds if missing
+        }
+
+        // Calculate late time based on 10:15 AM threshold
+        $late = $this->calculateLateTime($clockIn, $date);
+
+        // Calculate early leaving
+        $endTime = \App\Models\Utility::getValByName('company_end_time');
+        $totalEarlyLeavingSeconds = strtotime($date . ' ' . $endTime) - strtotime($date . ' ' . $clockOut);
+        $hours = floor($totalEarlyLeavingSeconds / 3600);
+        $mins = floor($totalEarlyLeavingSeconds / 60 % 60);
+        $secs = floor($totalEarlyLeavingSeconds % 60);
+        $earlyLeaving = sprintf('%02d:%02d:%02d', $hours, $mins, $secs);
+
+        // Calculate overtime
+        if (strtotime($date . ' ' . $clockOut) > strtotime($date . ' ' . $endTime)) {
+            $totalOvertimeSeconds = strtotime($date . ' ' . $clockOut) - strtotime($date . ' ' . $endTime);
+            $hours = floor($totalOvertimeSeconds / 3600);
+            $mins = floor($totalOvertimeSeconds / 60 % 60);
+            $secs = floor($totalOvertimeSeconds % 60);
+            $overtime = sprintf('%02d:%02d:%02d', $hours, $mins, $secs);
+        } else {
+            $overtime = '00:00:00';
+        }
+
+        // Calculate status using the same logic as AttendanceEmployeeController
+        $status = $this->calculateAttendanceStatus($clockIn, $clockOut, $date, $regularisation->employee_id);
+
+        // Update existing attendance record
+        $existingAttendance->status = $status;
+        $existingAttendance->clock_in = $clockIn;
+        $existingAttendance->clock_out = $clockOut;
+        $existingAttendance->late = $late;
+        $existingAttendance->early_leaving = ($earlyLeaving > 0) ? $earlyLeaving : '00:00:00';
+        $existingAttendance->overtime = $overtime;
+        $existingAttendance->save();
     }
 
     /**
@@ -670,6 +718,58 @@ class AttendanceRegularisationController extends Controller
             });
 
         return $lateMarks->count();
+    }
+
+    /**
+     * Fetch existing attendance data for a selected date
+     */
+    public function fetchAttendanceData(Request $request)
+    {
+        // Only employees can fetch their own attendance data
+        if (\Auth::user()->type != 'employee') {
+            return response()->json(['success' => false, 'message' => __('Permission denied.')], 403);
+        }
+
+        $validator = \Validator::make(
+            $request->all(),
+            [
+                'date' => 'required|date',
+            ]
+        );
+
+        if ($validator->fails()) {
+            $messages = $validator->getMessageBag();
+            return response()->json(['success' => false, 'message' => $messages->first()], 422);
+        }
+
+        // Get employee
+        $employee = Employee::where('user_id', \Auth::user()->id)->first();
+        if (!$employee) {
+            return response()->json(['success' => false, 'message' => __('Employee not found.')], 404);
+        }
+
+        // Check if attendance already exists for this date
+        $existingAttendance = AttendanceEmployee::where('employee_id', $employee->id)
+            ->where('date', $request->date)
+            ->first();
+
+        if ($existingAttendance) {
+            return response()->json([
+                'success' => true,
+                'has_attendance' => true,
+                'data' => [
+                    'punch_in_time' => date('H:i', strtotime($existingAttendance->clock_in)),
+                    'punch_out_time' => date('H:i', strtotime($existingAttendance->clock_out)),
+                    'status' => $existingAttendance->status,
+                ]
+            ]);
+        }
+
+        return response()->json([
+            'success' => true,
+            'has_attendance' => false,
+            'message' => __('No attendance found for this date.')
+        ]);
     }
 
     /**
