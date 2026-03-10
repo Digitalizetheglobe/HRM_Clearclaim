@@ -418,38 +418,46 @@ class ExpenseReimbursementController extends Controller
         
         $companyId = $user->creatorId();
         
-        // Check if user is Company/Admin
+        // Check if user is Company/Admin - allow approval without employee record
         $isAdmin = in_array($user->type, ['company', 'super admin']);
         
-        // Check if user is HR department employee
-        $employee = Employee::where('user_id', $user->id)->first();
+        // For non-admin users, check if user is HR or Finance department employee
+        $isHREmployee = false;
+        $isFinanceEmployee = false;
+        $employee = null;
         
-        // Log all employee records for this user to help debug
-        $allEmployees = Employee::where('user_id', $user->id)->get(['id', 'name', 'department_id', 'user_id']);
-        Log::info('All Employee Records for User', [
-            'user_id' => $user->id,
-            'user_name' => $user->name,
-            'employees' => $allEmployees->toArray(),
-        ]);
-        
-        if (!$employee) {
-            Log::error('No employee record found for user', [
+        if (!$isAdmin) {
+            $employee = Employee::where('user_id', $user->id)->first();
+            
+            // Log all employee records for this user to help debug
+            $allEmployees = Employee::where('user_id', $user->id)->get(['id', 'name', 'department_id', 'user_id']);
+            Log::info('All Employee Records for User', [
                 'user_id' => $user->id,
                 'user_name' => $user->name,
+                'employees' => $allEmployees->toArray(),
             ]);
-            return redirect()->back()->with('error', __('Employee profile not found. Please ensure you have an employee record.'));
+            
+            if (!$employee) {
+                Log::error('No employee record found for user', [
+                    'user_id' => $user->id,
+                    'user_name' => $user->name,
+                ]);
+                return redirect()->back()->with('error', __('Employee profile not found. Please ensure you have an employee record.'));
+            }
+            
+            // Log the employee's department details
+            $employeeDepartment = $employee->department_id ? Department::find($employee->department_id) : null;
+            Log::info('Employee Department Details', [
+                'employee_id' => $employee->id,
+                'employee_name' => $employee->name,
+                'employee_department_id' => $employee->department_id,
+                'employee_department_name' => $employeeDepartment ? $employeeDepartment->name : 'Not Found',
+            ]);
+            
+            // Only call helper methods if employee exists
+            $isHREmployee = $this->isHREmployee($employee, $companyId);
+            $isFinanceEmployee = $this->isFinanceEmployee($employee, $companyId);
         }
-        
-        // Log the employee's department details
-        $employeeDepartment = $employee->department_id ? Department::find($employee->department_id) : null;
-        Log::info('Employee Department Details', [
-            'employee_id' => $employee->id,
-            'employee_name' => $employee->name,
-            'employee_department_id' => $employee->department_id,
-            'employee_department_name' => $employeeDepartment ? $employeeDepartment->name : 'Not Found',
-        ]);
-        
-        $isHREmployee = $this->isHREmployee($employee, $companyId);
         
         // Debug logging to help diagnose permission issues
         Log::info('Expense Approval Attempt', [
@@ -461,13 +469,15 @@ class ExpenseReimbursementController extends Controller
             'employee_department_id' => $employee ? $employee->department_id : null,
             'is_admin' => $isAdmin,
             'is_hr_employee' => $isHREmployee,
+            'is_finance_employee' => $isFinanceEmployee,
             'expense_id' => $id,
         ]);
         
-        // Only HR employees or Admin can approve expenses
-        if (!$isAdmin && !$isHREmployee) {
+        // Company users, HR employees, and Finance employees can approve expenses
+        if (!$isAdmin && !$isHREmployee && !$isFinanceEmployee) {
             // Additional debug info for permission denied
             $hrDepartment = $this->findHRDepartment($companyId);
+            $financeDepartment = $this->findFinanceDepartment($companyId);
             Log::warning('Expense Approval Permission Denied', [
                 'user_id' => $user->id,
                 'user_type' => $user->type,
@@ -475,10 +485,12 @@ class ExpenseReimbursementController extends Controller
                 'employee_department_id' => $employee ? $employee->department_id : null,
                 'hr_department_id' => $hrDepartment ? $hrDepartment->id : null,
                 'hr_department_name' => $hrDepartment ? $hrDepartment->name : null,
+                'finance_department_id' => $financeDepartment ? $financeDepartment->id : null,
+                'finance_department_name' => $financeDepartment ? $financeDepartment->name : null,
                 'company_id' => $companyId,
             ]);
             
-            return redirect()->back()->with('error', __('Permission denied. Only Human Resource department employees or Admin can approve expenses.'));
+            return redirect()->back()->with('error', __('Permission denied. Only Company users, Human Resource department employees, or Finance department employees can approve expenses.'));
         }
         
         // Only expenses with status 'pending_hr' can be approved
@@ -511,16 +523,27 @@ class ExpenseReimbursementController extends Controller
         $user = Auth::user();
         $companyId = $user->creatorId();
         
-        // Check if user is Company/Admin
+        // Check if user is Company/Admin - allow rejection without employee record
         $isAdmin = in_array($user->type, ['company', 'super admin']);
         
-        // Check if user is HR department employee
-        $employee = Employee::where('user_id', $user->id)->first();
-        $isHREmployee = $this->isHREmployee($employee, $companyId);
+        // For non-admin users, check if user is HR or Finance department employee
+        $isHREmployee = false;
+        $isFinanceEmployee = false;
+        $employee = null;
         
-        // Only HR employees or Admin can reject
-        if (!$isAdmin && !$isHREmployee) {
-            return redirect()->back()->with('error', __('Permission denied. Only Human Resource department employees or Admin can reject expenses.'));
+        if (!$isAdmin) {
+            $employee = Employee::where('user_id', $user->id)->first();
+            
+            // Only call helper methods if employee exists
+            if ($employee) {
+                $isHREmployee = $this->isHREmployee($employee, $companyId);
+                $isFinanceEmployee = $this->isFinanceEmployee($employee, $companyId);
+            }
+        }
+        
+        // Company users, HR employees, and Finance employees can reject
+        if (!$isAdmin && !$isHREmployee && !$isFinanceEmployee) {
+            return redirect()->back()->with('error', __('Permission denied. Only Company users, Human Resource department employees, or Finance department employees can reject expenses.'));
         }
         
         $expense = EmployeeExpense::where(function($query) use ($companyId) {

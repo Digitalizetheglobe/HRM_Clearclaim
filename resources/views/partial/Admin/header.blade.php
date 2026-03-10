@@ -164,7 +164,7 @@
                     @if($notifications->count() > 0)
                     <div class="noti-footer border-top p-2">
                         <div class="d-grid gap-2">
-                            <button type="button" class="btn btn-sm btn-danger" id="clear-all-notifications" onclick="clearAllNotificationsInline(event)">
+                            <button type="button" class="btn btn-sm btn-danger" id="clear-all-notifications">
                                 <i class="ti ti-trash me-1"></i>{{ __('Clear All') }}
                             </button>
                         </div>
@@ -222,71 +222,46 @@
             console.log('Header script loaded'); // Debug log
             const csrfToken = document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') || '{{ csrf_token() }}';
             
-            // Test if clear all button exists
-            const clearAllBtn = document.getElementById('clear-all-notifications');
-            console.log('Clear all button found:', !!clearAllBtn); // Debug log
-            
-            // If button doesn't exist initially, watch for it to be added dynamically
-            if (!clearAllBtn) {
-                const observer = new MutationObserver(function(mutations) {
-                    mutations.forEach(function(mutation) {
-                        if (mutation.addedNodes) {
-                            for (let node of mutation.addedNodes) {
-                                if (node.nodeType === 1) { // Element node
-                                    const button = node.querySelector ? node.querySelector('#clear-all-notifications') : null;
-                                    if (button || node.id === 'clear-all-notifications') {
-                                        console.log('Clear all button found via MutationObserver'); // Debug log
-                                        setupClearAllButton();
-                                        observer.disconnect();
-                                        return;
-                                    }
-                                }
-                            }
-                        }
-                    });
-                });
-                
-                observer.observe(document.body, {
-                    childList: true,
-                    subtree: true
-                });
-            } else {
-                setupClearAllButton();
-            }
+            // Set up clear all notifications button
+            setupClearAllButton();
             
             function setupClearAllButton() {
-                // Clear all notifications - Try both vanilla JS and jQuery
                 const clearAllBtn = document.getElementById('clear-all-notifications');
+                console.log('Setup clear all button - button found:', !!clearAllBtn); // Debug log
                 if (clearAllBtn) {
                     clearAllBtn.addEventListener('click', function(e) {
+                        console.log('Clear all button clicked!'); // Debug log
                         e.preventDefault();
                         e.stopPropagation(); // Prevent dropdown from closing
-                        console.log('Clear all notifications clicked (vanilla JS)'); // Debug log
                         clearAllNotifications();
                     });
                 } else {
-                    console.log('Clear all button not found (vanilla JS), trying jQuery'); // Debug log
-                    // Fallback to jQuery
-                    $(document).on('click', '#clear-all-notifications', function(e) {
-                        e.preventDefault();
-                        e.stopPropagation(); // Prevent dropdown from closing
-                        console.log('Clear all notifications clicked (jQuery)'); // Debug log
-                        clearAllNotifications();
-                    });
+                    console.error('Clear all button not found in DOM'); // Debug log
                 }
+                
+                // Also set up jQuery fallback
+                $(document).on('click', '#clear-all-notifications', function(e) {
+                    console.log('Clear all button clicked via jQuery fallback!'); // Debug log
+                    e.preventDefault();
+                    e.stopPropagation();
+                    clearAllNotifications();
+                });
             }
             
             // Handle notification item clicks
             document.querySelectorAll('.notification-item').forEach(item => {
                 item.addEventListener('click', function(e) {
                     const url = this.getAttribute('data-url');
+                    const notificationId = this.getAttribute('data-notification-id');
+                    
+                    console.log('Notification clicked:', { url, notificationId }); // Debug log
                     
                     // For view-only notifications (reporting managers), prevent any action
                     if (url && url.includes('/view')) {
                         e.preventDefault();
                         e.stopPropagation();
+                        console.log('View-only notification, just marking as read'); // Debug log
                         // Just mark as read without any action
-                        const notificationId = this.getAttribute('data-notification-id');
                         fetch(`/notifications/${notificationId}/read`, {
                             method: 'POST',
                             headers: {
@@ -310,10 +285,8 @@
                     }
                     
                     e.preventDefault();
-                    const notificationId = this.getAttribute('data-notification-id');
-                    const leaveId = this.getAttribute('data-leave-id');
                     
-                    // Mark notification as read
+                    // Mark notification as read first
                     fetch(`/notifications/${notificationId}/read`, {
                         method: 'POST',
                         headers: {
@@ -324,56 +297,11 @@
                     .then(response => response.json())
                     .then(data => {
                         if (data.success) {
-                            // Remove unread indicator
-                            this.classList.remove('bg-light');
-                            this.querySelector('.badge.bg-primary')?.remove();
+                            console.log('Notification marked as read, redirecting to:', url); // Debug log
                             
-                            // Update notification count
-                            updateNotificationCount();
-                            
-                            // If this is a leave notification
-                            if (leaveId && (url.includes('/leave/') || url.includes('action'))) {
-                                // Check if user can approve/reject (company or hr)
-                                const userType = '{{ Auth::user()->type }}';
-                                if (userType === 'company' || userType === 'hr') {
-                                        // Create a temporary link element to trigger the existing modal system
-                                        const tempLink = $('<a>', {
-                                            'href': '#',
-                                            'data-url': `/leave/${leaveId}/action`,
-                                            'data-ajax-popup': 'true',
-                                            'data-size': 'md',
-                                            'data-title': '{{ __("Leave Action") }}'
-                                        });
-                                        
-                                        // Append to body temporarily
-                                        $('body').append(tempLink);
-                                        
-                                        // Trigger click to open modal using existing system
-                                        tempLink.trigger('click');
-                                        
-                                        // Store notification ID for deletion after action
-                                        setTimeout(function() {
-                                            $('#commonModal').data('notification-id', notificationId);
-                                            // Remove temporary link
-                                            tempLink.remove();
-                                        }, 100);
-                                    } else {
-                                        // For employees, redirect to leave index
-                                        if (url && url !== '#') {
-                                            window.location.href = url;
-                                        }
-                                    }
-                                } else {
-                                    // For other leave URLs, just redirect
-                                    if (url && url !== '#') {
-                                        window.location.href = url;
-                                    }
-                                }
-                            } else {
-                                // For other notifications, just redirect
-                                if (url && url !== '#') {
-                                    window.location.href = url;
-                                }
+                            // Redirect to the URL
+                            if (url && url !== '#') {
+                                window.location.href = url;
                             }
                         }
                     })
@@ -417,105 +345,51 @@
                 .catch(error => console.error('Error:', error));
             });
             
-            // Inline function as backup
-            function clearAllNotificationsInline(event) {
-                event.preventDefault();
-                event.stopPropagation(); // Prevent dropdown from closing
-                console.log('Clear all notifications clicked (inline)'); // Debug log
-                
-                const csrfToken = document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') || '{{ csrf_token() }}';
-                
-                fetch('/notifications/clear-all', {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json',
-                        'X-CSRF-TOKEN': csrfToken
-                    }
-                })
-                .then(response => response.json())
-                .then(data => {
-                    console.log('Clear all response (inline):', data); // Debug log
-                    if (data.success) {
-                        // Clear all notifications from UI
-                        const notificationsList = document.getElementById('notifications-list');
-                        if (notificationsList) {
-                            notificationsList.innerHTML = `
-                                <div class="text-center p-4" id="no-notifications">
-                                    <i class="ti ti-bell-off fs-1 text-muted"></i>
-                                    <p class="mb-0 text-muted mt-2">{{ __('No notifications') }}</p>
-                                </div>
-                            `;
-                        }
-                        
-                        // Remove count badge
-                        const badge = document.getElementById('notification-count');
-                        if (badge) {
-                            badge.remove();
-                        }
-                        
-                        // Hide footer
-                        const footer = document.querySelector('.noti-footer');
-                        if (footer) {
-                            footer.remove();
-                        }
-                        
-                        // Show success message
-                        show_toastr('success', '{{ __("All notifications cleared") }}');
-                        
-                        // Close dropdown after successful clear
-                        setTimeout(() => {
-                            document.querySelector('[data-bs-toggle="dropdown"]').click();
-                        }, 500);
-                    }
-                })
-                .catch(error => {
-                    console.error('Error clearing notifications (inline):', error);
-                    show_toastr('error', 'Error clearing notifications');
-                });
-            }
-            
             function clearAllNotifications() {
+                console.log('clearAllNotifications function called'); // Debug log
+                
+                // Try multiple ways to get CSRF token
+                let csrfToken = document.querySelector('meta[name="csrf-token"]')?.getAttribute('content');
+                if (!csrfToken) {
+                    csrfToken = document.querySelector('input[name="_token"]')?.value;
+                }
+                if (!csrfToken) {
+                    csrfToken = '{{ csrf_token() }}';
+                }
+                
+                console.log('CSRF Token:', csrfToken ? 'Found' : 'Not found'); // Debug log
+                
                 fetch('/notifications/clear-all', {
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/json',
-                        'X-CSRF-TOKEN': csrfToken
+                        'X-CSRF-TOKEN': csrfToken,
+                        'X-Requested-With': 'XMLHttpRequest'
                     }
                 })
-                .then(response => response.json())
+                .then(response => {
+                    console.log('Response status:', response.status); // Debug log
+                    console.log('Response ok:', response.ok); // Debug log
+                    if (!response.ok) {
+                        throw new Error(`HTTP error! status: ${response.status}`);
+                    }
+                    return response.json();
+                })
                 .then(data => {
                     console.log('Clear all response:', data); // Debug log
                     if (data.success) {
-                        // Clear all notifications from UI
-                        const notificationsList = document.getElementById('notifications-list');
-                        if (notificationsList) {
-                            notificationsList.innerHTML = `
-                                <div class="text-center p-4" id="no-notifications">
-                                    <i class="ti ti-bell-off fs-1 text-muted"></i>
-                                    <p class="mb-0 text-muted mt-2">{{ __('No notifications') }}</p>
-                                </div>
-                            `;
-                        }
-                        
-                        // Remove count badge
-                        const badge = document.getElementById('notification-count');
-                        if (badge) {
-                            badge.remove();
-                        }
-                        
-                        // Hide footer
-                        const footer = document.querySelector('.noti-footer');
-                        if (footer) {
-                            footer.remove();
-                        }
+                        console.log('Clear successful, showing success message'); // Debug log
                         
                         // Show success message
                         show_toastr('success', '{{ __("All notifications cleared") }}');
                         
-                        // Close dropdown after successful clear
+                        // Redirect to current page to refresh notifications
                         setTimeout(() => {
-                            document.querySelector('[data-bs-toggle="dropdown"]').click();
-                        }, 500);
+                            window.location.href = window.location.href;
+                        }, 1000);
+                    } else {
+                        console.log('Clear failed:', data.message); // Debug log
+                        show_toastr('error', data.message || 'Failed to clear notifications');
                     }
                 })
                 .catch(error => {

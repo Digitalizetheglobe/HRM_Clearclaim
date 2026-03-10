@@ -26,6 +26,21 @@
             </div>
         </div>
 
+        <div class="col-lg-12 col-md-12 col-sm-12">
+            <div class="form-group">
+                {{ Form::label('punch_in_time', __('Punch In Time'), ['class' => 'form-label']) }}
+                <div class="form-icon-user">
+                    {{ Form::time('punch_in_time', null, ['class' => 'form-control', 'required' => 'required']) }}
+                </div>
+                <small class="text-muted">{{ __('Employees punching in after this time will be marked as late') }}</small>
+                @error('punch_in_time')
+                    <span class="invalid-name" role="alert">
+                        <strong class="text-danger">{{ $message }}</strong>
+                    </span>
+                @enderror
+            </div>
+        </div>
+
     </div>
 </div>
 <div class="modal-footer">

@@ -316,13 +316,10 @@
                             <tbody>
                                 @foreach ($attendanceEmployee as $attendance)
                                     @php
-                                        // Check if this is a late mark (clock-in after 10:15 AM)
+                                        // Check if this is a late mark based on department-specific punch-in time
                                         $isLateMark = false;
                                         if ($attendance->clock_in && $attendance->clock_in != '00:00:00') {
-                                            $lateMarkTime = \App\Models\AttendanceEmployee::LATE_MARK_TIME; // 10:15:00
-                                            $clockInTime = strtotime($attendance->clock_in);
-                                            $lateThreshold = strtotime($lateMarkTime);
-                                            $isLateMark = $clockInTime > $lateThreshold;
+                                            $isLateMark = \App\Models\AttendanceEmployee::isLateMarkForEmployee($attendance->employee_id, $attendance->clock_in);
                                         }
                                         
                                         // Calculate total hours
@@ -390,8 +387,39 @@
                                         @endif
                                         <td>{{ \Auth::user()->dateFormat($attendance->date) }}</td>
                                         <td>
-                                            <span>{{ $attendance->status }}</span>
-                                            @if($isLateMark)
+                                            @php
+                                                $statusClass = '';
+                                                $statusText = $attendance->status;
+                                                
+                                                // Determine status styling
+                                                switch($attendance->status) {
+                                                    case 'Present':
+                                                        $statusClass = 'badge bg-success';
+                                                        break;
+                                                    case 'Present (Late)':
+                                                        $statusClass = 'badge bg-success text-decoration-underline';
+                                                        break;
+                                                    case 'Late':
+                                                        $statusClass = 'badge bg-warning';
+                                                        break;
+                                                    case 'Half Day (Late)':
+                                                        $statusClass = 'badge bg-danger';
+                                                        break;
+                                                    case 'Half Day (Punch Miss)':
+                                                        $statusClass = 'badge bg-info';
+                                                        break;
+                                                    case 'Half Day':
+                                                        $statusClass = 'badge bg-secondary';
+                                                        break;
+                                                    case 'Absent':
+                                                        $statusClass = 'badge bg-dark';
+                                                        break;
+                                                    default:
+                                                        $statusClass = 'badge bg-light text-dark';
+                                                }
+                                            @endphp
+                                            <span class="{{ $statusClass }}">{{ $statusText }}</span>
+                                            @if($isLateMark && $attendance->status != 'Late' && $attendance->status != 'Half Day (Late)')
                                                 <span class="badge bg-danger ms-2" style="font-size: 10px; padding: 2px 6px;">LATE</span>
                                             @endif
                                         </td>

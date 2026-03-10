@@ -9,6 +9,7 @@ class Department extends Model
     protected $fillable = [
         'name',
         'branch_id',
+        'punch_in_time',
         'created_by',
     ];
 

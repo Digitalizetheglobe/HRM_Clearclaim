@@ -42,6 +42,7 @@ class DepartmentController extends Controller
                 [
                     'branch_id' => 'required',
                     'name' => 'required|max:20',
+                    'punch_in_time' => 'required|date_format:H:i',
                 ]
             );
             if ($validator->fails()) {
@@ -53,6 +54,7 @@ class DepartmentController extends Controller
             $department             = new Department();
             $department->branch_id  = $request->branch_id;
             $department->name       = $request->name;
+            $department->punch_in_time = $request->punch_in_time;
             $department->created_by = \Auth::user()->creatorId();
             $department->save();
 
@@ -92,6 +94,7 @@ class DepartmentController extends Controller
                     [
                         'branch_id' => 'required',
                         'name' => 'required|max:20',
+                        'punch_in_time' => 'required|date_format:H:i',
                     ]
                 );
                 if ($validator->fails()) {
@@ -102,6 +105,7 @@ class DepartmentController extends Controller
 
                 $department->branch_id = $request->branch_id;
                 $department->name      = $request->name;
+                $department->punch_in_time = $request->punch_in_time;
                 $department->save();
 
                 return redirect()->route('department.index')->with('success', __('Department successfully updated.'));

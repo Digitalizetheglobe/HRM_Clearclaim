@@ -30,7 +30,37 @@
             @foreach($dates as $date)
                 <td>
                     @isset($attendanceData[$employee->id][$date]['status'])
-                        {{ substr($attendanceData[$employee->id][$date]['status'], 0, 1) }}
+                        @php
+                            $status = $attendanceData[$employee->id][$date]['status'];
+                            $abbreviation = 'A'; // Default for Absent
+                            
+                            switch($status) {
+                                case 'Present':
+                                    $abbreviation = 'P';
+                                    break;
+                                case 'Present (Late)':
+                                    $abbreviation = 'PL';
+                                    break;
+                                case 'Late':
+                                    $abbreviation = 'L';
+                                    break;
+                                case 'Half Day (Late)':
+                                    $abbreviation = 'HL';
+                                    break;
+                                case 'Half Day (Punch Miss)':
+                                    $abbreviation = 'HP';
+                                    break;
+                                case 'Half Day':
+                                    $abbreviation = 'H';
+                                    break;
+                                case 'Absent':
+                                    $abbreviation = 'A';
+                                    break;
+                                default:
+                                    $abbreviation = substr($status, 0, 1);
+                            }
+                        @endphp
+                        {{ $abbreviation }}
                     @else
                         A
                     @endisset

@@ -510,8 +510,8 @@ class AttendanceRegularisationController extends Controller
             $clockOut = $clockOut . ':00'; // Add seconds if missing
         }
 
-        // Calculate late time based on 10:15 AM threshold
-        $late = $this->calculateLateTime($clockIn, $date);
+        // Calculate late time based on department-specific punch-in time
+        $late = $this->calculateLateTime($clockIn, $date, $regularisation->employee_id);
 
         // Calculate early leaving
         $endTime = \App\Models\Utility::getValByName('company_end_time');
@@ -565,8 +565,8 @@ class AttendanceRegularisationController extends Controller
             $clockOut = $clockOut . ':00'; // Add seconds if missing
         }
 
-        // Calculate late time based on 10:15 AM threshold
-        $late = $this->calculateLateTime($clockIn, $date);
+        // Calculate late time based on department-specific punch-in time
+        $late = $this->calculateLateTime($clockIn, $date, $regularisation->employee_id);
 
         // Calculate early leaving
         $endTime = \App\Models\Utility::getValByName('company_end_time');
@@ -606,9 +606,9 @@ class AttendanceRegularisationController extends Controller
     }
 
     /**
-     * Calculate late time based on 10:15 AM threshold
+     * Calculate late time based on department-specific punch-in time
      */
-    private function calculateLateTime($clockIn, $date)
+    private function calculateLateTime($clockIn, $date, $employeeId = null)
     {
         if (empty($clockIn) || $clockIn == '00:00:00') {
             return '00:00:00';
@@ -625,7 +625,13 @@ class AttendanceRegularisationController extends Controller
             $clockInStr = $clockInStr . ':00'; // Add seconds if missing
         }
 
-        $lateMarkTime = AttendanceEmployee::LATE_MARK_TIME; // 10:15:00
+        // Get department-specific punch-in time if employee ID is provided
+        if ($employeeId) {
+            $lateMarkTime = AttendanceEmployee::getEmployeePunchInTime($employeeId);
+        } else {
+            $lateMarkTime = AttendanceEmployee::LATE_MARK_TIME; // Fallback to default
+        }
+        
         $expectedTime = $date . ' ' . $lateMarkTime;
         $actualTime = $date . ' ' . $clockInStr;
 
@@ -713,8 +719,8 @@ class AttendanceRegularisationController extends Controller
             ->whereBetween('date', [$startOfMonth, $endOfMonth])
             ->where('clock_in', '!=', '00:00:00')
             ->get()
-            ->filter(function($attendance) {
-                return $this->isLateMark($attendance->clock_in);
+            ->filter(function($attendance) use ($employeeId) {
+                return $this->isLateMark($attendance->clock_in, $employeeId);
             });
 
         return $lateMarks->count();
@@ -773,15 +779,21 @@ class AttendanceRegularisationController extends Controller
     }
 
     /**
-     * Check if clock-in time is considered a late mark (after 10:15 AM)
+     * Check if clock-in time is considered a late mark based on department settings
      */
-    private function isLateMark($clockIn)
+    private function isLateMark($clockIn, $employeeId = null)
     {
         if (empty($clockIn) || $clockIn == '00:00:00') {
             return false;
         }
 
-        $lateMarkTime = AttendanceEmployee::LATE_MARK_TIME; // 10:15:00
+        // Use department-specific punch-in time if employee ID is provided
+        if ($employeeId) {
+            return AttendanceEmployee::isLateMarkForEmployee($employeeId, $clockIn);
+        }
+        
+        // Fallback to default time
+        $lateMarkTime = AttendanceEmployee::LATE_MARK_TIME;
         return strtotime($clockIn) > strtotime($lateMarkTime);
     }
 }

@@ -165,9 +165,19 @@ class AttendanceEmployeeController extends Controller
                             // Format as H:i:s
                             $clockOutTime = $calculatedClockOut->format('H:i:s');
                             
+                            // Check if this was a late mark
+                            $isLateMark = AttendanceEmployee::isLateMarkForEmployee($attendance->employee_id, $attendance->clock_in);
+                            $lateMarksCount = $this->countLateMarksInMonth($attendance->employee_id, $attendance->date);
+                            
                             // Update attendance record
                             $attendance->clock_out = $clockOutTime;
-                            $attendance->status = AttendanceEmployee::STATUS_HALF_DAY;
+                            
+                            // Set status based on late mark count
+                            if ($isLateMark && $lateMarksCount > AttendanceEmployee::MAX_LATE_MARKS_PER_MONTH) {
+                                $attendance->status = AttendanceEmployee::STATUS_HALF_DAY_LATE;
+                            } else {
+                                $attendance->status = AttendanceEmployee::STATUS_HALF_DAY_PUNCH_MISS;
+                            }
                             
                             // Calculate early leaving (if applicable)
                             $endTime = Utility::getValByName('company_end_time');
@@ -255,8 +265,8 @@ class AttendanceEmployeeController extends Controller
 
             $date = $request->date ?? date("Y-m-d");
 
-            // Calculate late time based on 10:15 AM threshold
-            $late = $this->calculateLateTime($request->clock_in . ':00', $date);
+            // Calculate late time based on department-specific punch-in time
+            $late = $this->calculateLateTime($request->clock_in . ':00', $date, $request->employee_id);
 
             // Calculate early leaving
             $endTime = Utility::getValByName('company_end_time');
@@ -296,7 +306,20 @@ class AttendanceEmployeeController extends Controller
             $employeeAttendance->overtime      = $overtime;
             $employeeAttendance->total_rest    = '00:00:00';
             $employeeAttendance->created_by    = \Auth::user()->creatorId();
-            $employeeAttendance->save();
+            
+            // Handle different Half Day scenarios with automatic punch-out calculation
+            if ($status === AttendanceEmployee::STATUS_HALF_DAY) {
+                // Rule 1: Regular Half Day - set punch-out to exactly 4.5 hours
+                $this->handleHalfDayStatus($employeeAttendance, $date);
+            } elseif ($status === AttendanceEmployee::STATUS_HALF_DAY_PUNCH_MISS) {
+                // Rule 2: Half Day (Punch Miss) - auto-calculate punch-out to 4.5 hours
+                $this->handleHalfDayPunchMiss($employeeAttendance, $date);
+            } elseif ($status === AttendanceEmployee::STATUS_HALF_DAY_LATE) {
+                // Rule 3: Half Day (Late) - auto-calculate punch-out to 4.5 hours
+                $this->handleHalfDayLateMark($employeeAttendance, $date);
+            } else {
+                $employeeAttendance->save();
+            }
 
             return redirect()->route('attendanceemployee.index')->with('success', __('Employee attendance successfully created.'));
         } else {
@@ -478,8 +501,8 @@ class AttendanceEmployeeController extends Controller
             $clockIn = $request->clock_in;
             $clockOut = $request->clock_out;
 
-            // Calculate late time based on 10:15 AM threshold
-            $late = $this->calculateLateTime($clockIn, $request->date);
+            // Calculate late time based on department-specific punch-in time
+            $late = $this->calculateLateTime($clockIn, $request->date, $request->employee_id);
 
             // Determine status and calculate other values
             // If clock_out is '00:00:00' or empty, it's a single punch in (Half Day per new rules)
@@ -521,14 +544,32 @@ class AttendanceEmployeeController extends Controller
             }
 
             if ($check->date == date('Y-m-d')) {
-                $check->update([
-                    'late' => $late,
-                    'early_leaving' => ($earlyLeaving > 0) ? $earlyLeaving : '00:00:00',
-                    'overtime' => $overtime,
-                    'clock_in' => $clockIn,
-                    'clock_out' => $clockOut,
-                    'status' => $status
-                ]);
+                // Handle different Half Day scenarios with automatic punch-out calculation
+                if ($status === AttendanceEmployee::STATUS_HALF_DAY) {
+                    // Rule 1: Regular Half Day - set punch-out to exactly 4.5 hours
+                    $check->clock_in = $clockIn;
+                    $check->status = $status;
+                    $this->handleHalfDayStatus($check, $request->date);
+                } elseif ($status === AttendanceEmployee::STATUS_HALF_DAY_PUNCH_MISS) {
+                    // Rule 2: Half Day (Punch Miss) - auto-calculate punch-out to 4.5 hours
+                    $check->clock_in = $clockIn;
+                    $check->status = $status;
+                    $this->handleHalfDayPunchMiss($check, $request->date);
+                } elseif ($status === AttendanceEmployee::STATUS_HALF_DAY_LATE) {
+                    // Rule 3: Half Day (Late) - auto-calculate punch-out to 4.5 hours
+                    $check->clock_in = $clockIn;
+                    $check->status = $status;
+                    $this->handleHalfDayLateMark($check, $request->date);
+                } else {
+                    $check->update([
+                        'late' => $late,
+                        'early_leaving' => ($earlyLeaving > 0) ? $earlyLeaving : '00:00:00',
+                        'overtime' => $overtime,
+                        'clock_in' => $clockIn,
+                        'clock_out' => $clockOut,
+                        'status' => $status
+                    ]);
+                }
 
                 return redirect()->route('attendanceemployee.index')->with('success', __('Employee attendance successfully updated.'));
             } else {
@@ -755,8 +796,8 @@ class AttendanceEmployeeController extends Controller
                         $in  = date("H:i:s", strtotime($request->$in));
                         $out = date("H:i:s", strtotime($request->$out));
 
-                        // Calculate late time based on 10:15 AM threshold
-                        $late = $this->calculateLateTime($in, $date);
+                        // Calculate late time based on department-specific punch-in time
+                        $late = $this->calculateLateTime($in, $date, $employee);
 
                         //early Leaving
                         $totalEarlyLeavingSeconds = strtotime($date . ' ' . $endTime) - strtotime($date . ' ' . $out);
@@ -1070,8 +1111,8 @@ class AttendanceEmployeeController extends Controller
                 return redirect()->back()->with('error', __('Your clock-in is already being processed.'));
             }
 
-            // Calculate late time based on 10:15 AM threshold
-            $late = $this->calculateLateTime($time, $date);
+            // Calculate late time based on department-specific punch-in time
+            $late = $this->calculateLateTime($time, $date, $employeeId);
 
             $employeeAttendance = new AttendanceEmployee();
             $employeeAttendance->employee_id = $employeeId;
@@ -1227,13 +1268,34 @@ class AttendanceEmployeeController extends Controller
 
                     $employeeData = [];
 
-                    // Mark 'present' from attendance records (only current month)
+                    // Mark attendance status using the same 3-rule logic as the main system
                     foreach ($attendances as $attendance) {
-                        // Check if this is a late mark (clock-in after 10:15 AM)
-                        $isLateMark = $this->isLateMark($attendance['clock_in']);
+                        // Use the same status calculation logic as the main attendance system
+                        $status = $this->calculateAttendanceStatusWithNewRules(
+                            $attendance['clock_in'],
+                            $attendance['clock_out'],
+                            $attendance['date'],
+                            $selectedEmployee->id
+                        );
+                        
+                        // Map status to calendar types
+                        $calendarType = 'present'; // default
+                        if ($status === AttendanceEmployee::STATUS_ABSENT) {
+                            $calendarType = 'absent';
+                        } elseif (in_array($status, [
+                            AttendanceEmployee::STATUS_HALF_DAY,
+                            AttendanceEmployee::STATUS_HALF_DAY_PUNCH_MISS,
+                            AttendanceEmployee::STATUS_HALF_DAY_LATE
+                        ])) {
+                            $calendarType = 'half_day';
+                        }
+                        
+                        // Check if this is a late mark based on department punch-in time
+                        $isLateMark = $this->isLateMark($attendance['clock_in'], $selectedEmployee->id);
                         
                         $employeeData[$attendance['date']] = [
-                            'type' => 'present',
+                            'type' => $calendarType,
+                            'status' => $status, // Add the actual status for display
                             'clock_in' => $attendance['clock_in'],
                             'clock_out' => $attendance['clock_out'],
                             'is_late' => $isLateMark
@@ -1746,28 +1808,40 @@ class AttendanceEmployeeController extends Controller
     }
 
     /**
-     * Check if clock-in time is considered a late mark (after 10:15 AM)
+     * Check if clock-in time is considered a late mark based on department settings
      */
-    private function isLateMark($clockIn)
+    private function isLateMark($clockIn, $employeeId = null)
     {
         if (empty($clockIn) || $clockIn == '00:00:00') {
             return false;
         }
         
-        $lateMarkTime = AttendanceEmployee::LATE_MARK_TIME; // 10:15:00
+        // Use department-specific punch-in time if employee ID is provided
+        if ($employeeId) {
+            return AttendanceEmployee::isLateMarkForEmployee($employeeId, $clockIn);
+        }
+        
+        // Fallback to default time
+        $lateMarkTime = AttendanceEmployee::LATE_MARK_TIME;
         return strtotime($clockIn) > strtotime($lateMarkTime);
     }
 
     /**
-     * Calculate late time based on 10:15 AM threshold
+     * Calculate late time based on department-specific punch-in time
      */
-    private function calculateLateTime($clockIn, $date)
+    private function calculateLateTime($clockIn, $date, $employeeId = null)
     {
         if (empty($clockIn) || $clockIn == '00:00:00') {
             return '00:00:00';
         }
         
-        $lateMarkTime = AttendanceEmployee::LATE_MARK_TIME; // 10:15:00
+        // Get department-specific punch-in time if employee ID is provided
+        if ($employeeId) {
+            $lateMarkTime = AttendanceEmployee::getEmployeePunchInTime($employeeId);
+        } else {
+            $lateMarkTime = AttendanceEmployee::LATE_MARK_TIME; // Fallback to default
+        }
+        
         $expectedTime = $date . ' ' . $lateMarkTime;
         $actualTime = $date . ' ' . $clockIn;
         
@@ -1778,6 +1852,26 @@ class AttendanceEmployeeController extends Controller
         $secs = $totalLateSeconds % 60;
         
         return sprintf('%02d:%02d:%02d', $hours, $mins, $secs);
+    }
+
+    /**
+     * Count late marks for an employee in a given month (excluding current day)
+     */
+    private function countLateMarksInMonthExcludingCurrent($employeeId, $currentDate)
+    {
+        $carbonDate = Carbon::parse($currentDate);
+        $startOfMonth = $carbonDate->copy()->startOfMonth()->format('Y-m-d');
+        
+        $lateMarks = AttendanceEmployee::where('employee_id', $employeeId)
+            ->where('date', '>=', $startOfMonth)
+            ->where('date', '<', $currentDate) // Only dates BEFORE current date
+            ->where('clock_in', '!=', '00:00:00')
+            ->get()
+            ->filter(function($attendance) use ($employeeId) {
+                return AttendanceEmployee::isLateMarkForEmployee($employeeId, $attendance->clock_in);
+            });
+        
+        return $lateMarks->count();
     }
 
     /**
@@ -1793,16 +1887,20 @@ class AttendanceEmployeeController extends Controller
             ->whereBetween('date', [$startOfMonth, $endOfMonth])
             ->where('clock_in', '!=', '00:00:00')
             ->get()
-            ->filter(function($attendance) {
-                return $this->isLateMark($attendance->clock_in);
+            ->filter(function($attendance) use ($employeeId) {
+                return $this->isLateMark($attendance->clock_in, $employeeId);
             });
         
         return $lateMarks->count();
     }
 
     /**
-     * Calculate attendance status based on new rules:
-     * - Half Day if: >3 late marks in month OR <4.5 hours worked OR missed punch-out
+     * Calculate attendance status with new rules for Half Day scenarios
+     * 
+     * Rules:
+     * 1. If worked ≤ 4.5 hours OR punch-out within 4.5 hours → "Half Day"
+     * 2. If punch-out is missing → "Half Day (Punch Miss)" with auto 4.5h calculation
+     * 3. If 4th+ late mark → "Half Day (Late)" with auto 4.5h calculation
      */
     private function calculateAttendanceStatusWithNewRules($clockIn, $clockOut, $date, $employeeId)
     {
@@ -1811,9 +1909,15 @@ class AttendanceEmployeeController extends Controller
             return AttendanceEmployee::STATUS_ABSENT;
         }
         
-        // If clocked in but not out, return Half Day (missed punch-out)
+        // Check if this is a late mark
+        $isLateMark = AttendanceEmployee::isLateMarkForEmployee($employeeId, $clockIn);
+        
+        // Count late marks for this employee in the month (excluding current day)
+        $lateMarksCount = $this->countLateMarksInMonthExcludingCurrent($employeeId, $date);
+        
+        // Rule 2: If clocked in but no clock out, return Half Day (Punch Miss)
         if (empty($clockOut) || $clockOut == '00:00:00') {
-            return AttendanceEmployee::STATUS_HALF_DAY;
+            return AttendanceEmployee::STATUS_HALF_DAY_PUNCH_MISS;
         }
         
         // Calculate total worked hours
@@ -1828,25 +1932,180 @@ class AttendanceEmployeeController extends Controller
         $totalMinutes = $end->diffInMinutes($start);
         $workedHours = $totalMinutes / 60;
         
-        // Check if worked hours < 4.5 hours
-        if ($workedHours < AttendanceEmployee::HALF_DAY_HOURS_THRESHOLD) {
+        // Rule 3: If 4th+ late mark, return Half Day (Late)
+        if ($isLateMark && $lateMarksCount >= AttendanceEmployee::MAX_LATE_MARKS_PER_MONTH) {
+            return AttendanceEmployee::STATUS_HALF_DAY_LATE;
+        }
+        
+        // Rule 1: If worked ≤ 4.5 hours OR punch-out within 4.5 hours, return Half Day
+        if ($totalMinutes <= 270) { // 4.5 hours = 270 minutes
+            // For late marks with ≤ 4.5 hours, still return Half Day (not Half Day Late)
             return AttendanceEmployee::STATUS_HALF_DAY;
         }
         
-        // Check if employee has more than 3 late marks in the month
-        $lateMarksCount = $this->countLateMarksInMonth($employeeId, $date);
-        if ($lateMarksCount > AttendanceEmployee::MAX_LATE_MARKS_PER_MONTH) {
-            return AttendanceEmployee::STATUS_HALF_DAY;
+        // For employees who worked > 4.5 hours
+        if ($isLateMark) {
+            // First 3 late marks with > 4.5 hours - Present (Late)
+            return AttendanceEmployee::STATUS_PRESENT_LATE;
         }
         
-        // If all conditions pass, check if it's a full day (8.5 hours)
-        if ($totalMinutes >= 510) { // 8.5 hours = 510 minutes
-            return AttendanceEmployee::STATUS_PRESENT;
-        } else {
-            return AttendanceEmployee::STATUS_HALF_DAY;
-        }
+        // If punch-out is after 4.5 hours and not late, mark as Present
+        return AttendanceEmployee::STATUS_PRESENT;
     }
 
+
+    /**
+     * Handle Half Day (Punch Miss) status by calculating 4.5 hours and updating attendance
+     */
+    private function handleHalfDayPunchMiss($attendance, $date)
+    {
+        // Calculate 4.5 hours from punch-in time
+        $clockInTime = Carbon::parse($date . ' ' . $attendance->clock_in);
+        $calculatedClockOut = $clockInTime->copy()->addHours(4)->addMinutes(30);
+        
+        // If calculated time goes past midnight (next day), cap it at end of day (23:59:59)
+        $endOfDay = Carbon::parse($date . ' 23:59:59');
+        if ($calculatedClockOut->gt($endOfDay)) {
+            $calculatedClockOut = $endOfDay;
+        }
+        
+        // Format as H:i:s
+        $clockOutTime = $calculatedClockOut->format('H:i:s');
+        
+        // Update attendance record
+        $attendance->clock_out = $clockOutTime;
+        $attendance->status = AttendanceEmployee::STATUS_HALF_DAY_PUNCH_MISS;
+        
+        // Calculate early leaving (if applicable)
+        $endTime = Utility::getValByName('company_end_time');
+        if ($endTime) {
+            $expectedEndTime = Carbon::parse($date . ' ' . $endTime);
+            if ($calculatedClockOut->lt($expectedEndTime)) {
+                $totalEarlyLeavingSeconds = $expectedEndTime->diffInSeconds($calculatedClockOut);
+                $hours = floor($totalEarlyLeavingSeconds / 3600);
+                $mins = floor(($totalEarlyLeavingSeconds % 3600) / 60);
+                $secs = $totalEarlyLeavingSeconds % 60;
+                $attendance->early_leaving = sprintf('%02d:%02d:%02d', $hours, $mins, $secs);
+            } else {
+                $attendance->early_leaving = '00:00:00';
+            }
+        }
+        
+        // Set overtime to 00:00:00 (no overtime for half day)
+        $attendance->overtime = '00:00:00';
+        
+        $attendance->save();
+        
+        return $attendance;
+    }
+
+    /**
+     * Handle Half Day status by calculating 4.5 hours and updating attendance
+     */
+    private function handleHalfDayStatus($attendance, $date)
+    {
+        // Calculate 4.5 hours from punch-in time
+        $clockInTime = Carbon::parse($date . ' ' . $attendance->clock_in);
+        $calculatedClockOut = $clockInTime->copy()->addHours(4)->addMinutes(30);
+        
+        // If calculated time goes past midnight (next day), cap it at end of day (23:59:59)
+        $endOfDay = Carbon::parse($date . ' 23:59:59');
+        if ($calculatedClockOut->gt($endOfDay)) {
+            $calculatedClockOut = $endOfDay;
+        }
+        
+        // Format as H:i:s
+        $clockOutTime = $calculatedClockOut->format('H:i:s');
+        
+        // Update attendance record
+        $attendance->clock_out = $clockOutTime;
+        $attendance->status = AttendanceEmployee::STATUS_HALF_DAY;
+        
+        // Calculate early leaving (if applicable)
+        $endTime = Utility::getValByName('company_end_time');
+        if ($endTime) {
+            $expectedEndTime = Carbon::parse($date . ' ' . $endTime);
+            if ($calculatedClockOut->lt($expectedEndTime)) {
+                $totalEarlyLeavingSeconds = $expectedEndTime->diffInSeconds($calculatedClockOut);
+                $hours = floor($totalEarlyLeavingSeconds / 3600);
+                $mins = floor(($totalEarlyLeavingSeconds % 3600) / 60);
+                $secs = $totalEarlyLeavingSeconds % 60;
+                $attendance->early_leaving = sprintf('%02d:%02d:%02d', $hours, $mins, $secs);
+            } else {
+                $attendance->early_leaving = '00:00:00';
+            }
+        }
+        
+        // Set overtime to 00:00:00 (no overtime for half day)
+        $attendance->overtime = '00:00:00';
+        
+        $attendance->save();
+        
+        return $attendance;
+    }
+
+    /**
+     * Handle 4th+ late mark by calculating 4.5 hours and updating attendance
+     */
+    private function handleHalfDayLateMark($attendance, $date)
+    {
+        // Calculate 4.5 hours from punch-in time
+        $clockInTime = Carbon::parse($date . ' ' . $attendance->clock_in);
+        $calculatedClockOut = $clockInTime->copy()->addHours(4)->addMinutes(30);
+        
+        // If calculated time goes past midnight (next day), cap it at end of day (23:59:59)
+        $endOfDay = Carbon::parse($date . ' 23:59:59');
+        if ($calculatedClockOut->gt($endOfDay)) {
+            $calculatedClockOut = $endOfDay;
+        }
+        
+        // Format as H:i:s
+        $clockOutTime = $calculatedClockOut->format('H:i:s');
+        
+        // Update attendance record
+        $attendance->clock_out = $clockOutTime;
+        $attendance->status = AttendanceEmployee::STATUS_HALF_DAY_LATE;
+        
+        // Calculate early leaving (if applicable)
+        $endTime = Utility::getValByName('company_end_time');
+        if ($endTime) {
+            $expectedEndTime = Carbon::parse($date . ' ' . $endTime);
+            if ($calculatedClockOut->lt($expectedEndTime)) {
+                $totalEarlyLeavingSeconds = $expectedEndTime->diffInSeconds($calculatedClockOut);
+                $hours = floor($totalEarlyLeavingSeconds / 3600);
+                $mins = floor(($totalEarlyLeavingSeconds % 3600) / 60);
+                $secs = $totalEarlyLeavingSeconds % 60;
+                $attendance->early_leaving = sprintf('%02d:%02d:%02d', $hours, $mins, $secs);
+            } else {
+                $attendance->early_leaving = '00:00:00';
+            }
+        }
+        
+        // Set overtime to 00:00:00 (no overtime for half day)
+        $attendance->overtime = '00:00:00';
+        
+        $attendance->save();
+        
+        return $attendance;
+    }
+
+    /**
+     * Get status abbreviation for export display
+     */
+    private function getStatusAbbreviation($status)
+    {
+        $abbreviations = [
+            'Present' => 'P',
+            'Present (Late)' => 'PL',
+            'Late' => 'L',
+            'Half Day (Late)' => 'HL',
+            'Half Day (Punch Miss)' => 'HP',
+            'Half Day' => 'H',
+            'Absent' => 'A',
+        ];
+        
+        return $abbreviations[$status] ?? substr($status, 0, 1);
+    }
 
     protected function calculateAttendanceStatus($clockIn, $clockOut, $date, $employeeId = null)
     {
@@ -1871,12 +2130,13 @@ class AttendanceEmployeeController extends Controller
         $end = \Carbon\Carbon::parse($date . ' ' . $clockOut);
         $totalMinutes = $end->diffInMinutes($start);
         
-        // Full day threshold is 8.5 hours = 510 minutes
-        if ($totalMinutes >= 510) {
-            return 'Present';
-        } else {
+        // If punch-out is within 4.5 hours from punch-in, mark as Half Day
+        if ($totalMinutes < 270) { // 4.5 hours = 270 minutes
             return 'Half Day';
         }
+        
+        // If punch-out is after 4.5 hours, mark as Present
+        return 'Present';
     }
 
     /**

@@ -118,7 +118,19 @@
                         })
                         ->first();
                     $isHREmployee = $employee && $hrDepartment && $employee->department_id == $hrDepartment->id;
-                    $canApproveReject = $isAdmin || $isHREmployee;
+                    
+                    // Find Finance Department (matching controller logic)
+                    $financeDepartment = \App\Models\Department::where('created_by', $companyId)
+                        ->where(function($q) {
+                            $q->whereRaw('LOWER(name) LIKE ?', ['%finance%'])
+                              ->orWhereRaw('LOWER(name) LIKE ?', ['%finanace%'])  // Handle misspelling
+                              ->orWhereRaw('LOWER(name) = ?', ['finance'])
+                              ->orWhereRaw('LOWER(name) = ?', ['finanace']); // Handle misspelling
+                        })
+                        ->first();
+                    $isFinanceEmployee = $employee && $financeDepartment && $employee->department_id == $financeDepartment->id;
+                    
+                    $canApproveReject = $isAdmin || $isHREmployee || $isFinanceEmployee;
                 @endphp
                 @if($expense->status == 'pending_hr' && $canApproveReject)
                 <div class="row">

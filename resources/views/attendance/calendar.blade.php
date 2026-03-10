@@ -43,6 +43,8 @@
                         <div class="d-flex flex-wrap mt-2 gap-2" style="font-size: 0.85em;">
                             <span class="badge bg-success">Present</span>
                             <span class="badge bg-warning text-dark">Half Day</span>
+                            <span class="badge" style="background-color: #dc3545;">Half Day (Punch Miss)</span>
+                            <span class="badge" style="background-color: #fd7e14;">Half Day (Late)</span>
                             <span class="badge bg-danger">Absent</span>
                             <span class="badge bg-warning">Leave</span>
                             <span class="badge" style="background-color: #e3342f;">LATE</span>
@@ -785,6 +787,7 @@
                             } else if (status === 'half_day') {
                                 var clockIn = attendanceData['{{ $selectedEmployee->id }}'].data[dateStr].clock_in;
                                 var clockOut = attendanceData['{{ $selectedEmployee->id }}'].data[dateStr].clock_out;
+                                var actualStatus = attendanceData['{{ $selectedEmployee->id }}'].data[dateStr].status || 'Half Day';
                                 var isLate = attendanceData['{{ $selectedEmployee->id }}'].data[dateStr].is_late || false;
                                 
                                 var formattedIn = formatTime12Hour(clockIn);
@@ -810,13 +813,24 @@
                                 
                                 var lateBadge = isLate ? '<span class="badge" style="background-color: #e3342f; color: white; padding: 2px 4px; border-radius: 3px; display: inline-block; font-size: ' + lateBadgeSize + '; font-weight: 600; margin-bottom: 2px;">LATE</span><br>' : '';
                                 
-                                // Check if clock_out is actual or calculated (00:00:00 means calculated)
-                                var isCalculatedClockOut = !clockOut || clockOut === '00:00:00' || clockOut === '00:00';
-                                var actualClockOutDisplay = '';
-                                var displayClockOut = formattedOut;
+                                // Determine badge color and text based on actual status
+                                var badgeColor = '#f59e0b'; // Default orange for Half Day
+                                var badgeText = 'Half Day';
                                 
-                                if (isCalculatedClockOut && clockIn && clockIn !== '00:00:00' && clockIn !== '00:00') {
-                                    // Calculate the actual clock out time (4.5 hours after clock in)
+                                if (actualStatus === 'Half Day (Punch Miss)') {
+                                    badgeColor = '#dc3545'; // Red for punch miss
+                                    badgeText = isMobile ? 'HD(PM)' : 'Half Day (Punch Miss)';
+                                } else if (actualStatus === 'Half Day (Late)') {
+                                    badgeColor = '#fd7e14'; // Dark orange for late
+                                    badgeText = isMobile ? 'HD(L)' : 'Half Day (Late)';
+                                }
+                                
+                                // Calculate the correct punch-out time (4.5 hours after clock in)
+                                var calculatedClockOut = '';
+                                var displayClockOut = formattedOut;
+                                var actualClockOutDisplay = '';
+                                
+                                if (clockIn && clockIn !== '00:00:00' && clockIn !== '00:00') {
                                     var clockInParts = clockIn.split(':');
                                     var inHours = parseInt(clockInParts[0]);
                                     var inMinutes = parseInt(clockInParts[1]);
@@ -825,31 +839,36 @@
                                     var outHours = Math.floor(outTotalMinutes / 60) % 24;
                                     var outMinutes = outTotalMinutes % 60;
                                     
-                                    var calculatedClockOut = (outHours < 10 ? '0' : '') + outHours + ':' + (outMinutes < 10 ? '0' : '') + outMinutes;
+                                    calculatedClockOut = (outHours < 10 ? '0' : '') + outHours + ':' + (outMinutes < 10 ? '0' : '') + outMinutes;
                                     displayClockOut = formatTime12Hour(calculatedClockOut);
                                     
                                     // If there's an actual clock out time (different from calculated), show it in brackets
-                                    if (clockOut && clockOut !== '00:00:00' && clockOut !== '00:00') {
+                                    if (clockOut && clockOut !== '00:00:00' && clockOut !== '00:00' && clockOut !== calculatedClockOut) {
                                         var formattedActualClockOut = formatTime12Hour(clockOut);
                                         actualClockOutDisplay = '<br><small style="color: #666; font-size: 90%;">(Actual: ' + formattedActualClockOut + ')</small>';
                                     }
                                 }
                                 
+                                // Calculate the correct total time (should be 4.5 hours for all half day scenarios)
+                                var correctTotalTime = '4h 30m';
+                                
                                 // On mobile, show compact version
                                 var mobileHtml = '';
                                 if (isMobile) {
-                                    mobileHtml = `${lateBadge}<span class="badge" style="background-color: #f59e0b; color: white; padding: 1px 3px; border-radius: 2px; display: block; font-size: ${halfDayBadgeSize}; font-weight: 600; margin-bottom: 1px; width: fit-content;">
-                                        HD</span>
+                                    var shortBadgeText = actualStatus === 'Half Day (Punch Miss)' ? 'HD(PM)' : 
+                                                         actualStatus === 'Half Day (Late)' ? 'HD(L)' : 'HD';
+                                    mobileHtml = `${lateBadge}<span class="badge" style="background-color: ${badgeColor}; color: white; padding: 1px 3px; border-radius: 2px; display: block; font-size: ${halfDayBadgeSize}; font-weight: 600; margin-bottom: 1px; width: fit-content;">
+                                        ${shortBadgeText}</span>
                                         <div class="time-info" style="font-size: ${timeInfoSize}; line-height: 1.2;">
                                             ${formattedIn}<br>${displayClockOut}${actualClockOutDisplay}
                                         </div>`;
                                 } else {
-                                    mobileHtml = `${lateBadge}<span class="badge" style="background-color: #f59e0b; color: white; padding: 3px 6px; border-radius: 3px; display: inline-block; font-size: ${halfDayBadgeSize}; font-weight: 600; margin-bottom: 2px;">
-                                        Half Day</span>
+                                    mobileHtml = `${lateBadge}<span class="badge" style="background-color: ${badgeColor}; color: white; padding: 3px 6px; border-radius: 3px; display: inline-block; font-size: ${halfDayBadgeSize}; font-weight: 600; margin-bottom: 2px;">
+                                        ${badgeText}</span>
                                         <div class="time-info" style="font-size: ${timeInfoSize};">
                                             In: ${formattedIn}<br>
                                             Out: ${displayClockOut}<br>
-                                            Total: ${totalTime}${actualClockOutDisplay}
+                                            Total: ${correctTotalTime}${actualClockOutDisplay}
                                         </div>`;
                                 }
                                 

@@ -37,6 +37,7 @@
                             <tr>
                                 <th>{{ __('Branch') }}</th>
                                 <th>{{ __('Department') }}</th>
+                                <th>{{ __('Punch In Time') }}</th>
                                 <th width="200px">{{ __('Action') }}</th>
                             </tr>
                         </thead>
@@ -45,6 +46,7 @@
                                 <tr>
                                     <td>{{ !empty($department->branch) ? $department->branch->name : '' }}</td>
                                     <td>{{ $department->name }}</td>
+                                    <td>{{ $department->punch_in_time }}</td>
 
                                     <td class="Action">
                                         <span>
