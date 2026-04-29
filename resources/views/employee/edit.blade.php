@@ -137,7 +137,7 @@
                                     </div>
 
                                     <div class="form-group col-md-6">
-                                        {!! Form::label('emergency_number', __('Emergency Number'), ['class' => 'form-label']) !!}<span class="text-danger pl-1">*</span>
+                                        {!! Form::label('emergency_number', __('Emergency Number'), ['class' => 'form-label']) !!}
                                         {!! Form::text('emergency_number', old('emergency_number', $employee->emergency_number), [
                                             'class' => 'form-control',
                                             'placeholder' => 'Enter emergency number',
