@@ -342,6 +342,7 @@
 
                 $rules = [
                     'name' => 'required',
+                    'email' => ['required', 'email', Rule::unique('users')->ignore($employee->user_id)],
                     'branch_id' => 'required',
                     'department_id' => 'required',
                     'designation_id' => 'required',
@@ -425,6 +426,18 @@
                     'tax_payer_id' => $request['tax_payer_id'] ?? null,
                 ];
 
+                // ✅ Update User email if it has changed
+                if ($request->has('email') && $request->email != $employee->email) {
+                    $user = User::find($employee->user_id);
+                    if ($user) {
+                        $user->email = $request->email;
+                        $user->session_version++; // Force logout from all sessions
+                        $user->setRememberToken(\Illuminate\Support\Str::random(60)); // Invalidate remember-me tokens
+                        $user->save();
+                    }
+                    $data['email'] = $request->email;
+                }
+
                 // ✅ Reset approval if employee edits details
                 if (\Auth::user()->type === 'employee') {
                     $data['approval_status'] = 'pending';
@@ -438,6 +451,8 @@
                     $data['password'] = Hash::make($request['password']);
                     $user = User::find($employee->user_id);
                     $user->password = Hash::make($request['password']);
+                    $user->session_version++; // Force logout from all sessions
+                    $user->setRememberToken(\Illuminate\Support\Str::random(60)); // Invalidate remember-me tokens
                     $user->save();
                 }
 

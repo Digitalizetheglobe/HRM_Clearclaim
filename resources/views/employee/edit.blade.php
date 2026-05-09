@@ -2,7 +2,7 @@
 @php
     // Determine edit permissions based on user role and department
     $canEditCompanyDetails = false;
-    $emailReadonly = true; // Email is always locked for everyone
+    $emailReadonly = false; // Email is now editable
     
     if (\Auth::user()->type === 'company') {
         // Company role can edit everything except email
@@ -192,7 +192,6 @@
                                             'class' => 'form-control',
                                             'required' => 'required',
                                             'placeholder' => 'Enter employee email',
-                                            'readonly' => 'readonly',
                                         ]) !!}
                                     </div>
                                     <div class="form-group col-md-6">
