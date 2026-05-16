@@ -16,17 +16,22 @@ class IpRestrict extends Model
      */
     public function matchesIp($clientIp)
     {
-        // Get first three octets of both IPs
-        $allowedParts = explode('.', $this->ip);
-        $clientParts = explode('.', $clientIp);
+        $allowedParts = explode('.', trim($this->ip));
+        $clientParts = explode('.', trim($clientIp));
         
-        if (count($allowedParts) >= 3 && count($clientParts) >= 3) {
-            $allowedSubnet = $allowedParts[0] . '.' . $allowedParts[1] . '.' . $allowedParts[2];
-            $clientSubnet = $clientParts[0] . '.' . $clientParts[1] . '.' . $clientParts[2];
-            
-            return $allowedSubnet === $clientSubnet;
+        // Ensure there are parts to compare
+        if (count($allowedParts) === 0 || count($clientParts) === 0) {
+            return false;
         }
         
-        return false;
+        // Loop through each octet defined in the allowed IP
+        foreach ($allowedParts as $index => $part) {
+            // If the client IP doesn't have this octet, or it doesn't match, return false
+            if (!isset($clientParts[$index]) || $clientParts[$index] !== $part) {
+                return false;
+            }
+        }
+        
+        return true;
     }
 }

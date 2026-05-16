@@ -1045,33 +1045,36 @@ $currIncrementLetterLang = \App\Models\IncrementLetter::where('created_by',  \Au
                 return redirect()->back()->with('error', $messages->first());
             }
 
-            // Basic IP validation (more flexible)
-            $ip = $request->ip;
-            
-            // Remove leading zeros from each octet
+            // Basic IP validation (allow partial IP addresses like 103.197)
+            $ip = trim($request->input('ip'));
+            // Remove any trailing dots
+            $ip = rtrim($ip, '.');
             $ipParts = explode('.', $ip);
-            if (count($ipParts) === 4) {
+            
+            if (count($ipParts) >= 1 && count($ipParts) <= 4) {
                 $cleanedParts = [];
+                $isValid = true;
                 foreach ($ipParts as $part) {
-                    // Remove leading zeros but keep the zero if it's the only digit
+                    $part = trim($part);
+                    if (!is_numeric($part) || $part < 0 || $part > 255) {
+                        $isValid = false;
+                        break;
+                    }
                     $cleanedParts[] = ltrim($part, '0') === '' ? '0' : ltrim($part, '0');
                 }
-                $cleanedIp = implode('.', $cleanedParts);
                 
-                if (!filter_var($cleanedIp, FILTER_VALIDATE_IP)) {
+                if (!$isValid) {
                     return redirect()->back()->with('error', __('Invalid IP address format.'));
                 }
-                
-                // Store the cleaned IP
+                $cleanedIp = implode('.', $cleanedParts);
+                // Important: merge back to request and use input for saving
                 $request->merge(['ip' => $cleanedIp]);
             } else {
-                if (!filter_var($ip, FILTER_VALIDATE_IP)) {
-                    return redirect()->back()->with('error', __('Invalid IP address format.'));
-                }
+                return redirect()->back()->with('error', __('Invalid IP address format.'));
             }
 
             $ip             = new IpRestrict();
-            $ip->ip         = $request->ip;
+            $ip->ip         = $request->input('ip');
             $ip->created_by = \Auth::user()->creatorId();
             $ip->save();
 
@@ -1103,33 +1106,36 @@ $currIncrementLetterLang = \App\Models\IncrementLetter::where('created_by',  \Au
                 return redirect()->back()->with('error', $messages->first());
             }
 
-            // Basic IP validation (more flexible)
-            $ip = $request->ip;
-            
-            // Remove leading zeros from each octet
+            // Basic IP validation (allow partial IP addresses like 103.197)
+            $ip = trim($request->input('ip'));
+            // Remove any trailing dots
+            $ip = rtrim($ip, '.');
             $ipParts = explode('.', $ip);
-            if (count($ipParts) === 4) {
+            
+            if (count($ipParts) >= 1 && count($ipParts) <= 4) {
                 $cleanedParts = [];
+                $isValid = true;
                 foreach ($ipParts as $part) {
-                    // Remove leading zeros but keep the zero if it's the only digit
+                    $part = trim($part);
+                    if (!is_numeric($part) || $part < 0 || $part > 255) {
+                        $isValid = false;
+                        break;
+                    }
                     $cleanedParts[] = ltrim($part, '0') === '' ? '0' : ltrim($part, '0');
                 }
-                $cleanedIp = implode('.', $cleanedParts);
                 
-                if (!filter_var($cleanedIp, FILTER_VALIDATE_IP)) {
+                if (!$isValid) {
                     return redirect()->back()->with('error', __('Invalid IP address format.'));
                 }
-                
-                // Store the cleaned IP
+                $cleanedIp = implode('.', $cleanedParts);
+                // Important: merge back to request and use input for saving
                 $request->merge(['ip' => $cleanedIp]);
             } else {
-                if (!filter_var($ip, FILTER_VALIDATE_IP)) {
-                    return redirect()->back()->with('error', __('Invalid IP address format.'));
-                }
+                return redirect()->back()->with('error', __('Invalid IP address format.'));
             }
 
             $ip     = IpRestrict::find($id);
-            $ip->ip = $request->ip;
+            $ip->ip = $request->input('ip');
             $ip->save();
 
             return redirect()->back()->with('success', __('IP successfully updated.'));
