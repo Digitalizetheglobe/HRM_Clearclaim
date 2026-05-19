@@ -10,18 +10,7 @@
 @endsection
 
 @section('action-button')
-    <a href="{{ route('holidays.export') }}" class="btn btn-sm btn-primary" data-bs-toggle="tooltip"
-        data-bs-original-title="{{ __('Export') }}">
-        <i class="ti ti-file-export"></i>
-    </a>
 
-    @if (\Auth::user()->type != 'employee')
-        <a href="#" data-url="{{ route('holidays.file.import') }}" data-ajax-popup="true"
-            data-title="{{ __('Import Holiday CSV file') }}" data-bs-toggle="tooltip" title=""
-            class="btn btn-sm btn-primary" data-bs-original-title="{{ __('Import') }}">
-            <i class="ti ti-file-import"></i>
-        </a>
-    @endif
 
     <a href="{{ route('holiday.calender') }}" class="btn btn-sm btn-primary" data-bs-toggle="tooltip"
         data-bs-original-title="{{ __('Calendar View') }}">

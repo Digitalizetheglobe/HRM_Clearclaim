@@ -25,11 +25,12 @@ class SetSalaryController extends Controller
     public function index()
     {
         if (\Auth::user()->can('Manage Set Salary')) {
+            $terminatedEmployees = \App\Models\Termination::pluck('employee_id')->toArray();
             $employees = Employee::where(
                 [
                     'created_by' => \Auth::user()->creatorId(),
                 ]
-            )->get();
+            )->whereNotIn('id', $terminatedEmployees)->get();
 
             return view('setsalary.index', compact('employees'));
         } else {
@@ -195,7 +196,7 @@ class SetSalaryController extends Controller
         $validator = \Validator::make(
             $request->all(),
             [
-                'salary_type' => 'required',
+                'salary_type' => 'nullable',
                 'salary' => 'required',
                 'account_type' => 'nullable|exists:account_lists,id',
             ]
@@ -207,6 +208,9 @@ class SetSalaryController extends Controller
         }
         $employee = Employee::findOrFail($id);
         $input    = $request->all();
+        if (empty($input['salary_type'])) {
+            $input['salary_type'] = $employee->salary_type ?? PayslipType::where('created_by', \Auth::user()->creatorId())->first()->id ?? 1;
+        }
         $employee->fill($input)->save();
 
         return redirect()->back()->with('success', 'Employee Salary Updated.');

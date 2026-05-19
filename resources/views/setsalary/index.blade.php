@@ -21,7 +21,6 @@
                             <tr>
                                 <th>{{ __('Employee Id') }}</th>
                                 <th>{{ __('Name') }}</th>
-                                <th>{{ __('Payroll Type') }}</th>
                                 <th>{{ __('Salary') }}</th>
                                 <th>{{ __('Net Salary') }}</th>
                                 <th width="200px">{{ __('Action') }}</th>
@@ -37,14 +36,14 @@
                                         </a>
                                     </td>
                                     <td>{{ $employee->name }}</td>
-                                    <td>{{ !empty($employee->salary_type()) ? $employee->salary_type() : '-' }}</td>
                                     <td>{{ \Auth::user()->priceFormat($employee->salary) }}</td>
                                     <td>{{ !empty($employee->get_net_salary()) ? \Auth::user()->priceFormat($employee->get_net_salary()) : '-' }}
                                     </td>
                                     <td class="Action">
                                         <span>
                                             <div class="action-btn bg-warning ms-2">
-                                                <a href="{{ route('setsalary.show', \Illuminate\Support\Facades\Crypt::encrypt($employee->id)) }}"
+                                                <a href="#" data-url="{{ route('employee.basic.salary', $employee->id) }}" data-ajax-popup="true"
+                                                    data-title="{{ __('Add Salary') }}"
                                                     class="mx-3 btn btn-sm align-items-center" data-bs-toggle="tooltip"
                                                     title="" data-bs-original-title="{{ __('View') }}">
                                                     <i class="ti ti-eye text-white"></i>

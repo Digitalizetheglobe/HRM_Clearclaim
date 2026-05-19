@@ -2,21 +2,17 @@
 <div class="modal-body">
     <div class="row">
         <div class="form-group">
-            {{ Form::label('salary_type', __('Payslip Type'), ['class' => 'col-form-label']) }}<span class="text-danger pl-1">*</span>
-            {{ Form::select('salary_type', $payslip_type, null, ['class' => 'form-control', 'required' => 'required']) }}
+            {{ Form::label('employee_name', __('Employee Name'), ['class' => 'col-form-label']) }}
+            {{ Form::text('employee_name', $employee->name, ['class' => 'form-control', 'readonly' => 'readonly']) }}
         </div>
         <div class="form-group">
             {{ Form::label('salary', __('Salary'), ['class' => 'col-form-label']) }}
             {{ Form::number('salary', null, ['class' => 'form-control ', 'required' => 'required']) }}
         </div>
-        <!-- <div class="form-group">
-            {{ Form::label('account_type', __('From Account'), ['class' => 'col-form-label']) }}<span class="text-danger pl-1">*</span>
-            {{ Form::select('account_type', $accounts, null, ['class' => 'form-control', 'required' => 'required']) }}
-        </div> -->
     </div>
 </div>
 <div class="modal-footer">
     <input type="button" value="Cancel" class="btn btn-light" data-bs-dismiss="modal">
-    <button type="submit" class="btn  btn-primary">{{ __('Save') }}</button>
+    <button type="submit" class="btn  btn-primary">{{ __('Add Salary') }}</button>
 </div>
 {{ Form::close() }}

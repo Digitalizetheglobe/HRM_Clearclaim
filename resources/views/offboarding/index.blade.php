@@ -403,10 +403,14 @@
                                                     <div class="avatar-group hover-avatar-ungroup">
                                                         <a href="#" class="user-group">
                                                             @php
-                                                                $avatar = ($process->employee->user && !empty($process->employee->user->avatar)) ? $process->employee->user->avatar : 'avatar.png';
+                                                                if ($process->employee->user && !empty($process->employee->user->avatar)) {
+                                                                    $avatarUrl = $logo . $process->employee->user->avatar;
+                                                                } else {
+                                                                    $avatarUrl = asset('images/avatar.png');
+                                                                }
                                                             @endphp
-                                                            <img src="{{ $logo . $avatar }}"
-                                                                class="hweb " style="width: 28px">
+                                                            <img src="{{ $avatarUrl }}"
+                                                                class="hweb" style="width: 28px; height: 28px; border-radius: 50%; object-fit: cover;">
                                                         </a>
                                                     </div>
                                                 @endif

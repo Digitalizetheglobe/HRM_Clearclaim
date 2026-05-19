@@ -39,11 +39,7 @@
                         </div>
                         <div class="card-body">
                             <div class="project-info d-flex text-sm">
-                                <div class="project-info-inner mr-3 col-11">
-                                    <b class="m-0"> {{ __('Payslip Type') }} </b>
-                                    <div class="project-amnt pt-1">{{ $employee->salary_type() }}</div>
-                                </div>
-                                <div class="project-info-inner mr-3 col-1">
+                                <div class="project-info-inner mr-3 col-12">
                                     <b class="m-0"> {{ __('Salary') }} </b>
                                     <div class="project-amnt pt-1">{{ $employee->salary }}</div>
                                 </div>

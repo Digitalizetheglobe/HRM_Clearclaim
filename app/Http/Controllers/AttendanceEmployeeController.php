@@ -29,7 +29,9 @@ class AttendanceEmployeeController extends Controller
             $department->prepend('All', '');
 
               // Get employees for filter dropdown
+            $terminatedEmployees = \App\Models\Termination::pluck('employee_id')->toArray();
             $employees = Employee::where('created_by', \Auth::user()->creatorId())
+                ->whereNotIn('id', $terminatedEmployees)
                 ->with('user')
                 ->get()
                 ->pluck('name', 'id');
@@ -82,7 +84,9 @@ class AttendanceEmployeeController extends Controller
 
                 $attendanceEmployee = $attendanceEmployee->get();
             } else {
-                $employee = Employee::select('id')->where('created_by', \Auth::user()->creatorId());
+                $terminatedEmployees = \App\Models\Termination::pluck('employee_id')->toArray();
+                $employee = Employee::select('id')->where('created_by', \Auth::user()->creatorId())
+                    ->whereNotIn('id', $terminatedEmployees);
                 if (!empty($request->branch)) {
                     $employee->where('branch_id', $request->branch);
                 }
@@ -225,7 +229,12 @@ class AttendanceEmployeeController extends Controller
     public function create()
     {
         if (\Auth::user()->can('Create Attendance')) {
-            $employees = User::where('created_by', '=', Auth::user()->creatorId())->where('type', '=', "employee")->get()->pluck('name', 'id');
+            $terminatedUserIds = Employee::whereIn('id', \App\Models\Termination::pluck('employee_id')->toArray())->pluck('user_id')->toArray();
+            $employees = User::where('created_by', '=', Auth::user()->creatorId())
+                ->where('type', '=', "employee")
+                ->whereNotIn('id', $terminatedUserIds)
+                ->get()
+                ->pluck('name', 'id');
 
             return view('attendance.create', compact('employees'));
         } else {
@@ -337,7 +346,11 @@ class AttendanceEmployeeController extends Controller
     {
         if (\Auth::user()->can('Edit Attendance')) {
             $attendanceEmployee = AttendanceEmployee::where('id', $id)->first();
-            $employees          = Employee::where('created_by', '=', \Auth::user()->creatorId())->get()->pluck('name', 'id');
+            $terminatedEmployees = \App\Models\Termination::pluck('employee_id')->toArray();
+            $employees          = Employee::where('created_by', '=', \Auth::user()->creatorId())
+                ->whereNotIn('id', $terminatedEmployees)
+                ->get()
+                ->pluck('name', 'id');
 
             return view('attendance.edit', compact('attendanceEmployee', 'employees'));
         } else {
@@ -767,7 +780,12 @@ class AttendanceEmployeeController extends Controller
 
             $employees = [];
             if (!empty($request->branch) && !empty($request->department)) {
-                $employees = Employee::where('created_by', \Auth::user()->creatorId())->where('branch_id', $request->branch)->where('department_id', $request->department)->get();
+                $terminatedEmployees = \App\Models\Termination::pluck('employee_id')->toArray();
+                $employees = Employee::where('created_by', \Auth::user()->creatorId())
+                    ->whereNotIn('id', $terminatedEmployees)
+                    ->where('branch_id', $request->branch)
+                    ->where('department_id', $request->department)
+                    ->get();
             }
 
             return view('attendance.bulk', compact('employees', 'branch', 'department'));
@@ -1189,7 +1207,10 @@ class AttendanceEmployeeController extends Controller
         if (\Auth::user()->can('Manage Attendance')) {
             $employees = [];
             $selectedEmployee = null;
-            $allEmployees = Employee::where('created_by', \Auth::user()->creatorId())->get();
+            $terminatedEmployees = \App\Models\Termination::pluck('employee_id')->toArray();
+            $allEmployees = Employee::where('created_by', \Auth::user()->creatorId())
+                ->whereNotIn('id', $terminatedEmployees)
+                ->get();
 
             // For employee users - automatically select their own record
             if (\Auth::user()->type == 'employee') {
@@ -1266,6 +1287,25 @@ class AttendanceEmployeeController extends Controller
                             ];
                         });
 
+                    // Get holidays ONLY for the current month
+                    $holidays = \App\Models\Holiday::where('created_by', \Auth::user()->creatorId())
+                        ->where(function($query) use ($startOfMonth, $endOfMonth) {
+                            $query->whereBetween('start_date', [$startOfMonth, $endOfMonth])
+                                  ->orWhereBetween('end_date', [$startOfMonth, $endOfMonth])
+                                  ->orWhere(function($q) use ($startOfMonth, $endOfMonth) {
+                                      $q->where('start_date', '<=', $startOfMonth)
+                                        ->where('end_date', '>=', $endOfMonth);
+                                  });
+                        })
+                        ->get()
+                        ->map(function ($item) {
+                            return [
+                                'start_date' => \Carbon\Carbon::parse($item->start_date)->format('Y-m-d'),
+                                'end_date' => \Carbon\Carbon::parse($item->end_date)->format('Y-m-d'),
+                                'occasion' => $item->occasion
+                            ];
+                        });
+
                     $employeeData = [];
 
                     // Mark attendance status using the same 3-rule logic as the main system
@@ -1325,6 +1365,29 @@ class AttendanceEmployeeController extends Controller
                         }
                     }
 
+                    // Mark 'holiday' days (only current month)
+                    foreach ($holidays as $holiday) {
+                        $start = \Carbon\Carbon::parse($holiday['start_date']);
+                        $end = \Carbon\Carbon::parse($holiday['end_date']);
+                        $monthStart = $currentDate->copy()->startOfMonth();
+                        $monthEnd = $currentDate->copy()->endOfMonth();
+
+                        // Only process dates within the current month
+                        $processStart = $start->gt($monthStart) ? $start : $monthStart;
+                        $processEnd = $end->lt($monthEnd) ? $end : $monthEnd;
+
+                        for ($date = $processStart->copy(); $date->lte($processEnd); $date->addDay()) {
+                            $formattedDate = $date->format('Y-m-d');
+
+                            if (!isset($employeeData[$formattedDate])) {
+                                $employeeData[$formattedDate] = [
+                                    'type' => 'holiday',
+                                    'reason' => $holiday['occasion']
+                                ];
+                            }
+                        }
+                    }
+
                     // Fill in 'absent' ONLY for current month dates (excluding Sundays)
                     $monthStart = $currentDate->copy()->startOfMonth();
                     $monthEnd = $currentDate->copy()->endOfMonth();
@@ -1376,7 +1439,9 @@ class AttendanceEmployeeController extends Controller
                 $emp = !empty(\Auth::user()->employee) ? \Auth::user()->employee->id : 0;
                 $query = AttendanceEmployee::where('employee_id', $emp);
             } else {
-                $employee = Employee::select('id')->where('created_by', \Auth::user()->creatorId());
+                $terminatedEmployees = \App\Models\Termination::pluck('employee_id')->toArray();
+                $employee = Employee::select('id')->where('created_by', \Auth::user()->creatorId())
+                    ->whereNotIn('id', $terminatedEmployees);
                 
                 if (!empty($request->branch)) {
                     $employee->where('branch_id', $request->branch);

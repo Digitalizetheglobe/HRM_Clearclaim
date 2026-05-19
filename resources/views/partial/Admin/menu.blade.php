@@ -621,8 +621,19 @@
             @endif -->
             <!-- HR-->
 
+            @can('Manage Holiday')
+                <li class="dash-item {{ Request::segment(1) == 'holiday' ? 'active' : '' }}">
+                    <a href="{{ route('holiday.index') }}" class="dash-link text-white hover:text-white hover:bg-[#001a3b] text-lg flex items-center space-x-2">
+                        <span class="dash-micon text-white text-[30px] shadow-none" style="background: none;">
+                            <i class="ti ti-calendar text-white text-[30px]"></i>
+                        </span>
+                        <span class="dash-mtext">{{ __('Holidays') }}</span>
+                    </a>
+                </li>
+            @endcan
+
             <!-- recruitment-->
-            @if (Gate::check('Manage Job') ||
+            <!-- @if (Gate::check('Manage Job') ||
                     Gate::check('Manage Job Application') ||
                     Gate::check('Manage Job OnBoard') ||
                     Gate::check('Manage Custom Question') ||
@@ -690,21 +701,11 @@
                         @endcan
                     </ul>
                 </li>
-            @endif
+            @endif -->
             <!-- recruitment-->
 
             
-            <!--contract-->
-            <!-- @can('Manage Contract')
-                <li
-                    class="dash-item {{ Request::route()->getName() == 'contract.index' || Request::route()->getName() == 'contract.show' ? 'active' : '' }}">
-                    <a href="{{ route('contract.index') }}" class="dash-link text-white hover:text-white hover:bg-[#001a3b] text-lg flex items-center space-x-2"><span class="dash-micon text-white text-[30px] shadow-none" style="background: none;">
-                        <i class="ti ti-device-floppy text-white text-[30px]">
-                        </i></span><span class="dash-mtext">{{ __('Contracts') }}</span></a>
-                </li>
-            @endcan -->
 
-            <!--end-->
 
             <!-- ticket-->
             @can('Manage Ticket')
@@ -714,80 +715,7 @@
                 </li>
             @endcan
 
-
-
-            <!-- Event-->
-            <!-- @can('Manage Event')
-                <li class="dash-item">
-                    <a href="{{ route('event.index') }}" class="dash-link text-white hover:text-white hover:bg-[#001a3b] text-lgn flex items-center space-x-2"><span class="dash-micon text-white text-[30px] shadow-none" style="background: none;"><i
-                                class="ti ti-calendar-event text-white text-[30px]"></i></span><span
-                            class="dash-mtext">{{ __('Event') }}</span>
-                    </a>
-                </li>
-            @endcan -->
-
-            <!--meeting-->
-            <!-- @can('Manage Meeting')
-                <li
-                    class="dash-item {{ Request::segment(1) == 'meeting' || Request::segment(2) == 'meeting' ? 'active' : '' }}">
-                    <a href="{{ route('meeting.index') }}" class="dash-link text-white hover:text-white hover:bg-[#001a3b] text-lg flex items-center space-x-2"><span class="dash-micon text-white text-[30px] shadow-none" style="background: none;"><i
-                                class="ti ti-calendar-time text-white text-[30px]"></i></span><span
-                            class="dash-mtext">{{ __('Meeting') }}</span></a>
-                </li>
-            @endcan
- -->
-
-            <!-- Zoom meeting-->
-            <!-- @can('Manage Zoom meeting')
-                @if (\Auth::user()->type != 'super admin')
-                    <li class="dash-item {{ Request::segment(1) == 'zoommeeting' ? 'active' : '' }}">
-                        <a href="{{ route('zoom-meeting.index') }}" class="dash-link text-white hover:text-white hover:bg-[#001a3b] text-lg flex items-center space-x-2"><span class="dash-micon text-white text-[30px] shadow-none" style="background: none;"><i
-                                    class="ti ti-video text-white text-[30px]"></i></span><span
-                                class="dash-mtext">{{ __('Zoom Meeting') }}</span></a>
-                    </li>
-                @endif
-            @endcan -->
-
-            <!-- assets-->
-            <!-- @if (Gate::check('Manage Assets'))
-                <li class="dash-item">
-                    <a href="{{ route('account-assets.index') }}" class="dash-link text-white hover:text-white hover:bg-[#001a3b] text-lg flex items-center space-x-2"><span class="dash-micon text-white text-[30px] shadow-none" style="background: none;"><i
-                                class="ti ti-medical-cross text-white text-[30px]"></i></span><span
-                            class="dash-mtext">{{ __('Assets') }}</span></a>
-                </li>
-            @endcan
- -->
-
-            <!-- document-->
-            <!-- @if (Gate::check('Manage Document'))
-                <li class="dash-item">
-                    <a href="{{ route('document-upload.index') }}" class="dash-link text-white hover:text-white hover:bg-[#001a3b] text-lgflex items-center space-x-2"><span class="dash-micon text-white text-[30px] shadow-none" style="background: none;">
-                            <i class="ti ti-file text-white text-[30px]"></i></span><span
-                            class="dash-mtext">{{ __('Document') }}</span></a>
-                </li>
-            @endcan -->
-
-
-
-            <!--chats-->
-            @if (\Auth::user()->type != 'super admin')
-                <li class="dash-item {{ Request::segment(1) == 'chats' ? 'active' : '' }}">
-                    <a href="{{ url('chats') }}" class="dash-link text-white hover:text-white hover:bg-[#001a3b] text-lg flex items-center space-x-2"><span class="dash-micon text-white text-[30px] shadow-none" style="background: none;"><i
-                                class="ti ti-messages text-white text-[30px]"></i></span><span
-                            class="dash-mtext">{{ __('Messenger') }}</span></a>
-                </li>
-            @endif
-
-            @if (\Auth::user()->type == 'company')
-                <li
-                    class="dash-item {{ Request::route()->getName() == 'notification-templates.update' || Request::segment(1) == 'notification-templates' ? 'active' : '' }}">
-                    <a href="{{ route('notification-templates.index') }}" class="dash-link text-white hover:text-white hover:bg-[#001a3b] text- flex items-center space-x-2"><span class="dash-micon text-white text-[30px] shadow-none" style="background: none;">
-                            <i class="ti ti-bell text-white text-[30]"></i></span><span
-                            class="dash-mtext">{{ __('Notification Template') }}</span></a>
-                </li>
-            @endif
-
-             @if (\Auth::user()->type == 'super admin')
+            @if (\Auth::user()->type == 'super admin')
                 @if (Gate::check('Manage Plan'))
                     <li class="dash-item ">
                         <a href="{{ route('plans.index') }}" class="dash-link text-white hover:text-white hover:bg-[#001a3b] text-lg flex items-center space-x-2"><span class="dash-micon text-white text-[30px] shadow-none" style="background: none;">

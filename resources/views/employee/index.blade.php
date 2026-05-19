@@ -12,7 +12,7 @@
 
 
 @section('action-button')
-    <a href="{{ route('employee.export') }}" data-bs-toggle="tooltip" data-bs-placement="top"
+    <!-- <a href="{{ route('employee.export') }}" data-bs-toggle="tooltip" data-bs-placement="top"
         data-bs-original-title="{{ __('Export') }}" class="btn btn-sm btn-primary">
         <i class="ti ti-file-export"></i>
     </a>
@@ -20,7 +20,7 @@
     <a href="#" data-bs-toggle="modal" data-bs-target="#importModal" data-bs-placement="top"
         data-bs-original-title="{{ __('Import') }}" class="btn btn-sm btn-primary">
         <i class="ti ti-file-import"></i>
-    </a>
+    </a> -->
 
     @can('Create Assets')
             <a href="{{ route('employee.create') }}" 
@@ -146,7 +146,7 @@
                         <!-- Left Employees Tab -->
                         <div class="tab-pane fade" id="left" role="tabpanel" aria-labelledby="left-tab">
                             <div class="table-responsive">
-                                <table class="table mt-5" id="pc-dt-simple2">
+                                <table class="table" id="pc-dt-simple2">
                                     <thead>
                                         <tr>
                                             <th>{{ __('Employee ID') }}</th>
@@ -248,9 +248,10 @@
 @push('scripts')
     <script>
         $(document).ready(function() {
-            // Initialize both tables with the same style
-            $('#pc-dt-simple').DataTable();
-            $('#pc-dt-simple2').DataTable();
+            // Initialize Left Employees table with simple-datatables library
+            if (document.querySelector("#pc-dt-simple2")) {
+                const dataTable2 = new simpleDatatables.DataTable("#pc-dt-simple2");
+            }
             
             // Delete functionality with confirmation
             $(document).on('click', '.bs-pass-para', function(e) {

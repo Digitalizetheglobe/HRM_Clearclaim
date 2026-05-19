@@ -41,13 +41,7 @@
                                 <div class="card-body">
                                     {{ Form::model($employee, ['route' => ['employee.salary.update', $employee->id], 'method' => 'POST']) }}
                                     <div class="row">
-                                        <div class="col-12 col-md-6">
-                                            <div class="form-group">
-                                                {{ Form::label('salary_type', __('Payslip Type*'), ['class' => 'col-form-label']) }}
-                                                {{ Form::select('salary_type', $payslip_type, null, ['class' => 'form-control ', 'required' => 'required']) }}
-                                            </div>
-                                        </div>
-                                        <div class="col-12 col-md-6">
+                                        <div class="col-12">
                                             <div class="form-group">
                                                 {{ Form::label('salary', __('Salary'), ['class' => 'col-form-label']) }}
                                                 {{ Form::number('salary', null, ['class' => 'form-control ', 'required' => 'required']) }}

@@ -41,9 +41,12 @@ class SalaryProcessingController extends Controller
             
             $formate_month_year = $year . '-' . $month;
             
+            $terminatedEmployees = \App\Models\Termination::pluck('employee_id')->toArray();
+            
             // Get all employees with salary > 0
             $employees = Employee::where('created_by', \Auth::user()->creatorId())
                 ->where('salary', '>', 0)
+                ->whereNotIn('id', $terminatedEmployees)
                 ->orderBy('name', 'asc')
                 ->get();
             

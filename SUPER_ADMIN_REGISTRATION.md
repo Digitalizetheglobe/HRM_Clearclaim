@@ -69,7 +69,7 @@ The registration creates a user record with:
 To test the functionality:
 
 1. Ensure the development server is running: `php artisan serve`
-2. Visit: `http://127.0.0.1:8000/super-admin/register`
+2. Visit: `http://127.0.0.1:8001/super-admin/register`
 3. Fill out the form and submit
 4. Verify the user is created with super admin role and permissions
 

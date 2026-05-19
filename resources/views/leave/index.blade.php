@@ -116,7 +116,6 @@
                                     <th>{{ __('Duration') }}</th>
                                     <th>{{ __('Total Days') }}</th>
                                     <th>{{ __('Leave Type') }}</th>
-                                    <th>{{ __('Leave Reason') }}</th>
                                     <th>{{ __('Status') }}</th>
                                     @if (\Auth::user()->type != 'employee')
                                         <th width="200px">{{ __('Action') }}</th>
@@ -148,7 +147,6 @@
                                             @endif
                                         </td>
                                         <!-- <td>{{ $leave->leave_reason }}</td> -->
-                                        <td>{!! breakAfterWords($leave->leave_reason) !!}</td>
                                         <td>
                                             @if ($leave->status == 'Pending')
                                                 <div class="badge bg-warning p-2 px-3 rounded status-badge5">

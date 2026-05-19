@@ -166,14 +166,6 @@ class PaySlipController extends Controller
                     $payslipEmployee->created_by           = \Auth::user()->creatorId();
                     $payslipEmployee->save();
 
-                    if ($payslipEmployee->loan > 0) {
-                        LoanDeduction::whereHas('loan', function($q) use ($employee) {
-                            $q->where('employee_id', $employee->id);
-                        })
-                        ->where('month', 'like', $formate_month_year.'%')
-                        ->update(['is_deducted' => true]);
-                    }
-
                     //Slack Notification
                     $setting  = Utility::settings(\Auth::user()->creatorId());
                     if (isset($setting['monthly_payslip_notification']) && $setting['monthly_payslip_notification'] == 1) {
