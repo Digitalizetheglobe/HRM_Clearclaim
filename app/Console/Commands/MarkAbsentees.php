@@ -14,10 +14,37 @@ class MarkAbsentees extends Command
 
     public function handle()
     {
-        $today = Carbon::today()->toDateString();
+        $todayCarbon = Carbon::today();
+        $today = $todayCarbon->toDateString();
+        
+        // 1. Skip weekends (Saturday and Sunday)
+        if ($todayCarbon->isWeekend()) {
+            $this->info('Today is a weekend. Skipping marking absentees.');
+            return;
+        }
+        
+        // 2. Skip public holidays
+        $isHoliday = \App\Models\Holiday::where('start_date', '<=', $today)
+                                        ->where('end_date', '>=', $today)
+                                        ->exists();
+        if ($isHoliday) {
+            $this->info('Today is a holiday. Skipping marking absentees.');
+            return;
+        }
+        
         $employees = Employee::all();
         
         foreach ($employees as $employee) {
+            // 3. Skip if the employee has an active, non-rejected leave on this date
+            $hasLeave = \App\Models\Leave::where('employee_id', $employee->id)
+                                        ->where('status', '!=', 'Reject')
+                                        ->where('start_date', '<=', $today)
+                                        ->where('end_date', '>=', $today)
+                                        ->exists();
+            if ($hasLeave) {
+                continue; // Skip creating an absent record since they are on leave
+            }
+
             $attendance = AttendanceEmployee::where('employee_id', $employee->id)
                                           ->where('date', $today)
                                           ->first();

@@ -107,7 +107,7 @@
                         <table class="table" id="pc-dt-simple">
                             <thead>
                                 <tr>
-                                    @if (\Auth::user()->type != 'employee')
+                                    @if (\Auth::user()->type != 'employee' || (isset($isManager) && $isManager))
                                         <th>{{ __('Employee') }}</th>
                                     @endif
                                     <th>{{ __('Applied On') }}</th>
@@ -117,7 +117,7 @@
                                     <th>{{ __('Total Days') }}</th>
                                     <th>{{ __('Leave Type') }}</th>
                                     <th>{{ __('Status') }}</th>
-                                    @if (\Auth::user()->type != 'employee')
+                                    @if (\Auth::user()->type != 'employee' || (isset($isManager) && $isManager))
                                         <th width="200px">{{ __('Action') }}</th>
                                     @endif    
                                 </tr>
@@ -125,7 +125,7 @@
                             <tbody>
                                 @foreach ($leaves as $leave)
                                     <tr>
-                                        @if (\Auth::user()->type != 'employee')
+                                        @if (\Auth::user()->type != 'employee' || (isset($isManager) && $isManager))
                                             <td>{{ !empty($leave->employee_id) ? $leave->employees->name : '' }}
                                             </td>
                                         @endif
@@ -160,32 +160,36 @@
                                             @endif
                                         </td>
 
-                                        @if (\Auth::user()->type != 'employee')
+                                        @if (\Auth::user()->type != 'employee' || (isset($isManager) && $isManager))
                                             <td class="Action">
 
                                                 <span>
-                                                    @if (\Auth::user()->type != 'employee')
-                                                        <div class="action-btn bg-success ms-2">
-                                                            <a href="#" class="mx-3 btn btn-sm  align-items-center"
-                                                                data-size="lg"
-                                                                data-url="{{ URL::to('leave/' . $leave->id . '/action') }}"
-                                                                data-ajax-popup="true" data-size="md" data-bs-toggle="tooltip"
-                                                                title="" data-title="{{ __('Leave Action') }}"
-                                                                data-bs-original-title="{{ __('Manage Leave') }}">
-                                                                <i class="ti ti-caret-right text-white"></i>
-                                                            </a>
-                                                        </div>
-                                                        @can('Edit Leave')
-                                                            <div class="action-btn bg-info ms-2">
+                                                    @if (\Auth::user()->type != 'employee' || (isset($isManager) && $isManager))
+                                                        @if (\Auth::user()->type != 'employee' || $leave->employee_id != $employee->id)
+                                                            <div class="action-btn bg-success ms-2">
                                                                 <a href="#" class="mx-3 btn btn-sm  align-items-center"
                                                                     data-size="lg"
-                                                                    data-url="{{ URL::to('leave/' . $leave->id . '/edit') }}"
+                                                                    data-url="{{ URL::to('leave/' . $leave->id . '/action') }}"
                                                                     data-ajax-popup="true" data-size="md" data-bs-toggle="tooltip"
-                                                                    title="" data-title="{{ __('Edit Leave') }}"
-                                                                    data-bs-original-title="{{ __('Edit') }}">
-                                                                    <i class="ti ti-pencil text-white"></i>
+                                                                    title="" data-title="{{ __('Leave Action') }}"
+                                                                    data-bs-original-title="{{ __('Manage Leave') }}">
+                                                                    <i class="ti ti-caret-right text-white"></i>
                                                                 </a>
                                                             </div>
+                                                        @endif
+                                                        @can('Edit Leave')
+                                                            @if (\Auth::user()->type != 'employee')
+                                                                <div class="action-btn bg-info ms-2">
+                                                                    <a href="#" class="mx-3 btn btn-sm  align-items-center"
+                                                                        data-size="lg"
+                                                                        data-url="{{ URL::to('leave/' . $leave->id . '/edit') }}"
+                                                                        data-ajax-popup="true" data-size="md" data-bs-toggle="tooltip"
+                                                                        title="" data-title="{{ __('Edit Leave') }}"
+                                                                        data-bs-original-title="{{ __('Edit') }}">
+                                                                        <i class="ti ti-pencil text-white"></i>
+                                                                    </a>
+                                                                </div>
+                                                            @endif
                                                         @endcan
                                                         @can('Delete Leave')
                                                             @if (\Auth::user()->type != 'employee')

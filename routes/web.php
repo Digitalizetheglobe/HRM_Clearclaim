@@ -1186,7 +1186,12 @@ Route::group(['middleware' => ['verified']], function () {
         ]
     );
 
-    
+    Route::get('leave-request', [LeaveController::class, 'leaveRequest'])->name('leave.request')->middleware(
+        [
+            'auth',
+            'XSS',
+        ]
+    );
 
     Route::any('leave/get_leave_data', [LeaveController::class, 'get_leave_data'])->name('leave.get_leave_data')->middleware(['auth', 'XSS']);
 
@@ -1283,6 +1288,13 @@ Route::group(['middleware' => ['verified']], function () {
         ]
     );
     Route::post('attendance-regularisation/fetch-attendance', [\App\Http\Controllers\AttendanceRegularisationController::class, 'fetchAttendanceData'])->name('attendance-regularisation.fetch-attendance')->middleware(
+        [
+            'auth',
+            'XSS',
+        ]
+    );
+
+    Route::get('attendance-request', [\App\Http\Controllers\AttendanceRegularisationController::class, 'attendanceRequest'])->name('attendance.request')->middleware(
         [
             'auth',
             'XSS',

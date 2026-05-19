@@ -275,6 +275,13 @@
                             href="{{ route('attendance-regularisation.index') }}">{{ __('Attendance Regularisation') }}</a>
                         </li>
 
+                        @if(\Auth::user()->type == 'employee' && \Auth::user()->employee && \Auth::user()->employee->designation && str_contains(strtolower(\Auth::user()->employee->designation->name), 'manager'))
+                            <li class="dash-item {{ Request::segment(1) == 'attendance-request' ? ' active' : '' }}">
+                                <a class="dash-link text-white hover:text-white hover:bg-[#001a3b] text-lg"
+                                href="{{ route('attendance.request') }}">{{ __('Attendance Requests') }}</a>
+                            </li>
+                        @endif
+
                         @can('Create Attendance')
                             <li class="dash-item">
                                 <a class="dash-link text-white hover:text-white hover:bg-[#001a3b] text-lg"
@@ -309,6 +316,12 @@
                             </li>              
                         @endcan
                         
+                        @if(\Auth::user()->type == 'employee' && \Auth::user()->employee && \Auth::user()->employee->designation && str_contains(strtolower(\Auth::user()->employee->designation->name), 'manager'))
+                            <li class="dash-item {{ Request::segment(1) == 'leave-request' ? ' active' : '' }}">
+                                <a class="dash-link text-white hover:text-white hover:bg-[#001a3b] text-lg" href="{{ route('leave.request') }}">{{ __('Leave Requests') }}</a>
+                            </li>
+                        @endif
+
                         @if(\Auth::user()->type == 'company' || (\Auth::user()->type == 'employee' && \Auth::user()->employee && \Auth::user()->employee->department && strcasecmp(\Auth::user()->employee->department->name, 'Human Resources') == 0) || (\Auth::user()->type == 'employee' && \Auth::user()->employee && \Auth::user()->employee->designation && strcasecmp(\Auth::user()->employee->designation->name, 'Manager') == 0))
                             <li class="dash-item {{ Request::segment(1) == 'leave-details' ? ' active' : '' }}">
                                 <a class="dash-link text-white hover:text-white hover:bg-[#001a3b] text-lg" href="{{ route('leave-details.index') }}">{{ __('Leave Details') }}</a>

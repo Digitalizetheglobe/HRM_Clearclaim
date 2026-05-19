@@ -287,7 +287,7 @@ class OffboardingController extends Controller
                 $checklist = $request->checklist ?? [];
                 // Convert to array format - handle both object and array formats
                 $checklistArray = [];
-                $defaultItems = ['hrm_login', 'biometric', 'email', 'crm', 'workdrive', 'whatsapp', 'other'];
+                $defaultItems = ['hrm_login', 'biometric', 'email', 'crm', 'whatsapp', 'internal_tools', 'other'];
                 
                 if (is_array($checklist)) {
                     foreach ($checklist as $key => $item) {
@@ -295,6 +295,12 @@ class OffboardingController extends Controller
                             // Ensure key is set
                             if (!isset($item['key'])) {
                                 $item['key'] = $key;
+                            }
+                            // Convert JS string boolean 'true'/'false' to actual PHP boolean
+                            if (isset($item['done'])) {
+                                $item['done'] = filter_var($item['done'], FILTER_VALIDATE_BOOLEAN);
+                            } else {
+                                $item['done'] = false;
                             }
                             $checklistArray[] = $item;
                         }
@@ -303,28 +309,36 @@ class OffboardingController extends Controller
                 
                 $process->access_removal_checklist = $checklistArray;
                 
-                // Check if all items are done - strict validation
-                $allDone = true;
                 $checkedItems = [];
-                
                 foreach ($checklistArray as $item) {
                     if (isset($item['key']) && isset($item['done']) && $item['done']) {
                         $checkedItems[] = $item['key'];
                     }
                 }
                 
-                // Check if all default items are checked
-                foreach ($defaultItems as $defaultKey) {
-                    if (!in_array($defaultKey, $checkedItems)) {
-                        $allDone = false;
-                        break;
-                    }
-                }
-                
-                if ($allDone && isset($stages[5])) {
+                if (isset($stages[5])) {
                     $process->stage = $stages[5]; // Move to next stage
-                } else {
-                    return response()->json(['error' => __('Please complete all checklist items before proceeding.')], 400);
+                }
+
+                // --- ENTERPRISE AUTOMATION SYSTEM ---
+                // 1. Update EmployeeSystemAccess table in real time
+                $dbAccess = \App\Models\EmployeeSystemAccess::where('employee_id', $process->employee_id)->first();
+                if ($dbAccess) {
+                    // If marked as revoked (checked in exit clearance), we set access to false (deactivated)
+                    if (in_array('biometric', $checkedItems)) $dbAccess->biometric = false;
+                    if (in_array('email', $checkedItems)) $dbAccess->email = false;
+                    if (in_array('crm', $checkedItems)) $dbAccess->crm = false;
+                    if (in_array('whatsapp', $checkedItems)) $dbAccess->whatsapp = false;
+                    if (in_array('internal_tools', $checkedItems)) $dbAccess->internal_tools = false;
+                    if (in_array('other', $checkedItems)) $dbAccess->other = false;
+                    $dbAccess->save();
+                }
+
+                // 2. Automatically deactivate the employee's active login user account in the system
+                if (in_array('hrm_login', $checkedItems) && $process->employee && $process->employee->user) {
+                    $employeeUser = $process->employee->user;
+                    $employeeUser->is_active = 0; // Deactivate account
+                    $employeeUser->save();
                 }
                 break;
 
@@ -332,7 +346,7 @@ class OffboardingController extends Controller
                 $checklist = $request->checklist ?? [];
                 // Convert to array format - handle both object and array formats
                 $checklistArray = [];
-                $defaultItems = ['laptop', 'charger', 'mobile', 'mobile_charger', 'mouse', 'sim', 'id_card', 'other'];
+                $defaultItems = ['laptop', 'chargers', 'mobile', 'mouse', 'sim_card', 'id_card', 'other'];
                 
                 if (is_array($checklist)) {
                     foreach ($checklist as $key => $item) {
@@ -341,6 +355,12 @@ class OffboardingController extends Controller
                             if (!isset($item['key'])) {
                                 $item['key'] = $key;
                             }
+                            // Convert JS string boolean 'true'/'false' to actual PHP boolean
+                            if (isset($item['collected'])) {
+                                $item['collected'] = filter_var($item['collected'], FILTER_VALIDATE_BOOLEAN);
+                            } else {
+                                $item['collected'] = false;
+                            }
                             $checklistArray[] = $item;
                         }
                     }
@@ -348,28 +368,30 @@ class OffboardingController extends Controller
                 
                 $process->asset_collection_checklist = $checklistArray;
                 
-                // Check if all items are collected - strict validation
-                $allCollected = true;
                 $collectedItems = [];
-                
                 foreach ($checklistArray as $item) {
                     if (isset($item['key']) && isset($item['collected']) && $item['collected']) {
                         $collectedItems[] = $item['key'];
                     }
                 }
                 
-                // Check if all default items are collected
-                foreach ($defaultItems as $defaultKey) {
-                    if (!in_array($defaultKey, $collectedItems)) {
-                        $allCollected = false;
-                        break;
-                    }
-                }
-                
-                if ($allCollected && isset($stages[6])) {
+                if (isset($stages[6])) {
                     $process->stage = $stages[6]; // Move to next stage
-                } else {
-                    return response()->json(['error' => __('Please mark all assets as collected before proceeding.')], 400);
+                }
+
+                // --- ENTERPRISE AUTOMATION SYSTEM ---
+                // Update EmployeeAsset table in real time
+                $dbAsset = \App\Models\EmployeeAsset::where('employee_id', $process->employee_id)->first();
+                if ($dbAsset) {
+                    // If marked as collected (checked in exit clearance), we set asset to false (no longer issued)
+                    if (in_array('laptop', $collectedItems)) $dbAsset->laptop = false;
+                    if (in_array('chargers', $collectedItems)) $dbAsset->chargers = false;
+                    if (in_array('mobile', $collectedItems)) $dbAsset->mobile = false;
+                    if (in_array('mouse', $collectedItems)) $dbAsset->mouse = false;
+                    if (in_array('sim_card', $collectedItems)) $dbAsset->sim_card = false;
+                    if (in_array('id_card', $collectedItems)) $dbAsset->id_card = false;
+                    if (in_array('other', $collectedItems)) $dbAsset->other = false;
+                    $dbAsset->save();
                 }
                 break;
 

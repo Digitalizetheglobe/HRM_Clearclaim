@@ -22,14 +22,19 @@ class LeaveController extends Controller
 {
     public function index()
     {
+        $user = \Auth::user();
+        $employee = Employee::where('user_id', '=', $user->id)->first();
+        $isManager = false;
+        
+        if ($employee && $employee->designation) {
+            $isManager = (str_contains(strtolower($employee->designation->name), 'manager'));
+        }
 
-        if (\Auth::user()->can('Manage Leave')) {
+        if ($user->can('Manage Leave') || $isManager) {
             $leaveBalance = null;
             
-            if (\Auth::user()->type == 'employee') {
-                $user     = \Auth::user();
-                $employee = Employee::where('user_id', '=', $user->id)->first();
-                $leaves = LocalLeave::where('employee_id', '=', $employee->id)->get();
+            if ($user->type == 'employee') {
+                $leaves = LocalLeave::where('employee_id', '=', $employee->id)->orderBy('id', 'desc')->get();
                 
                 // Calculate leave balance for employee
                 if ($employee) {
@@ -83,10 +88,38 @@ class LeaveController extends Controller
                     ];
                 }
             } else {
-                $leaves = LocalLeave::where('created_by', '=', \Auth::user()->creatorId())->with(['employees', 'leaveType'])->get();
+                $leaves = LocalLeave::where('created_by', '=', $user->creatorId())->with(['employees', 'leaveType'])->orderBy('id', 'desc')->get();
             }
 
-            return view('leave.index', compact('leaves', 'leaveBalance'));
+            return view('leave.index', compact('leaves', 'leaveBalance', 'isManager', 'employee'));
+        } else {
+            return redirect()->back()->with('error', __('Permission denied.'));
+        }
+    }
+
+    public function leaveRequest()
+    {
+        $user = \Auth::user();
+        $employee = Employee::where('user_id', '=', $user->id)->first();
+        $isManager = false;
+        
+        if ($employee && $employee->designation) {
+            $isManager = (str_contains(strtolower($employee->designation->name), 'manager'));
+        }
+
+        if ($isManager && $employee) {
+            // Manager sees all leaves in their department except their own
+            $departmentEmployeeIds = Employee::where('department_id', '=', $employee->department_id)
+                ->where('id', '!=', $employee->id)
+                ->pluck('id')
+                ->toArray();
+                
+            $leaves = LocalLeave::whereIn('employee_id', $departmentEmployeeIds)
+                ->with(['employees', 'leaveType'])
+                ->orderBy('id', 'desc')
+                ->get();
+
+            return view('leave.leave_request', compact('leaves', 'isManager', 'employee'));
         } else {
             return redirect()->back()->with('error', __('Permission denied.'));
         }
@@ -587,6 +620,23 @@ class LeaveController extends Controller
     {
         $leave     = LocalLeave::find($id);
         $employee  = Employee::find($leave->employee_id);
+        $currentUser = \Auth::user();
+        
+        $currentEmployee = Employee::where('user_id', $currentUser->id)->first();
+        $isDepartmentManager = false;
+        if ($currentEmployee && $currentEmployee->designation) {
+            $isDepartmentManager = str_contains(strtolower($currentEmployee->designation->name), 'manager');
+        }
+
+        // Check if the leave belongs to someone in their own department
+        if ($isDepartmentManager && $employee && $employee->department_id == $currentEmployee->department_id) {
+            // Cannot approve their own leave request
+            if ($leave->employee_id == $currentEmployee->id) {
+                return redirect()->route('leave.index')->with('error', __('You cannot approve your own leave request.'));
+            }
+            // Allow access to action page for department employees
+            return view('leave.action', compact('employee', 'leave', 'isDepartmentManager'));
+        }
 
         // Check if current user is a reporting manager (view-only access)
         if ($employee && $employee->reporting_manager) {
@@ -597,7 +647,7 @@ class LeaveController extends Controller
             }
         }
 
-        return view('leave.action', compact('employee', 'leave'));
+        return view('leave.action', compact('employee', 'leave', 'isDepartmentManager'));
     }
 
     public function view($id)
@@ -620,6 +670,22 @@ class LeaveController extends Controller
     public function changeaction(Request $request)
     {
         $leave = LocalLeave::find($request->leave_id);
+        $currentUser = \Auth::user();
+        
+        $currentEmployee = Employee::where('user_id', $currentUser->id)->first();
+        $isDepartmentManager = false;
+        if ($currentEmployee && $currentEmployee->designation) {
+            $isDepartmentManager = str_contains(strtolower($currentEmployee->designation->name), 'manager');
+        }
+        
+        // If department manager, authorize they can only approve/reject department employee leaves (not themselves)
+        if ($isDepartmentManager) {
+            $leaveEmployee = Employee::find($leave->employee_id);
+            if (!$leaveEmployee || $leaveEmployee->department_id != $currentEmployee->department_id || $leave->employee_id == $currentEmployee->id) {
+                return redirect()->route('leave.index')->with('error', __('Permission denied.'));
+            }
+        }
+
         $leave->status = $request->status;
         
         if ($leave->status == 'Approved') {
@@ -913,6 +979,15 @@ class LeaveController extends Controller
                 ->whereMonth('start_date', $selectedMonth)
                 ->sum('total_leave_days');
 
+            // Yearly total PAID leaves used (approved) - LOP leaves are NOT counted
+            $date = \App\Models\Utility::AnnualLeaveCycle();
+            $yearlyUsed = LocalLeave::where('employee_id', $employee->id)
+                ->where('leave_type_id', $leaveType->id)
+                ->where('is_paid', true) // Only count PAID leaves
+                ->where('status', 'Approved')
+                ->whereBetween('created_at', [$date['start_date'], $date['end_date']])
+                ->sum('total_leave_days');
+
             $leaveDetails[] = [
                 'employee' => $employee,
                 'yearly_leaves' => $yearlyLeaves,
@@ -920,7 +995,7 @@ class LeaveController extends Controller
                 'leaves_taken' => $leavesTakenThisMonth,
                 'pending_leaves' => $pendingLeaves,
                 'remaining_monthly' => $monthlyLeaves - $leavesTakenThisMonth,
-                'remaining_yearly' => $yearlyLeaves - $leavesTakenThisMonth
+                'remaining_yearly' => $yearlyLeaves - $yearlyUsed
             ];
         }
 

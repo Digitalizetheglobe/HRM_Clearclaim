@@ -149,7 +149,13 @@ class AttendanceRegularisationController extends Controller
         if (\Auth::user()->type == 'employee') {
             $employee = Employee::where('user_id', \Auth::user()->id)->first();
             if ($regularisation->employee_id != $employee->id) {
-                return redirect()->back()->with('error', __('Permission denied.'));
+                $isManager = false;
+                if ($employee && $employee->designation) {
+                    $isManager = (str_contains(strtolower($employee->designation->name), 'manager'));
+                }
+                if (!$isManager || !$regularisation->employee || $regularisation->employee->department_id != $employee->department_id) {
+                    return redirect()->back()->with('error', __('Permission denied.'));
+                }
             }
         } else {
             if ($regularisation->created_by != \Auth::user()->creatorId() && 
@@ -288,9 +294,16 @@ class AttendanceRegularisationController extends Controller
      */
     public function approve(Request $request, $id)
     {
-        // Only Company and HR users can approve
-        if (\Auth::user()->type != 'company' && \Auth::user()->type != 'hr') {
-            $errorMsg = __('Permission denied. Only Company and HR users can approve requests.');
+        $currentUser = \Auth::user();
+        $employee = Employee::where('user_id', $currentUser->id)->first();
+        $isManager = false;
+        if ($employee && $employee->designation) {
+            $isManager = (str_contains(strtolower($employee->designation->name), 'manager'));
+        }
+
+        // Only Company, HR and Managers can approve
+        if ($currentUser->type != 'company' && $currentUser->type != 'hr' && !$isManager) {
+            $errorMsg = __('Permission denied. Only Company, HR, and Managers can approve requests.');
             if ($request->ajax() || $request->wantsJson()) {
                 return response()->json(['success' => false, 'message' => $errorMsg], 403);
             }
@@ -299,13 +312,23 @@ class AttendanceRegularisationController extends Controller
 
         $regularisation = AttendanceRegularisation::with('employee')->findOrFail($id);
 
-        // Check if request belongs to the same company
-        if ($regularisation->employee->created_by != \Auth::user()->creatorId()) {
-            $errorMsg = __('Permission denied.');
-            if ($request->ajax() || $request->wantsJson()) {
-                return response()->json(['success' => false, 'message' => $errorMsg], 403);
+        // Check if request belongs to the same department if manager, or same company if admin
+        if ($isManager) {
+            if (!$regularisation->employee || $regularisation->employee->department_id != $employee->department_id || $regularisation->employee_id == $employee->id) {
+                $errorMsg = __('Permission denied.');
+                if ($request->ajax() || $request->wantsJson()) {
+                    return response()->json(['success' => false, 'message' => $errorMsg], 403);
+                }
+                return redirect()->back()->with('error', $errorMsg);
             }
-            return redirect()->back()->with('error', $errorMsg);
+        } else {
+            if ($regularisation->employee->created_by != \Auth::user()->creatorId()) {
+                $errorMsg = __('Permission denied.');
+                if ($request->ajax() || $request->wantsJson()) {
+                    return response()->json(['success' => false, 'message' => $errorMsg], 403);
+                }
+                return redirect()->back()->with('error', $errorMsg);
+            }
         }
 
         if ($regularisation->status != AttendanceRegularisation::STATUS_PENDING) {
@@ -338,25 +361,31 @@ class AttendanceRegularisationController extends Controller
         // Send notification to employee
         $this->sendApprovalNotification($regularisation);
 
+        $redirectUrl = $isManager ? route('attendance.request') : route('attendance-regularisation.index');
+
         if ($request->ajax() || $request->wantsJson()) {
             return response()->json([
                 'success' => true,
                 'message' => __('Attendance regularisation request approved successfully.'),
-                'redirect' => route('attendance-regularisation.index')
+                'redirect' => $redirectUrl
             ]);
         }
 
-        return redirect()->route('attendance-regularisation.index')->with('success', __('Attendance regularisation request approved successfully.'));
+        return redirect()->to($redirectUrl)->with('success', __('Attendance regularisation request approved successfully.'));
     }
 
-    /**
-     * Reject the regularisation request
-     */
     public function reject(Request $request, $id)
     {
-        // Only Company and HR users can reject
-        if (\Auth::user()->type != 'company' && \Auth::user()->type != 'hr') {
-            $errorMsg = __('Permission denied. Only Company and HR users can reject requests.');
+        $currentUser = \Auth::user();
+        $employee = Employee::where('user_id', $currentUser->id)->first();
+        $isManager = false;
+        if ($employee && $employee->designation) {
+            $isManager = (str_contains(strtolower($employee->designation->name), 'manager'));
+        }
+
+        // Only Company, HR and Managers can reject
+        if ($currentUser->type != 'company' && $currentUser->type != 'hr' && !$isManager) {
+            $errorMsg = __('Permission denied. Only Company, HR, and Managers can reject requests.');
             if ($request->ajax() || $request->wantsJson()) {
                 return response()->json(['success' => false, 'message' => $errorMsg], 403);
             }
@@ -381,13 +410,23 @@ class AttendanceRegularisationController extends Controller
 
         $regularisation = AttendanceRegularisation::with('employee')->findOrFail($id);
 
-        // Check if request belongs to the same company
-        if ($regularisation->employee->created_by != \Auth::user()->creatorId()) {
-            $errorMsg = __('Permission denied.');
-            if ($request->ajax() || $request->wantsJson()) {
-                return response()->json(['success' => false, 'message' => $errorMsg], 403);
+        // Check if request belongs to the same department if manager, or same company if admin
+        if ($isManager) {
+            if (!$regularisation->employee || $regularisation->employee->department_id != $employee->department_id || $regularisation->employee_id == $employee->id) {
+                $errorMsg = __('Permission denied.');
+                if ($request->ajax() || $request->wantsJson()) {
+                    return response()->json(['success' => false, 'message' => $errorMsg], 403);
+                }
+                return redirect()->back()->with('error', $errorMsg);
             }
-            return redirect()->back()->with('error', $errorMsg);
+        } else {
+            if ($regularisation->employee->created_by != \Auth::user()->creatorId()) {
+                $errorMsg = __('Permission denied.');
+                if ($request->ajax() || $request->wantsJson()) {
+                    return response()->json(['success' => false, 'message' => $errorMsg], 403);
+                }
+                return redirect()->back()->with('error', $errorMsg);
+            }
         }
 
         if ($regularisation->status != AttendanceRegularisation::STATUS_PENDING) {
@@ -408,15 +447,17 @@ class AttendanceRegularisationController extends Controller
         // Send notification to employee
         $this->sendRejectionNotification($regularisation);
 
+        $redirectUrl = $isManager ? route('attendance.request') : route('attendance-regularisation.index');
+
         if ($request->ajax() || $request->wantsJson()) {
             return response()->json([
                 'success' => true,
                 'message' => __('Attendance regularisation request rejected.'),
-                'redirect' => route('attendance-regularisation.index')
+                'redirect' => $redirectUrl
             ]);
         }
 
-        return redirect()->route('attendance-regularisation.index')->with('success', __('Attendance regularisation request rejected.'));
+        return redirect()->to($redirectUrl)->with('success', __('Attendance regularisation request rejected.'));
     }
 
     /**
@@ -795,6 +836,35 @@ class AttendanceRegularisationController extends Controller
         // Fallback to default time
         $lateMarkTime = AttendanceEmployee::LATE_MARK_TIME;
         return strtotime($clockIn) > strtotime($lateMarkTime);
+    }
+
+    public function attendanceRequest()
+    {
+        $user = \Auth::user();
+        $employee = Employee::where('user_id', '=', $user->id)->first();
+        $isManager = false;
+        
+        if ($employee && $employee->designation) {
+            $isManager = (str_contains(strtolower($employee->designation->name), 'manager'));
+        }
+
+        if ($isManager && $employee) {
+            // Manager sees all regularisation requests in their department except their own
+            $departmentEmployeeIds = Employee::where('department_id', '=', $employee->department_id)
+                ->where('id', '!=', $employee->id)
+                ->pluck('id')
+                ->toArray();
+                
+            $regularisations = AttendanceRegularisation::whereIn('employee_id', $departmentEmployeeIds)
+                ->with('employee')
+                ->orderBy('date', 'desc')
+                ->orderBy('created_at', 'desc')
+                ->get();
+
+            return view('attendance.regularisation.attendance_request', compact('regularisations', 'isManager', 'employee'));
+        } else {
+            return redirect()->back()->with('error', __('Permission denied.'));
+        }
     }
 }
 

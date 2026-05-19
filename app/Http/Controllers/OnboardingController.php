@@ -226,6 +226,12 @@ class OnboardingController extends Controller
                             if (!isset($item['key'])) {
                                 $item['key'] = $key;
                             }
+                            // Convert JS string boolean 'true'/'false' to actual PHP boolean
+                            if (isset($item['done'])) {
+                                $item['done'] = filter_var($item['done'], FILTER_VALIDATE_BOOLEAN);
+                            } else {
+                                $item['done'] = false;
+                            }
                             $checklistArray[] = $item;
                         }
                     }
@@ -233,50 +239,35 @@ class OnboardingController extends Controller
                 
                 $process->system_access_checklist = $checklistArray;
                 
-                // Check if all items are done
-                $allDone = true;
                 $checkedItems = [];
-                
                 foreach ($checklistArray as $item) {
                     if (isset($item['key']) && isset($item['done']) && $item['done']) {
                         $checkedItems[] = $item['key'];
                     }
                 }
                 
-                // Check if all default items are checked
-                foreach ($defaultItems as $defaultKey) {
-                    if (!in_array($defaultKey, $checkedItems)) {
-                        $allDone = false;
-                        break;
-                    }
-                }
+                // Set status to done and move to next stage immediately without requiring all options to be selected
+                $process->system_access_status = 'done';
+                $process->system_access_completed_by = Auth::user()->id;
+                $process->system_access_completed_at = now();
                 
-                if ($allDone) {
-                    $process->system_access_status = 'done';
-                    $process->system_access_completed_by = Auth::user()->id;
-                    $process->system_access_completed_at = now();
-                    
-                    if (isset($stages[5])) {
-                        $process->stage = $stages[5]->id; // Move to next stage
-                    }
-
-                    // Save/update to dedicated database table
-                    \App\Models\EmployeeSystemAccess::updateOrCreate(
-                        ['employee_id' => $process->employee_id],
-                        [
-                            'biometric' => in_array('biometric', $checkedItems),
-                            'email' => in_array('email', $checkedItems),
-                            'crm' => in_array('crm', $checkedItems),
-                            'whatsapp' => in_array('whatsapp', $checkedItems),
-                            'internal_tools' => in_array('internal_tools', $checkedItems),
-                            'other' => in_array('other', $checkedItems),
-                            'created_by' => Auth::user()->creatorId(),
-                        ]
-                    );
-                } else {
-                    $process->system_access_status = 'pending';
-                    return response()->json(['error' => __('Please complete all checklist items before proceeding.')], 400);
+                if (isset($stages[5])) {
+                    $process->stage = $stages[5]->id; // Move to next stage
                 }
+
+                // Save/update to dedicated database table (only checked items will be saved as true, others as false)
+                \App\Models\EmployeeSystemAccess::updateOrCreate(
+                    ['employee_id' => $process->employee_id],
+                    [
+                        'biometric' => in_array('biometric', $checkedItems),
+                        'email' => in_array('email', $checkedItems),
+                        'crm' => in_array('crm', $checkedItems),
+                        'whatsapp' => in_array('whatsapp', $checkedItems),
+                        'internal_tools' => in_array('internal_tools', $checkedItems),
+                        'other' => in_array('other', $checkedItems),
+                        'created_by' => Auth::user()->creatorId(),
+                    ]
+                );
                 break;
 
             case 5: // Asset Issuance
@@ -291,6 +282,12 @@ class OnboardingController extends Controller
                             if (!isset($item['key'])) {
                                 $item['key'] = $key;
                             }
+                            // Convert JS string boolean 'true'/'false' to actual PHP boolean
+                            if (isset($item['issued'])) {
+                                $item['issued'] = filter_var($item['issued'], FILTER_VALIDATE_BOOLEAN);
+                            } else {
+                                $item['issued'] = false;
+                            }
                             $checklistArray[] = $item;
                         }
                     }
@@ -298,36 +295,36 @@ class OnboardingController extends Controller
                 
                 $process->asset_issuance_checklist = $checklistArray;
                 
-                // Check if all items are issued
-                $allIssued = true;
                 $issuedItems = [];
-                
                 foreach ($checklistArray as $item) {
                     if (isset($item['key']) && isset($item['issued']) && $item['issued']) {
                         $issuedItems[] = $item['key'];
                     }
                 }
                 
-                // Check if all default items are issued
-                foreach ($defaultItems as $defaultKey) {
-                    if (!in_array($defaultKey, $issuedItems)) {
-                        $allIssued = false;
-                        break;
-                    }
-                }
+                // Set status to issued and move to next stage immediately without requiring all options to be selected
+                $process->asset_issuance_status = 'issued';
+                $process->asset_issuance_completed_by = Auth::user()->id;
+                $process->asset_issuance_completed_at = now();
                 
-                if ($allIssued) {
-                    $process->asset_issuance_status = 'issued';
-                    $process->asset_issuance_completed_by = Auth::user()->id;
-                    $process->asset_issuance_completed_at = now();
-                    
-                    if (isset($stages[6])) {
-                        $process->stage = $stages[6]->id; // Move to next stage
-                    }
-                } else {
-                    $process->asset_issuance_status = 'not_issued';
-                    return response()->json(['error' => __('Please mark all assets as issued before proceeding.')], 400);
+                if (isset($stages[6])) {
+                    $process->stage = $stages[6]->id; // Move to next stage
                 }
+
+                // Save/update to dedicated database table (only checked items will be saved as true, others as false)
+                \App\Models\EmployeeAsset::updateOrCreate(
+                    ['employee_id' => $process->employee_id],
+                    [
+                        'laptop' => in_array('laptop', $issuedItems),
+                        'chargers' => in_array('chargers', $issuedItems),
+                        'mobile' => in_array('mobile', $issuedItems),
+                        'mouse' => in_array('mouse', $issuedItems),
+                        'sim_card' => in_array('sim_card', $issuedItems),
+                        'id_card' => in_array('id_card', $issuedItems),
+                        'other' => in_array('other', $issuedItems),
+                        'created_by' => Auth::user()->creatorId(),
+                    ]
+                );
                 break;
 
             case 6: // Training, Policy & Agreement Acknowledgement
