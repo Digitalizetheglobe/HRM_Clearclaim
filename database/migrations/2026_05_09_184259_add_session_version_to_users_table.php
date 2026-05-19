@@ -11,9 +11,11 @@ return new class extends Migration
      */
     public function up(): void
     {
-        Schema::table('users', function (Blueprint $table) {
-            $table->integer('session_version')->default(0)->after('remember_token');
-        });
+        if (!Schema::hasColumn('users', 'session_version')) {
+            Schema::table('users', function (Blueprint $table) {
+                $table->integer('session_version')->default(0)->after('remember_token');
+            });
+        }
     }
 
     /**

@@ -13,9 +13,11 @@ class AddStatusToResignationsTable extends Migration
      */
     public function up()
     {
-        Schema::table('resignations', function (Blueprint $table) {
-            $table->string('status')->default('pending')->after('description');
-        });
+        if (!Schema::hasColumn('resignations', 'status')) {
+            Schema::table('resignations', function (Blueprint $table) {
+                $table->string('status')->default('pending')->after('description');
+            });
+        }
     }
 
     /**

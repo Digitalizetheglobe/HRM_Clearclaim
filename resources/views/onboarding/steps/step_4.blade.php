@@ -13,6 +13,19 @@
                     ['name' => 'Other systems', 'key' => 'other'],
                 ];
                 $currentChecklist = is_array($process->system_access_checklist) ? $process->system_access_checklist : [];
+                if (empty($currentChecklist)) {
+                    $dbAccess = \App\Models\EmployeeSystemAccess::where('employee_id', $process->employee_id)->first();
+                    if ($dbAccess) {
+                        $currentChecklist = [
+                            ['key' => 'biometric', 'done' => $dbAccess->biometric],
+                            ['key' => 'email', 'done' => $dbAccess->email],
+                            ['key' => 'crm', 'done' => $dbAccess->crm],
+                            ['key' => 'whatsapp', 'done' => $dbAccess->whatsapp],
+                            ['key' => 'internal_tools', 'done' => $dbAccess->internal_tools],
+                            ['key' => 'other', 'done' => $dbAccess->other],
+                        ];
+                    }
+                }
             @endphp
             
             <div class="checklist-items">

@@ -259,6 +259,20 @@ class OnboardingController extends Controller
                     if (isset($stages[5])) {
                         $process->stage = $stages[5]->id; // Move to next stage
                     }
+
+                    // Save/update to dedicated database table
+                    \App\Models\EmployeeSystemAccess::updateOrCreate(
+                        ['employee_id' => $process->employee_id],
+                        [
+                            'biometric' => in_array('biometric', $checkedItems),
+                            'email' => in_array('email', $checkedItems),
+                            'crm' => in_array('crm', $checkedItems),
+                            'whatsapp' => in_array('whatsapp', $checkedItems),
+                            'internal_tools' => in_array('internal_tools', $checkedItems),
+                            'other' => in_array('other', $checkedItems),
+                            'created_by' => Auth::user()->creatorId(),
+                        ]
+                    );
                 } else {
                     $process->system_access_status = 'pending';
                     return response()->json(['error' => __('Please complete all checklist items before proceeding.')], 400);
