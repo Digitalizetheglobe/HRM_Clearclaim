@@ -19,9 +19,9 @@ class HolidayImport implements ToModel,WithHeadingRow
     {
         return new Holiday([
             'occasion'     => $row['occasion'],
-            'start_date'    => date('Y-m-d', strtotime($row['start_date'])),
-            'end_date'    => date('Y-m-d', strtotime($row['end_date'])),
-            'created_by' => \Auth::user()->id,
+            'date'         => date('Y-m-d', strtotime($row['date'])),
+            'day'          => date('l', strtotime($row['date'])),
+            'created_by'   => \Auth::user()->id,
         ]);
     }
 }

@@ -21,20 +21,41 @@
             {{ Form::text('occasion', null, ['class' => 'form-control','placeholder'=>'Enter Occasion']) }}
         </div>
         <div class="row col-md-12">
-        <div class="form-group col-md-6">
-            {{ Form::label('start_date', __('Start Date'), ['class' => 'col-form-label']) }}
-            {{ Form::date('start_date', null, ['class' => 'form-control ']) }}
-        </div>
-        <div class="form-group col-md-6">
-            {{ Form::label('end_date', __('End Date'), ['class' => 'col-form-label']) }}
-            {{ Form::date('end_date', null, ['class' => 'form-control ']) }}
-        </div>
+            <div class="form-group col-md-6">
+                {{ Form::label('date', __('Date'), ['class' => 'col-form-label']) }}<span class="text-danger pl-1">*</span>
+                {{ Form::date('date', null, ['class' => 'form-control', 'id' => 'holiday_date_select', 'required' => 'required']) }}
+            </div>
+            <div class="form-group col-md-6">
+                {{ Form::label('day', __('Day'), ['class' => 'col-form-label']) }}
+                {{ Form::text('day', null, ['class' => 'form-control', 'id' => 'holiday_day_display', 'readonly' => 'readonly']) }}
+            </div>
         </div>
     </div>
 </div>
 <div class="modal-footer">
     <input type="button" value="Cancel" class="btn btn-light" data-bs-dismiss="modal">
-     <input type="submit" value="{{ __('Update') }}" class="btn  btn-primary">
+    <input type="submit" value="{{ __('Update') }}" class="btn  btn-primary">
 </div>
 {{ Form::close() }}
+
+<script>
+    $(document).ready(function() {
+        $('#holiday_date_select').trigger('change');
+    });
+
+    $(document).on('change', '#holiday_date_select', function() {
+        var dateVal = $(this).val();
+        if (dateVal) {
+            var dateObj = new Date(dateVal);
+            if (!isNaN(dateObj.getTime())) {
+                var dayName = dateObj.toLocaleDateString('en-US', { weekday: 'long' });
+                $('#holiday_day_display').val(dayName);
+            } else {
+                $('#holiday_day_display').val('');
+            }
+        } else {
+            $('#holiday_day_display').val('');
+        }
+    });
+</script>
 

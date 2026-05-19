@@ -36,22 +36,13 @@
                         <div class="row align-items-center justify-content-end">
                             <div class="col-xl-10">
                                 <div class="row">
-                                    <div class="col-xl-3 col-lg-3 col-md-6 col-sm-12 col-12">
+                                    <div class="col-xl-6 col-lg-6 col-md-6 col-sm-12 col-12">
                                         <div class="btn-box"></div>
                                     </div>
-                                    <div class="col-xl-3 col-lg-3 col-md-6 col-sm-12 col-12">
-                                        <div class="btn-box"></div>
-                                    </div>
-                                    <div class="col-xl-3 col-lg-3 col-md-6 col-sm-12 col-12">
+                                    <div class="col-xl-6 col-lg-6 col-md-6 col-sm-12 col-12">
                                         <div class="btn-box">
-                                            {{ Form::label('start_date', __('Start Date'), ['class' => 'form-label']) }}
-                                            {{ Form::date('start_date', isset($_GET['start_date']) ? $_GET['start_date'] : '', ['class' => 'month-btn form-control current_date', 'autocomplete' => 'off']) }}
-                                        </div>
-                                    </div>
-                                    <div class="col-xl-3 col-lg-3 col-md-6 col-sm-12 col-12">
-                                        <div class="btn-box">
-                                            {{ Form::label('end_date', __('End Date'), ['class' => 'form-label']) }}
-                                            {{ Form::date('end_date', isset($_GET['end_date']) ? $_GET['end_date'] : '', ['class' => 'month-btn form-control current_date', 'autocomplete' => 'off']) }}
+                                            {{ Form::label('date', __('Date'), ['class' => 'form-label']) }}
+                                            {{ Form::date('date', isset($_GET['date']) ? $_GET['date'] : '', ['class' => 'month-btn form-control', 'autocomplete' => 'off']) }}
                                         </div>
                                     </div>
                                 </div>
@@ -89,8 +80,8 @@
                         <thead>
                             <tr>
                                 <th>{{ __('Occasion') }}</th>
-                                <th>{{ __('Start Date') }}</th>
-                                <th>{{ __('End Date') }}</th>
+                                <th>{{ __('Date') }}</th>
+                                <th>{{ __('Day') }}</th>
                                 @if (Gate::check('Edit Holiday') || Gate::check('Delete Holiday'))
                                     <th width="200px">{{ __('Action') }}</th>
                                 @endif
@@ -100,8 +91,8 @@
                             @foreach ($holidays as $holiday)
                                 <tr>
                                     <td>{{ $holiday->occasion }}</td>
-                                    <td>{{ \Auth::user()->dateFormat($holiday->start_date) }}</td>
-                                    <td>{{ \Auth::user()->dateFormat($holiday->end_date) }}</td>
+                                    <td>{{ \Auth::user()->dateFormat($holiday->date) }}</td>
+                                    <td>{{ __($holiday->day) }}</td>
                                     @if (Gate::check('Edit Holiday') || Gate::check('Delete Holiday'))
                                         <td class="Action">
                                             <span>

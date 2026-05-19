@@ -37,19 +37,11 @@
                 <div class="card-body">
                     {{ Form::open(['route' => ['holiday.calender'], 'method' => 'get', 'id' => 'holiday_filter']) }}
                     <div class="d-flex align-items-center justify-content-end">
-                        <div class="col-xl-3 col-lg-3 col-md-6 col-sm-12 col-12 mx-2">
+                        <div class="col-xl-6 col-lg-6 col-md-6 col-sm-12 col-12 mx-2">
                             <div class="btn-box">
 
-                                {{ Form::label('start_date', __('Start Date'), ['class' => 'form-label']) }}
-                                {{ Form::date('start_date', isset($_GET['start_date']) ? $_GET['start_date'] : '', ['class' => 'month-btn form-control  ', 'autocomplete' => 'off']) }}
-
-                            </div>
-                        </div>
-                        <div class="col-xl-3 col-lg-3 col-md-6 col-sm-12 col-12 mx-2">
-                            <div class="btn-box">
-
-                                {{ Form::label('end_date', __('End Date'), ['class' => 'form-label']) }}
-                                {{ Form::date('end_date', isset($_GET['end_date']) ? $_GET['end_date'] : '', ['class' => 'month-btn form-control ', 'autocomplete' => 'off']) }}
+                                {{ Form::label('date', __('Date'), ['class' => 'form-label']) }}
+                                {{ Form::date('date', isset($_GET['date']) ? $_GET['date'] : '', ['class' => 'month-btn form-control ', 'autocomplete' => 'off']) }}
 
                             </div>
                         </div>
@@ -119,11 +111,11 @@
                                                 <div class="ms-3">
                                                     <h6 class="card-text small text-primary">{{ $holiday->occasion }}
                                                     </h6>
-                                                    <div class="card-text small text-dark">{{ __('Start Date :') }}
-                                                        {{ \Auth::user()->dateFormat($holiday->start_date) }}
+                                                    <div class="card-text small text-dark">{{ __('Date :') }}
+                                                        {{ \Auth::user()->dateFormat($holiday->date) }}
                                                     </div>
-                                                    <div class="card-text small text-dark">{{ __('End Date :') }}
-                                                        {{ \Auth::user()->dateFormat($holiday->end_date) }}
+                                                    <div class="card-text small text-dark">{{ __('Day :') }}
+                                                        {{ __($holiday->day) }}
                                                     </div>
                                                 </div>
                                             </div>

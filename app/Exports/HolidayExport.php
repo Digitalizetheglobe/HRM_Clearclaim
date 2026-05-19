@@ -14,11 +14,16 @@ class HolidayExport implements FromCollection,WithHeadings
     */
     public function collection()
     {
-        $data=Holiday::where('created_by', \Auth::user()->creatorId())->get();
-        foreach($data as $k=>$holidays)
+        $data = Holiday::where('created_by', \Auth::user()->creatorId())->get([
+            'id',
+            'date',
+            'day',
+            'occasion',
+            'created_by'
+        ]);
+        foreach($data as $k => $holiday)
         {
-            $data[$k]["created_by"]=Employee::login_user($holidays->created_by);
-            unset($holidays->created_at,$holidays->updated_at);
+            $data[$k]["created_by"] = Employee::login_user($holiday->created_by);
         }
         return $data;
     }
@@ -26,8 +31,8 @@ class HolidayExport implements FromCollection,WithHeadings
     {
         return [
             "ID",
-            "Start Date",
-            "End Date",
+            "Date",
+            "Day",
             "Occasion",
             "Created By"
         ];

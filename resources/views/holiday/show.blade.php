@@ -7,13 +7,13 @@
                         <div class="">
                             <div class="card-body">
                                 <dl class="row">
-                                    <dt class="col-sm-4"><span class="h6 text-sm mb-0">Start Date:</span>
+                                    <dt class="col-sm-4"><span class="h6 text-sm mb-0">Date:</span>
                                     </dt>
-                                    <dd class="col-sm-8"><span class="text-sm">{{ $holidays->start_date }}</span>
+                                    <dd class="col-sm-8"><span class="text-sm">{{ $holidays->date }}</span>
                                     </dd>
-                                    <dt class="col-sm-4"><span class="h6 text-sm mb-0">End Date:</span>
+                                    <dt class="col-sm-4"><span class="h6 text-sm mb-0">Day:</span>
                                     </dt>
-                                    <dd class="col-sm-8"><span class="text-sm">{{ $holidays->end_date }}</span>
+                                    <dd class="col-sm-8"><span class="text-sm">{{ __($holidays->day) }}</span>
                                     </dd>
                                 </dl>
                             </div>

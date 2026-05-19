@@ -19,13 +19,10 @@ class HolidayController extends Controller
         if (\Auth::user()->can('Manage Holiday')) {
             $holidays = LocalHoliday::where('created_by', '=', \Auth::user()->creatorId());
 
-            if (!empty($request->start_date)) {
-                $holidays->where('start_date', '>=', $request->start_date);
+            if (!empty($request->date)) {
+                $holidays->where('date', '=', $request->date);
             }
-            if (!empty($request->end_date)) {
-                $holidays->where('end_date', '<=', $request->end_date);
-            }
-            $holidays = $holidays->get();
+            $holidays = $holidays->orderBy('date', 'asc')->get();
 
             return view('holiday.index', compact('holidays'));
         } else {
@@ -51,8 +48,7 @@ class HolidayController extends Controller
                 $request->all(),
                 [
                     'occasion' => 'required',
-                    'start_date' => 'required',
-                    'end_date' => 'required',
+                    'date' => 'required',
                 ]
             );
 
@@ -64,20 +60,18 @@ class HolidayController extends Controller
 
             $holiday             = new LocalHoliday();
             $holiday->occasion          = $request->occasion;
-            $holiday->start_date        = $request->start_date;
-            $holiday->end_date          = $request->end_date;
+            $holiday->date              = $request->date;
+            $holiday->day               = date('l', strtotime($request->date));
             $holiday->created_by = \Auth::user()->creatorId();
             $holiday->save();
 
             // slack
             $setting = Utility::settings(\Auth::user()->creatorId());
             if (isset($setting['Holiday_notification']) && $setting['Holiday_notification'] == 1) {
-                // $msg = $request->occasion . ' ' . __("on") . ' ' . $request->start_date . ' ' . __("to") . ' ' . $request->end_date;
-
                 $uArr = [
                     'occasion_name' => $request->occasion,
-                    'start_date' => $request->start_date,
-                    'end_date' => $request->end_date,
+                    'start_date' => $request->date,
+                    'end_date' => $request->date,
                 ];
 
                 Utility::send_slack_msg('new_holidays', $uArr);
@@ -86,12 +80,10 @@ class HolidayController extends Controller
             // telegram
             $setting = Utility::settings(\Auth::user()->creatorId());
             if (isset($setting['telegram_Holiday_notification']) && $setting['telegram_Holiday_notification'] == 1) {
-                // $msg = $request->occasion . ' ' . __("on") . ' ' . $request->date . '.';
-
                 $uArr = [
                     'occasion_name' => $request->occasion,
-                    'start_date' => $request->start_date,
-                    'end_date' => $request->end_date,
+                    'start_date' => $request->date,
+                    'end_date' => $request->date,
                 ];
 
                 Utility::send_telegram_msg('new_holidays', $uArr);
@@ -103,8 +95,8 @@ class HolidayController extends Controller
                 $type = 'holiday';
                 $request1 = new GoogleEvent();
                 $request1->title = $request->occasion;
-                $request1->start_date = $request->start_date;
-                $request1->end_date = $request->end_date;
+                $request1->start_date = $request->date;
+                $request1->end_date = $request->date;
                 Utility::addCalendarData($request1, $type);
             }
 
@@ -113,7 +105,6 @@ class HolidayController extends Controller
             $webhook =  Utility::webhookSetting($module);
             if ($webhook) {
                 $parameter = json_encode($holiday);
-                // 1 parameter is  URL , 2 parameter is data , 3 parameter is method
                 $status = Utility::WebhookCall($webhook['url'], $parameter, $webhook['method']);
                 if ($status == true) {
                     return redirect()->back()->with('success', __('Holiday successfully created.'));
@@ -153,8 +144,7 @@ class HolidayController extends Controller
                 $request->all(),
                 [
                     'occasion' => 'required',
-                    'start_date' => 'required',
-                    'end_date' => 'required',
+                    'date' => 'required',
                 ]
             );
 
@@ -165,8 +155,8 @@ class HolidayController extends Controller
             }
 
             $holiday->occasion          = $request->occasion;
-            $holiday->start_date        = $request->start_date;
-            $holiday->end_date          = $request->end_date;
+            $holiday->date              = $request->date;
+            $holiday->day               = date('l', strtotime($request->date));
             $holiday->save();
 
             return redirect()->route('holiday.index')->with(
@@ -193,43 +183,6 @@ class HolidayController extends Controller
         }
     }
 
-    // public function calender(Request $request)
-    // {
-    //     if (\Auth::user()->can('Manage Holiday')) {
-    //         $holidays = LocalHoliday::where('created_by', '=', \Auth::user()->creatorId());
-    //         $today_date = date('m');
-    //         // $current_month_event = Holiday::select( 'occasion','start_date','end_date', 'created_at')->whereRaw('MONTH(start_date)=' . $today_date,'MONTH(end_date)=' . $today_date)->get();
-    //         $current_month_event = LocalHoliday::where('created_by', \Auth::user()->creatorId())->select('occasion', 'start_date', 'end_date', 'created_at')->whereNotNull(['start_date', 'end_date'])->whereMonth('start_date', $today_date)->whereMonth('end_date', $today_date)->get();
-    //         if (!empty($request->start_date)) {
-    //             $holidays->where('start_date', '>=', $request->start_date);
-    //         }
-    //         if (!empty($request->end_date)) {
-    //             $holidays->where('end_date', '<=', $request->end_date);
-    //         }
-    //         $holidays = $holidays->get();
-
-    //         $arrHolidays = [];
-
-    //         foreach ($holidays as $holiday) {
-
-    //             $arr['id']        = $holiday['id'];
-    //             $arr['title']     = $holiday['occasion'];
-    //             $arr['start']     = $holiday['start_date'];
-    //             $arr['end']       = $holiday['end_date'];
-    //             $arr['className'] = 'event-primary';
-    //             $arr['url']       = route('holiday.edit', $holiday['id']);
-    //             $arrHolidays[]    = $arr;
-    //         }
-    //         // $arrHolidays = str_replace('"[', '[', str_replace(']"', ']', json_encode($arrHolidays)));
-    //         $arrHolidays =  json_encode($arrHolidays);
-
-
-    //         return view('holiday.calender', compact('arrHolidays', 'current_month_event','holidays'));
-    //     } else {
-    //         return redirect()->back()->with('error', __('Permission denied.'));
-    //     }
-    // }
-
     public function calender(Request $request)
     {
         if (\Auth::user()->can('Manage Holiday')) {
@@ -237,13 +190,10 @@ class HolidayController extends Controller
 
             $holidays = LocalHoliday::where('created_by', '=', \Auth::user()->creatorId());
 
-            if (!empty($request->start_date)) {
-                $holidays->where('start_date', '>=', $request->start_date);
+            if (!empty($request->date)) {
+                $holidays->where('date', '=', $request->date);
             }
-            if (!empty($request->end_date)) {
-                $holidays->where('end_date', '<=', $request->end_date);
-            }
-            $holidays = $holidays->get();
+            $holidays = $holidays->orderBy('date', 'asc')->get();
 
             $arrHolidays = [];
 
@@ -251,7 +201,7 @@ class HolidayController extends Controller
                 $arr['id']        = $holiday['id'];
                 $arr['title']     = $holiday['occasion'];
                 $arr['start']     = $holiday['date'];
-                $arr['end']       = $holiday['end_date'];
+                $arr['end']       = $holiday['date'];
                 $arr['className'] = 'event-primary';
                 $arr['url']       = route('holiday.edit', $holiday['id']);
                 $arrHolidays[]    = $arr;
@@ -269,13 +219,14 @@ class HolidayController extends Controller
         $name = 'holidays_' . date('Y-m-d i:h:s');
         $data = Excel::download(new HolidayExport(), $name . '.xlsx');
 
-
         return $data;
     }
+
     public function importFile(Request $request)
     {
         return view('holiday.import');
     }
+
     public function import(Request $request)
     {
         $rules = [
@@ -297,14 +248,14 @@ class HolidayController extends Controller
             $errorArray    = [];
             foreach ($holidays as $holiday) {
 
-                $holiydayData = LocalHoliday::whereDate('start_date', $holiday['start_date'])->whereDate('end_date', $holiday['end_date'])->where('occasion', $holiday['occasion'])->first();
+                $holiydayData = LocalHoliday::whereDate('date', $holiday['date'])->where('occasion', $holiday['occasion'])->first();
 
                 if (!empty($holiydayData)) {
                     $errorArray[] = $holiydayData;
                 } else {
                     $holidays_data = new LocalHoliday();
-                    $holidays_data->start_date = $holiday['start_date'];
-                    $holidays_data->end_date = $holiday['end_date'];
+                    $holidays_data->date = $holiday['date'];
+                    $holidays_data->day = date('l', strtotime($holiday['date']));
                     $holidays_data->occasion = $holiday['occasion'];
                     $holidays_data->created_by = Auth::user()->id;
                     $holidays_data->save();
@@ -349,14 +300,12 @@ class HolidayController extends Controller
                 } else {
                     $url = route('holiday.edit', $val['id']);
                 }
-                $end_date = date_create($val->end_date);
-                date_add($end_date, date_interval_create_from_date_string("1 days"));
                 $arrayJson[] = [
                     "id" => $val->id,
                     "title" => $val->occasion,
-                    "start" => $val->start_date,
-                    "end" => date_format($end_date, "Y-m-d H:i:s"),
-                    "className" => $val->color,
+                    "start" => $val->date,
+                    "end" => $val->date,
+                    "className" => $val->color ?? 'event-primary',
                     "textColor" => '#FFF',
                     "allDay" => true,
                     "url" => $url,

@@ -21,19 +21,19 @@
             {{ Form::text('occasion', null, ['class' => 'form-control', 'required' => 'required', 'placeholder' => 'Enter Occasion']) }}
         </div>
         <div class="form-group col-md-6">
-            {{ Form::label('start_date', __('Start Date'), ['class' => 'col-form-label']) }}
-            {{ Form::date('start_date', null, ['class' => 'form-control current_date', 'autocomplete' => 'off']) }}
+            {{ Form::label('date', __('Date'), ['class' => 'col-form-label']) }}<span class="text-danger pl-1">*</span>
+            {{ Form::date('date', null, ['class' => 'form-control current_date', 'id' => 'holiday_date_select', 'required' => 'required', 'autocomplete' => 'off']) }}
         </div>
         <div class="form-group col-md-6">
-            {{ Form::label('end_date', __('End Date'), ['class' => 'col-form-label']) }}
-            {{ Form::date('end_date', null, ['class' => 'form-control current_date', 'autocomplete' => 'off']) }}
+            {{ Form::label('day', __('Day'), ['class' => 'col-form-label']) }}
+            {{ Form::text('day', null, ['class' => 'form-control', 'id' => 'holiday_day_display', 'readonly' => 'readonly', 'placeholder' => 'Select Date']) }}
         </div>
         @if(isset($setting['is_enabled']) && $setting['is_enabled'] =='on')
         <div class="form-group col-md-6">
             {{ Form::label('synchronize_type', __('Synchroniz in Google Calendar ?'), ['class' => 'form-label']) }}
             <div class=" form-switch">
                 <input type="checkbox" class="form-check-input mt-2" name="synchronize_type" id="switch-shadow"
-                    value="google_calender">
+                     value="google_calender">
                 <label class="form-check-label" for="switch-shadow"></label>
             </div>
         </div>
@@ -55,6 +55,24 @@
         if (month < 10) month = "0" + month;
         if (day < 10) day = "0" + day;
         var today = now.getFullYear() + '-' + month + '-' + day;
-        $('.current_date').val(today);
+        if (!$('#holiday_date_select').val()) {
+            $('#holiday_date_select').val(today);
+        }
+        $('#holiday_date_select').trigger('change');
+    });
+
+    $(document).on('change', '#holiday_date_select', function() {
+        var dateVal = $(this).val();
+        if (dateVal) {
+            var dateObj = new Date(dateVal);
+            if (!isNaN(dateObj.getTime())) {
+                var dayName = dateObj.toLocaleDateString('en-US', { weekday: 'long' });
+                $('#holiday_day_display').val(dayName);
+            } else {
+                $('#holiday_day_display').val('');
+            }
+        } else {
+            $('#holiday_day_display').val('');
+        }
     });
 </script>
