@@ -20,8 +20,9 @@ use App\Notifications\LeaveActionNotification;
 
 class LeaveController extends Controller
 {
-    public function index()
+    public function index(Request $request)
     {
+        $status = $request->get('status', 'Approved');
         $user = \Auth::user();
         $employee = Employee::where('user_id', '=', $user->id)->first();
         $isManager = false;
@@ -34,7 +35,9 @@ class LeaveController extends Controller
             $leaveBalance = null;
             
             if ($user->type == 'employee') {
-                $leaves = LocalLeave::where('employee_id', '=', $employee->id)->orderBy('id', 'desc')->get();
+                $leaves = LocalLeave::where('employee_id', '=', $employee->id)
+                    ->where('status', $status)
+                    ->orderBy('id', 'desc')->get();
                 
                 // Calculate leave balance for employee
                 if ($employee) {
@@ -88,10 +91,12 @@ class LeaveController extends Controller
                     ];
                 }
             } else {
-                $leaves = LocalLeave::where('created_by', '=', $user->creatorId())->with(['employees', 'leaveType'])->orderBy('id', 'desc')->get();
+                $leaves = LocalLeave::where('created_by', '=', $user->creatorId())
+                    ->where('status', $status)
+                    ->with(['employees', 'leaveType'])->orderBy('id', 'desc')->get();
             }
 
-            return view('leave.index', compact('leaves', 'leaveBalance', 'isManager', 'employee'));
+            return view('leave.index', compact('leaves', 'leaveBalance', 'isManager', 'employee', 'status'));
         } else {
             return redirect()->back()->with('error', __('Permission denied.'));
         }
@@ -785,6 +790,137 @@ class LeaveController extends Controller
         }
 
         return redirect()->route('leave.index')->with('success', __('Leave status successfully updated.'));
+    }
+
+    public function bulkApprove(Request $request)
+    {
+        $currentUser = \Auth::user();
+        $currentEmployee = Employee::where('user_id', $currentUser->id)->first();
+        $isDepartmentManager = false;
+        if ($currentEmployee && $currentEmployee->designation) {
+            $isDepartmentManager = str_contains(strtolower($currentEmployee->designation->name), 'manager');
+        }
+
+        if ($currentUser->type != 'company' && $currentUser->type != 'hr' && !$isDepartmentManager) {
+            $errorMsg = __('Permission denied.');
+            if ($request->ajax() || $request->wantsJson()) {
+                return response()->json(['success' => false, 'message' => $errorMsg], 403);
+            }
+            return redirect()->back()->with('error', $errorMsg);
+        }
+
+        $ids = $request->ids;
+        if (empty($ids) || !is_array($ids)) {
+            $errorMsg = __('No requests selected.');
+            if ($request->ajax() || $request->wantsJson()) {
+                return response()->json(['success' => false, 'message' => $errorMsg], 400);
+            }
+            return redirect()->back()->with('error', $errorMsg);
+        }
+
+        $successCount = 0;
+        foreach ($ids as $id) {
+            $leave = LocalLeave::find($id);
+            if (!$leave) {
+                continue;
+            }
+
+            if ($isDepartmentManager) {
+                $leaveEmployee = Employee::find($leave->employee_id);
+                if (!$leaveEmployee || $leaveEmployee->department_id != $currentEmployee->department_id || $leave->employee_id == $currentEmployee->id) {
+                    continue;
+                }
+            } else {
+                $leaveEmployee = Employee::find($leave->employee_id);
+                if (!$leaveEmployee || $leaveEmployee->created_by != \Auth::user()->creatorId()) {
+                    continue;
+                }
+            }
+
+            if ($leave->status != 'Pending') {
+                continue;
+            }
+
+            $leave->status = 'Approved';
+            
+            // Re-apply the logic from changeaction for 'Approved' status
+            $total_leave_days = $leave->total_leave_days;
+            
+            $now = now();
+            $monthlyPaidLeavesUsed = LocalLeave::whereNotIn('id', [$leave->id])
+                ->where('employee_id', $leave->employee_id)
+                ->where('leave_type_id', $leave->leave_type_id)
+                ->where('is_paid', true)
+                ->where('status', 'Approved')
+                ->whereYear('start_date', $now->year)
+                ->whereMonth('start_date', $now->month)
+                ->sum('total_leave_days');
+
+            $monthlyLimit = 2;
+            $isPaidLeave = true;
+            if ($monthlyPaidLeavesUsed >= $monthlyLimit) {
+                $isPaidLeave = false;
+            } else {
+                if ($monthlyPaidLeavesUsed + $total_leave_days > $monthlyLimit) {
+                    $isPaidLeave = false;
+                }
+            }
+
+            $leave->is_paid = $isPaidLeave;
+            $leave->is_lop = !$isPaidLeave;
+            
+            $balance = EmployeeLeaveBalance::where('employee_id', $leave->employee_id)
+                ->where('leave_type_id', $leave->leave_type_id)
+                ->where('year', $now->year)
+                ->where('month', $now->month)
+                ->first();
+                
+            if ($balance) {
+                $balance->used_days += $total_leave_days;
+                $balance->save();
+            }
+            
+            $leave->save();
+
+            // notifications
+            $setting = Utility::settings(\Auth::user()->creatorId());
+            $emp = Employee::find($leave->employee_id);
+            if (isset($setting['twilio_leave_approve_notification']) && $setting['twilio_leave_approve_notification'] == 1) {
+                $uArr = [
+                    'leave_status' => $leave->status,
+                ];
+                Utility::send_twilio_msg($emp->phone, 'leave_approve_reject', $uArr);
+            }
+
+            if ($emp && $emp->user_id) {
+                $employeeUser = User::find($emp->user_id);
+                if ($employeeUser) {
+                    $leaveType = LeaveType::find($leave->leave_type_id);
+                    $notificationData = [
+                        'leave_id' => $leave->id,
+                        'message' => 'Your leave request for ' . ($leaveType ? $leaveType->title : 'Leave') . ' from ' . 
+                                    \Auth::user()->dateFormat($leave->start_date) . ' to ' . 
+                                    \Auth::user()->dateFormat($leave->end_date) . ' has been ' . $leave->status,
+                        'status' => $leave->status,
+                        'url' => route('leave.index'),
+                    ];
+                    
+                    $employeeUser->notify(new LeaveActionNotification($notificationData));
+                }
+            }
+
+            $successCount++;
+        }
+
+        if ($request->ajax() || $request->wantsJson()) {
+            return response()->json([
+                'success' => true,
+                'message' => __(':count leave requests approved successfully.', ['count' => $successCount]),
+                'redirect' => route('leave.index')
+            ]);
+        }
+
+        return redirect()->route('leave.index')->with('success', __(':count leave requests approved successfully.', ['count' => $successCount]));
     }
 
     public function jsoncount(Request $request)

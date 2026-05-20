@@ -20,8 +20,8 @@
             <div class="card-body">
                 <!-- Filters -->
                 <form method="GET" action="{{ route('leave-details.index') }}">
-                    <div class="row mb-4">
-                        <div class="col-md-3">
+                    <div class="row mb-4 align-items-end">
+                        <div class="col-md-2">
                             <label for="month" class="form-label">{{ __('Month') }}</label>
                             <select name="month" id="month" class="form-select">
                                 @for($i = 1; $i <= 12; $i++)
@@ -31,7 +31,7 @@
                                 @endfor
                             </select>
                         </div>
-                        <div class="col-md-3">
+                        <div class="col-md-2">
                             <label for="year" class="form-label">{{ __('Year') }}</label>
                             <select name="year" id="year" class="form-select">
                                 @for($i = date('Y'); $i >= date('Y') - 5; $i--)
@@ -63,11 +63,15 @@
                                 @endforeach
                             </select>
                         </div>
-                    </div>
-                    <div class="row">
-                        <div class="col-12">
-                            <button type="submit" class="btn btn-primary">{{ __('Filter') }}</button>
-                            <a href="{{ route('leave-details.index') }}" class="btn btn-secondary">{{ __('Reset') }}</a>
+                        <div class="col-md-2">
+                            <div class="d-flex align-items-center gap-2">
+                                <button type="submit" class="btn btn-primary" data-bs-toggle="tooltip" title="{{ __('Filter') }}">
+                                    <i class="ti ti-search"></i>
+                                </button>
+                                <a href="{{ route('leave-details.index') }}" class="btn btn-danger" data-bs-toggle="tooltip" title="{{ __('Reset') }}">
+                                    <i class="ti ti-trash-off"></i>
+                                </a>
+                            </div>
                         </div>
                     </div>
                 </form>

@@ -1152,6 +1152,12 @@ Route::group(['middleware' => ['verified']], function () {
             'XSS',
         ]
     );
+    Route::post('leave/bulk-approve', [LeaveController::class, 'bulkApprove'])->name('leave.bulk-approve')->middleware(
+        [
+            'auth',
+            'XSS',
+        ]
+    );
     Route::post('leave/jsoncount', [LeaveController::class, 'jsoncount'])->name('leave.jsoncount')->middleware(
         [
             'auth',

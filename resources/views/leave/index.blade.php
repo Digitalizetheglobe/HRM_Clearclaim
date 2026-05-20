@@ -1,8 +1,10 @@
 @php
-    function breakAfterWords($text, $wordsPerLine = 3) {
-        $words = explode(' ', $text);
-        $lines = array_chunk($words, $wordsPerLine);
-        return implode('<br>', array_map('implode', array_fill(0, count($lines), ' '), $lines));
+    if (!function_exists('breakAfterWords')) {
+        function breakAfterWords($text, $wordsPerLine = 3) {
+            $words = explode(' ', $text);
+            $lines = array_chunk($words, $wordsPerLine);
+            return implode('<br>', array_map('implode', array_fill(0, count($lines), ' '), $lines));
+        }
     }
 @endphp
 @extends('layouts.admin')
@@ -31,6 +33,11 @@
             <i class="ti ti-plus"></i>
         </a>
     @endcan
+    @if (\Auth::user()->type == 'company' || \Auth::user()->type == 'hr' || (isset($isManager) && $isManager))
+        <button type="button" class="btn btn-sm btn-success d-none ms-1" id="bulkApproveBtn">
+            <i class="ti ti-check"></i> {{ __('Bulk Approve') }}
+        </button>
+    @endif
 @endsection
 
 @section('content')
@@ -103,10 +110,23 @@
             <div class="card">
                 <div class="card-header card-body table-border-style">
                     {{-- <h5> </h5> --}}
+                    <!-- Status Tabs -->
+                    @php $currentStatus = $status ?? 'Approved'; @endphp
+                    <ul class="nav nav-tabs mb-3" id="statusTabs">
+                        <li class="nav-item"><a class="nav-link {{ $currentStatus == 'Approved' ? 'active' : '' }}" href="{{ route('leave.index', ['status' => 'Approved']) }}">{{ __('Approved') }}</a></li>
+                        <li class="nav-item"><a class="nav-link {{ $currentStatus == 'Pending' ? 'active' : '' }}" href="{{ route('leave.index', ['status' => 'Pending']) }}">{{ __('Pending') }}</a></li>
+                    </ul>
                     <div class="table-responsive">
                         <table class="table" id="pc-dt-simple">
                             <thead>
                                 <tr>
+                                    @if ((\Auth::user()->type == 'company' || \Auth::user()->type == 'hr' || (isset($isManager) && $isManager)) && $currentStatus == 'Pending')
+                                        <th width="50px" data-sortable="false">
+                                            <div class="form-check">
+                                                <input class="form-check-input" type="checkbox" id="selectAll">
+                                            </div>
+                                        </th>
+                                    @endif
                                     @if (\Auth::user()->type != 'employee' || (isset($isManager) && $isManager))
                                         <th>{{ __('Employee') }}</th>
                                     @endif
@@ -125,6 +145,13 @@
                             <tbody>
                                 @foreach ($leaves as $leave)
                                     <tr>
+                                        @if ((\Auth::user()->type == 'company' || \Auth::user()->type == 'hr' || (isset($isManager) && $isManager)) && $currentStatus == 'Pending')
+                                            <td>
+                                                <div class="form-check">
+                                                    <input class="form-check-input request-checkbox" type="checkbox" value="{{ $leave->id }}">
+                                                </div>
+                                            </td>
+                                        @endif
                                         @if (\Auth::user()->type != 'employee' || (isset($isManager) && $isManager))
                                             <td>{{ !empty($leave->employee_id) ? $leave->employees->name : '' }}
                                             </td>
@@ -234,10 +261,150 @@
         </div>
     </div>
     </div>
+
+    <!-- Bulk Approve Confirmation Modal -->
+    <div class="modal fade" id="bulkApproveModal" tabindex="-1" aria-labelledby="bulkApproveModalLabel" aria-hidden="true">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="bulkApproveModalLabel">{{ __('Bulk Approve Leaves') }}</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    <p>{{ __('Are you sure you want to approve all selected leave requests?') }}</p>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">{{ __('Cancel') }}</button>
+                    <button type="button" class="btn btn-success" id="confirmBulkApproveBtn">{{ __('Approve') }}</button>
+                </div>
+            </div>
+        </div>
+    </div>
 @endsection
 
 @push('script-page')
     <script>
+        $(document).ready(function() {
+            var selectedIds = new Set();
+
+            function savePageState() {
+                if (typeof dataTable !== 'undefined') {
+                    sessionStorage.setItem('leave_page', dataTable.currentPage);
+                }
+            }
+
+            const savedPage = sessionStorage.getItem('leave_page');
+            if (savedPage && typeof dataTable !== 'undefined') {
+                setTimeout(function() {
+                    dataTable.page(parseInt(savedPage));
+                    sessionStorage.removeItem('leave_page');
+                    updateVisibleCheckboxes();
+                }, 100);
+            }
+
+            function updateBulkButtonVisibility() {
+                if (selectedIds.size > 0) {
+                    $('#bulkApproveBtn').removeClass('d-none');
+                } else {
+                    $('#bulkApproveBtn').addClass('d-none');
+                }
+            }
+
+            function updateVisibleCheckboxes() {
+                $('.request-checkbox').each(function() {
+                    var id = $(this).val();
+                    if (selectedIds.has(id)) {
+                        $(this).prop('checked', true);
+                    } else {
+                        $(this).prop('checked', false);
+                    }
+                });
+                
+                var visiblePendingCount = $('.request-checkbox').length;
+                var visibleCheckedCount = $('.request-checkbox:checked').length;
+                $('#selectAll').prop('checked', visiblePendingCount > 0 && visiblePendingCount === visibleCheckedCount);
+            }
+
+            if (typeof dataTable !== 'undefined') {
+                dataTable.on('datatable.page', function(page) {
+                    setTimeout(function() {
+                        updateVisibleCheckboxes();
+                    }, 50);
+                });
+            }
+
+            $(document).on('change', '.request-checkbox', function() {
+                var id = $(this).val();
+                if ($(this).is(':checked')) {
+                    selectedIds.add(id);
+                } else {
+                    selectedIds.delete(id);
+                }
+                updateBulkButtonVisibility();
+                
+                var visiblePendingCount = $('.request-checkbox').length;
+                var visibleCheckedCount = $('.request-checkbox:checked').length;
+                $('#selectAll').prop('checked', visiblePendingCount > 0 && visiblePendingCount === visibleCheckedCount);
+            });
+
+            $(document).on('change', '#selectAll', function() {
+                var isChecked = $(this).is(':checked');
+                $('.request-checkbox').each(function() {
+                    $(this).prop('checked', isChecked);
+                    var id = $(this).val();
+                    if (isChecked) {
+                        selectedIds.add(id);
+                    } else {
+                        selectedIds.delete(id);
+                    }
+                });
+                updateBulkButtonVisibility();
+            });
+
+            $('#bulkApproveBtn').on('click', function(e) {
+                e.preventDefault();
+                $('#bulkApproveModal').modal('show');
+            });
+
+            $('#confirmBulkApproveBtn').on('click', function() {
+                if (selectedIds.size === 0) {
+                    return;
+                }
+
+                var btn = $(this);
+                var originalText = btn.html();
+                btn.prop('disabled', true).html('<i class="fas fa-spinner fa-spin"></i> {{ __("Processing...") }}');
+
+                $.ajax({
+                    url: '{{ route("leave.bulk-approve") }}',
+                    type: 'POST',
+                    data: {
+                        ids: Array.from(selectedIds),
+                        _token: '{{ csrf_token() }}'
+                    },
+                    success: function(response) {
+                        $('#bulkApproveModal').modal('hide');
+                        if (response.success || response.redirect) {
+                            savePageState();
+                            location.reload();
+                        } else {
+                            alert(response.message || '{{ __("Error approving requests") }}');
+                            btn.prop('disabled', false).html(originalText);
+                        }
+                    },
+                    error: function(xhr) {
+                        $('#bulkApproveModal').modal('hide');
+                        var errorMsg = '{{ __("Error approving requests") }}';
+                        if (xhr.responseJSON && xhr.responseJSON.message) {
+                            errorMsg = xhr.responseJSON.message;
+                        }
+                        alert(errorMsg);
+                        btn.prop('disabled', false).html(originalText);
+                    }
+                });
+            });
+        });
+
         $(document).on('change', '#employee_id', function() {
             var employee_id = $(this).val();
 
