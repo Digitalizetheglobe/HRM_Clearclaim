@@ -8,6 +8,14 @@
     <li class="breadcrumb-item">{{ __('Attendance Requests') }}</li>
 @endsection
 
+@section('action-button')
+    <div class="float-end">
+        <button type="button" class="btn btn-sm btn-success d-none" id="bulkApproveBtn">
+            <i class="ti ti-check"></i> {{ __('Bulk Approve') }}
+        </button>
+    </div>
+@endsection
+
 @section('content')
     <div class="row">
         <div class="col-xl-12">
@@ -17,6 +25,11 @@
                         <table class="table" id="pc-dt-simple">
                             <thead>
                                 <tr>
+                                    <th width="50px">
+                                        <div class="form-check">
+                                            <input class="form-check-input" type="checkbox" id="selectAll">
+                                        </div>
+                                    </th>
                                     <th>{{ __('Employee') }}</th>
                                     <th>{{ __('Date') }}</th>
                                     <th>{{ __('Punch In') }}</th>
@@ -30,6 +43,15 @@
                             <tbody>
                                 @forelse ($regularisations as $regularisation)
                                     <tr>
+                                        <td>
+                                            @if ($regularisation->status == 'Pending')
+                                                <div class="form-check">
+                                                    <input class="form-check-input request-checkbox" type="checkbox" value="{{ $regularisation->id }}">
+                                                </div>
+                                            @else
+                                                -
+                                            @endif
+                                        </td>
                                         <td>{{ $regularisation->employee->name ?? '-' }}</td>
                                         <td>{{ \Auth::user()->dateFormat($regularisation->date) }}</td>
                                         <td>{{ date('h:i A', strtotime($regularisation->punch_in_time)) }}</td>
@@ -79,7 +101,7 @@
                                     </tr>
                                 @empty
                                     <tr>
-                                        <td colspan="8" class="text-center">
+                                        <td colspan="9" class="text-center">
                                             {{ __('No regularisation requests found.') }}
                                         </td>
                                     </tr>
@@ -137,12 +159,157 @@
             </div>
         </div>
     </div>
+
+    <!-- Bulk Approve Confirmation Modal -->
+    <div class="modal fade" id="bulkApproveModal" tabindex="-1" aria-labelledby="bulkApproveModalLabel" aria-hidden="true">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="bulkApproveModalLabel">{{ __('Bulk Approve Requests') }}</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    <p>{{ __('Are you sure you want to approve all selected regularization requests?') }}</p>
+                    <p class="text-muted"><small>{{ __('This will create or update the attendance records for all selected dates and employees.') }}</small></p>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">{{ __('Cancel') }}</button>
+                    <button type="button" class="btn btn-success" id="confirmBulkApproveBtn">{{ __('Approve') }}</button>
+                </div>
+            </div>
+        </div>
+    </div>
 @endsection
 
 @push('script-page')
     <script>
         $(document).ready(function() {
             var currentRegularisationId = null;
+            var selectedIds = new Set();
+
+            // Function to save page state
+            function savePageState() {
+                if (typeof dataTable !== 'undefined') {
+                    sessionStorage.setItem('attendance_regularisation_page', dataTable.currentPage);
+                }
+            }
+
+            // Restore saved page state on load
+            const savedPage = sessionStorage.getItem('attendance_regularisation_page');
+            if (savedPage && typeof dataTable !== 'undefined') {
+                setTimeout(function() {
+                    dataTable.page(parseInt(savedPage));
+                    sessionStorage.removeItem('attendance_regularisation_page');
+                    updateVisibleCheckboxes();
+                }, 100);
+            }
+
+            function updateBulkButtonVisibility() {
+                if (selectedIds.size > 0) {
+                    $('#bulkApproveBtn').removeClass('d-none');
+                } else {
+                    $('#bulkApproveBtn').addClass('d-none');
+                }
+            }
+
+            function updateVisibleCheckboxes() {
+                $('.request-checkbox').each(function() {
+                    var id = $(this).val();
+                    if (selectedIds.has(id)) {
+                        $(this).prop('checked', true);
+                    } else {
+                        $(this).prop('checked', false);
+                    }
+                });
+                
+                var visiblePendingCount = $('.request-checkbox').length;
+                var visibleCheckedCount = $('.request-checkbox:checked').length;
+                $('#selectAll').prop('checked', visiblePendingCount > 0 && visiblePendingCount === visibleCheckedCount);
+            }
+
+            // Handle page change events in Datatable
+            if (typeof dataTable !== 'undefined') {
+                dataTable.on('datatable.page', function(page) {
+                    setTimeout(function() {
+                        updateVisibleCheckboxes();
+                    }, 50);
+                });
+            }
+
+            // Individual checkbox change
+            $(document).on('change', '.request-checkbox', function() {
+                var id = $(this).val();
+                if ($(this).is(':checked')) {
+                    selectedIds.add(id);
+                } else {
+                    selectedIds.delete(id);
+                }
+                updateBulkButtonVisibility();
+                
+                var visiblePendingCount = $('.request-checkbox').length;
+                var visibleCheckedCount = $('.request-checkbox:checked').length;
+                $('#selectAll').prop('checked', visiblePendingCount > 0 && visiblePendingCount === visibleCheckedCount);
+            });
+
+            // Select All checkbox change
+            $(document).on('change', '#selectAll', function() {
+                var isChecked = $(this).is(':checked');
+                $('.request-checkbox').each(function() {
+                    $(this).prop('checked', isChecked);
+                    var id = $(this).val();
+                    if (isChecked) {
+                        selectedIds.add(id);
+                    } else {
+                        selectedIds.delete(id);
+                    }
+                });
+                updateBulkButtonVisibility();
+            });
+
+            // Bulk Approve click - Show confirmation modal
+            $('#bulkApproveBtn').on('click', function(e) {
+                e.preventDefault();
+                $('#bulkApproveModal').modal('show');
+            });
+
+            // Confirm bulk approve action
+            $('#confirmBulkApproveBtn').on('click', function() {
+                if (selectedIds.size === 0) {
+                    return;
+                }
+
+                var btn = $(this);
+                var originalText = btn.html();
+                btn.prop('disabled', true).html('<i class="fas fa-spinner fa-spin"></i> {{ __("Processing...") }}');
+
+                $.ajax({
+                    url: '{{ route("attendance-regularisation.bulk-approve") }}',
+                    type: 'POST',
+                    data: {
+                        ids: Array.from(selectedIds),
+                        _token: '{{ csrf_token() }}'
+                    },
+                    success: function(response) {
+                        $('#bulkApproveModal').modal('hide');
+                        if (response.success || response.redirect) {
+                            savePageState();
+                            location.reload();
+                        } else {
+                            alert(response.message || '{{ __("Error approving requests") }}');
+                            btn.prop('disabled', false).html(originalText);
+                        }
+                    },
+                    error: function(xhr) {
+                        $('#bulkApproveModal').modal('hide');
+                        var errorMsg = '{{ __("Error approving requests") }}';
+                        if (xhr.responseJSON && xhr.responseJSON.message) {
+                            errorMsg = xhr.responseJSON.message;
+                        }
+                        alert(errorMsg);
+                        btn.prop('disabled', false).html(originalText);
+                    }
+                });
+            });
 
             // Approve regularisation - Show confirmation modal
             $(document).on('click', '.approve-regularisation', function(e) {
@@ -170,6 +337,7 @@
                     success: function(response) {
                         $('#approveModal').modal('hide');
                         if (response.success || response.redirect) {
+                            savePageState();
                             location.reload();
                         } else {
                             alert(response.message || '{{ __("Error approving request") }}');
@@ -201,6 +369,11 @@
                 $('#rejectForm').attr('action', '{{ url("attendance-regularisation") }}/' + id + '/reject');
                 $('#rejection_reason').val('');
                 $('#rejectModal').modal('show');
+            });
+
+            // Save state on reject form submission
+            $('#rejectForm').on('submit', function() {
+                savePageState();
             });
         });
     </script>

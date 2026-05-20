@@ -1269,6 +1269,12 @@ Route::group(['middleware' => ['verified']], function () {
     Route::get('attendance/export/{employeeId}', [AttendanceEmployeeController::class, 'exportEmployee'])->name('attendance.export.employee');
     
     // Attendance Regularisation Routes
+    Route::post('attendance-regularisation/bulk-approve', [\App\Http\Controllers\AttendanceRegularisationController::class, 'bulkApprove'])->name('attendance-regularisation.bulk-approve')->middleware(
+        [
+            'auth',
+            'XSS',
+        ]
+    );
     Route::resource('attendance-regularisation', \App\Http\Controllers\AttendanceRegularisationController::class)->middleware(
         [
             'auth',

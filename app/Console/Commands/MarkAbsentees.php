@@ -24,8 +24,7 @@ class MarkAbsentees extends Command
         }
         
         // 2. Skip public holidays
-        $isHoliday = \App\Models\Holiday::where('start_date', '<=', $today)
-                                        ->where('end_date', '>=', $today)
+        $isHoliday = \App\Models\Holiday::where('date', $today)
                                         ->exists();
         if ($isHoliday) {
             $this->info('Today is a holiday. Skipping marking absentees.');

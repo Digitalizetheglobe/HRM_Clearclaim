@@ -18,6 +18,8 @@ class AttendanceRegularisationController extends Controller
      */
     public function index(Request $request)
     {
+        $status = $request->get('status', 'Approved');
+
         if (\Auth::user()->type == 'employee') {
             $employee = Employee::where('user_id', \Auth::user()->id)->first();
             if (!$employee) {
@@ -25,22 +27,26 @@ class AttendanceRegularisationController extends Controller
             }
             
             $regularisations = AttendanceRegularisation::where('employee_id', $employee->id)
+                ->where('status', $status)
                 ->orderBy('date', 'desc')
                 ->orderBy('created_at', 'desc')
                 ->get();
         } else {
             // Company/HR users can see all regularisations
-            $regularisations = AttendanceRegularisation::where('created_by', \Auth::user()->creatorId())
-                ->orWhereHas('employee', function($query) {
-                    $query->where('created_by', \Auth::user()->creatorId());
+            $regularisations = AttendanceRegularisation::where(function($q) {
+                    $q->where('created_by', \Auth::user()->creatorId())
+                      ->orWhereHas('employee', function($query) {
+                          $query->where('created_by', \Auth::user()->creatorId());
+                      });
                 })
+                ->where('status', $status)
                 ->orderBy('date', 'desc')
                 ->orderBy('created_at', 'desc')
                 ->with('employee')
                 ->get();
         }
 
-        return view('attendance.regularisation.index', compact('regularisations'));
+        return view('attendance.regularisation.index', compact('regularisations', 'status'));
     }
 
     /**
@@ -372,6 +378,92 @@ class AttendanceRegularisationController extends Controller
         }
 
         return redirect()->to($redirectUrl)->with('success', __('Attendance regularisation request approved successfully.'));
+    }
+
+    public function bulkApprove(Request $request)
+    {
+        $currentUser = \Auth::user();
+        $employee = Employee::where('user_id', $currentUser->id)->first();
+        $isManager = false;
+        if ($employee && $employee->designation) {
+            $isManager = (str_contains(strtolower($employee->designation->name), 'manager'));
+        }
+
+        // Only Company, HR and Managers can approve
+        if ($currentUser->type != 'company' && $currentUser->type != 'hr' && !$isManager) {
+            $errorMsg = __('Permission denied. Only Company, HR, and Managers can approve requests.');
+            if ($request->ajax() || $request->wantsJson()) {
+                return response()->json(['success' => false, 'message' => $errorMsg], 403);
+            }
+            return redirect()->back()->with('error', $errorMsg);
+        }
+
+        $ids = $request->ids;
+        if (empty($ids) || !is_array($ids)) {
+            $errorMsg = __('No requests selected.');
+            if ($request->ajax() || $request->wantsJson()) {
+                return response()->json(['success' => false, 'message' => $errorMsg], 400);
+            }
+            return redirect()->back()->with('error', $errorMsg);
+        }
+
+        $successCount = 0;
+        foreach ($ids as $id) {
+            $regularisation = AttendanceRegularisation::with('employee')->find($id);
+            if (!$regularisation) {
+                continue;
+            }
+
+            // Check if request belongs to the same department if manager, or same company if admin
+            if ($isManager) {
+                if (!$regularisation->employee || $regularisation->employee->department_id != $employee->department_id || $regularisation->employee_id == $employee->id) {
+                    continue;
+                }
+            } else {
+                if ($regularisation->employee->created_by != \Auth::user()->creatorId()) {
+                    continue;
+                }
+            }
+
+            if ($regularisation->status != AttendanceRegularisation::STATUS_PENDING) {
+                continue;
+            }
+
+            // Check if attendance already exists for this date
+            $existingAttendance = AttendanceEmployee::where('employee_id', $regularisation->employee_id)
+                ->where('date', $regularisation->date)
+                ->first();
+
+            if ($existingAttendance) {
+                // Update existing attendance record
+                $this->updateAttendanceFromRegularisation($regularisation, $existingAttendance);
+            } else {
+                // Create new attendance record
+                $this->createAttendanceFromRegularisation($regularisation);
+            }
+
+            // Update regularisation status
+            $regularisation->status = AttendanceRegularisation::STATUS_APPROVED;
+            $regularisation->approved_by = \Auth::user()->id;
+            $regularisation->approved_at = now();
+            $regularisation->save();
+
+            // Send notification to employee
+            $this->sendApprovalNotification($regularisation);
+            $successCount++;
+        }
+
+        $redirectUrl = $isManager ? route('attendance.request') : route('attendance-regularisation.index');
+
+        if ($request->ajax() || $request->wantsJson()) {
+            return response()->json([
+                'success' => true,
+                'message' => __(':count attendance regularisation requests approved successfully.', ['count' => $successCount]),
+                'redirect' => $redirectUrl
+            ]);
+        }
+
+        return redirect()->to($redirectUrl)->with('success', __(':count attendance regularisation requests approved successfully.', ['count' => $successCount]));
     }
 
     public function reject(Request $request, $id)

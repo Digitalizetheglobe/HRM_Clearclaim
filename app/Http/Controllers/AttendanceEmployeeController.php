@@ -1289,19 +1289,11 @@ class AttendanceEmployeeController extends Controller
 
                     // Get holidays ONLY for the current month
                     $holidays = \App\Models\Holiday::where('created_by', \Auth::user()->creatorId())
-                        ->where(function($query) use ($startOfMonth, $endOfMonth) {
-                            $query->whereBetween('start_date', [$startOfMonth, $endOfMonth])
-                                  ->orWhereBetween('end_date', [$startOfMonth, $endOfMonth])
-                                  ->orWhere(function($q) use ($startOfMonth, $endOfMonth) {
-                                      $q->where('start_date', '<=', $startOfMonth)
-                                        ->where('end_date', '>=', $endOfMonth);
-                                  });
-                        })
+                        ->whereBetween('date', [$startOfMonth, $endOfMonth])
                         ->get()
                         ->map(function ($item) {
                             return [
-                                'start_date' => \Carbon\Carbon::parse($item->start_date)->format('Y-m-d'),
-                                'end_date' => \Carbon\Carbon::parse($item->end_date)->format('Y-m-d'),
+                                'date' => \Carbon\Carbon::parse($item->date)->format('Y-m-d'),
                                 'occasion' => $item->occasion
                             ];
                         });
@@ -1367,24 +1359,13 @@ class AttendanceEmployeeController extends Controller
 
                     // Mark 'holiday' days (only current month)
                     foreach ($holidays as $holiday) {
-                        $start = \Carbon\Carbon::parse($holiday['start_date']);
-                        $end = \Carbon\Carbon::parse($holiday['end_date']);
-                        $monthStart = $currentDate->copy()->startOfMonth();
-                        $monthEnd = $currentDate->copy()->endOfMonth();
+                        $formattedDate = $holiday['date'];
 
-                        // Only process dates within the current month
-                        $processStart = $start->gt($monthStart) ? $start : $monthStart;
-                        $processEnd = $end->lt($monthEnd) ? $end : $monthEnd;
-
-                        for ($date = $processStart->copy(); $date->lte($processEnd); $date->addDay()) {
-                            $formattedDate = $date->format('Y-m-d');
-
-                            if (!isset($employeeData[$formattedDate])) {
-                                $employeeData[$formattedDate] = [
-                                    'type' => 'holiday',
-                                    'reason' => $holiday['occasion']
-                                ];
-                            }
+                        if (!isset($employeeData[$formattedDate])) {
+                            $employeeData[$formattedDate] = [
+                                'type' => 'holiday',
+                                'reason' => $holiday['occasion']
+                            ];
                         }
                     }
 
