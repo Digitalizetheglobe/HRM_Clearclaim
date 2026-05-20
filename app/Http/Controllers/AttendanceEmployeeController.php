@@ -1412,6 +1412,219 @@ class AttendanceEmployeeController extends Controller
         }
     }
 
+    public function teamCalendar(Request $request)
+    {
+        if (\Auth::user()->type == 'employee') {
+            $user = \Auth::user();
+            $employee = \App\Models\Employee::where('user_id', '=', $user->id)->first();
+            $isManager = false;
+            
+            if ($employee && $employee->designation) {
+                $isManager = (str_contains(strtolower($employee->designation->name), 'manager'));
+            }
+
+            if ($isManager && $employee) {
+                $employees = [];
+                $selectedEmployee = null;
+                $terminatedEmployees = \App\Models\Termination::pluck('employee_id')->toArray();
+                
+                // Manager sees all employees in their department
+                $departmentEmployeeIds = \App\Models\Employee::where('department_id', '=', $employee->department_id)
+                    ->whereNotIn('id', $terminatedEmployees)
+                    ->pluck('id')
+                    ->toArray();
+                    
+                $allEmployees = \App\Models\Employee::whereIn('id', $departmentEmployeeIds)->get();
+
+                if ($request->has('employee_id') && $request->employee_id) {
+                    // Make sure the requested employee is in the manager's department
+                    if (in_array($request->employee_id, $departmentEmployeeIds)) {
+                        $selectedEmployee = \App\Models\Employee::find($request->employee_id);
+                        if ($selectedEmployee) {
+                            $employees = [$selectedEmployee];
+                        }
+                    }
+                }
+
+                // Get current month and year from request or use current date
+                $currentMonth = (int)request()->input('month', date('m'));
+                $currentYear = (int)request()->input('year', date('Y'));
+                
+                // Validate month and year
+                if ($currentMonth < 1 || $currentMonth > 12) {
+                    $currentMonth = (int)date('m');
+                }
+                if ($currentYear < 2000 || $currentYear > 2100) {
+                    $currentYear = (int)date('Y');
+                }
+
+                $currentDate = \Carbon\Carbon::create($currentYear, $currentMonth, 1);
+                $previousMonth = $currentDate->copy()->subMonth();
+                $nextMonth = $currentDate->copy()->addMonth();
+
+                $attendanceData = [];
+
+                // Only process data if we have a selected employee
+                if ($selectedEmployee) {
+                    foreach ($employees as $emp) {
+                        // Get attendance records ONLY for the current month
+                        $startOfMonth = $currentDate->copy()->startOfMonth()->format('Y-m-d');
+                        $endOfMonth = $currentDate->copy()->endOfMonth()->format('Y-m-d');
+                        
+                        $attendances = \DB::table('attendance_employees')
+                            ->where('employee_id', $emp->id)
+                            ->whereBetween('date', [$startOfMonth, $endOfMonth])
+                            ->get()
+                            ->map(function ($item) {
+                                $date = \Carbon\Carbon::parse($item->date)->format('Y-m-d');
+                                return [
+                                    'date' => $date,
+                                    'clock_in' => $item->clock_in,
+                                    'clock_out' => $item->clock_out
+                                ];
+                            });
+
+                        // Get approved leaves ONLY for the current month
+                        $leaves = \App\Models\Leave::where('employee_id', $emp->id)
+                            ->where('status', 'Approved')
+                            ->where(function($query) use ($startOfMonth, $endOfMonth) {
+                                $query->whereBetween('start_date', [$startOfMonth, $endOfMonth])
+                                      ->orWhereBetween('end_date', [$startOfMonth, $endOfMonth])
+                                      ->orWhere(function($q) use ($startOfMonth, $endOfMonth) {
+                                          $q->where('start_date', '<=', $startOfMonth)
+                                            ->where('end_date', '>=', $endOfMonth);
+                                      });
+                            })
+                            ->get()
+                            ->map(function ($item) {
+                                return [
+                                    'start_date' => \Carbon\Carbon::parse($item->start_date)->format('Y-m-d'),
+                                    'end_date' => \Carbon\Carbon::parse($item->end_date)->format('Y-m-d'),
+                                    'leave_reason' => $item->leave_reason
+                                ];
+                            });
+
+                        // Get holidays ONLY for the current month
+                        $holidays = \App\Models\Holiday::where('created_by', \Auth::user()->creatorId())
+                            ->whereBetween('date', [$startOfMonth, $endOfMonth])
+                            ->get()
+                            ->map(function ($item) {
+                                return [
+                                    'date' => \Carbon\Carbon::parse($item->date)->format('Y-m-d'),
+                                    'occasion' => $item->occasion
+                                ];
+                            });
+
+                        $employeeData = [];
+
+                        // Mark attendance status using the same 3-rule logic as the main system
+                        foreach ($attendances as $attendance) {
+                            $status = $this->calculateAttendanceStatusWithNewRules(
+                                $attendance['clock_in'],
+                                $attendance['clock_out'],
+                                $attendance['date'],
+                                $selectedEmployee->id
+                            );
+                            
+                            $calendarType = 'present';
+                            if ($status === AttendanceEmployee::STATUS_ABSENT) {
+                                $calendarType = 'absent';
+                            } elseif (in_array($status, [
+                                AttendanceEmployee::STATUS_HALF_DAY,
+                                AttendanceEmployee::STATUS_HALF_DAY_PUNCH_MISS,
+                                AttendanceEmployee::STATUS_HALF_DAY_LATE
+                            ])) {
+                                $calendarType = 'half_day';
+                            }
+                            
+                            $isLateMark = $this->isLateMark($attendance['clock_in'], $selectedEmployee->id);
+                            
+                            $employeeData[$attendance['date']] = [
+                                'type' => $calendarType,
+                                'status' => $status,
+                                'clock_in' => $attendance['clock_in'],
+                                'clock_out' => $attendance['clock_out'],
+                                'is_late' => $isLateMark
+                            ];
+                        }
+
+                        // Mark 'leave' days
+                        foreach ($leaves as $leave) {
+                            $start = \Carbon\Carbon::parse($leave['start_date']);
+                            $end = \Carbon\Carbon::parse($leave['end_date']);
+                            $monthStart = $currentDate->copy()->startOfMonth();
+                            $monthEnd = $currentDate->copy()->endOfMonth();
+
+                            $processStart = $start->gt($monthStart) ? $start : $monthStart;
+                            $processEnd = $end->lt($monthEnd) ? $end : $monthEnd;
+
+                            for ($date = $processStart->copy(); $date->lte($processEnd); $date->addDay()) {
+                                $formattedDate = $date->format('Y-m-d');
+                                if (!isset($employeeData[$formattedDate])) {
+                                    $employeeData[$formattedDate] = [
+                                        'type' => 'leave',
+                                        'reason' => $leave['leave_reason']
+                                    ];
+                                }
+                            }
+                        }
+
+                        // Mark 'holiday' days
+                        foreach ($holidays as $holiday) {
+                            $formattedDate = $holiday['date'];
+                            if (!isset($employeeData[$formattedDate])) {
+                                $employeeData[$formattedDate] = [
+                                    'type' => 'holiday',
+                                    'reason' => $holiday['occasion']
+                                ];
+                            }
+                        }
+
+                        // Fill in 'absent' ONLY for current month dates (excluding Sundays)
+                        $monthStart = $currentDate->copy()->startOfMonth();
+                        $monthEnd = $currentDate->copy()->endOfMonth();
+                        $today = \Carbon\Carbon::today();
+                        
+                        for ($date = $monthStart->copy(); $date->lte($monthEnd); $date->addDay()) {
+                            $dateFormatted = $date->format('Y-m-d');
+                            $dayOfWeek = $date->dayOfWeek; // 0 = Sunday
+
+                            if (!isset($employeeData[$dateFormatted])) {
+                                if ($date->lte($today) && $dayOfWeek != 0) {
+                                    $employeeData[$dateFormatted] = ['type' => 'absent'];
+                                }
+                            }
+                        }
+
+                        ksort($employeeData);
+
+                        $attendanceData[$emp->id] = [
+                            'name' => $emp->name,
+                            'data' => $employeeData
+                        ];
+                    }
+                }
+
+                return view('attendance.team_calendar', [
+                    'attendanceData' => $attendanceData,
+                    'currentMonth' => $currentMonth,
+                    'currentYear' => $currentYear,
+                    'previousMonth' => $previousMonth->format('m'),
+                    'previousYear' => $previousMonth->format('Y'),
+                    'nextMonth' => $nextMonth->format('m'),
+                    'nextYear' => $nextMonth->format('Y'),
+                    'allEmployees' => $allEmployees,
+                    'selectedEmployee' => $selectedEmployee
+                ]);
+
+            } else {
+                return redirect()->back()->with('error', __('Permission denied. Only managers can view the team calendar.'));
+            }
+        } else {
+            return redirect()->back()->with('error', __('Permission denied. Only managers can view the team calendar.'));
+        }
+    }
+
     public function export(Request $request)
     {
         if (\Auth::user()->can('Manage Attendance')) {

@@ -1260,6 +1260,12 @@ Route::group(['middleware' => ['verified']], function () {
             'XSS',
         ]
     );
+    Route::get('attendance-team-calendar', [AttendanceEmployeeController::class, 'teamCalendar'])->name('attendance.team.calendar')->middleware(
+        [
+            'auth',
+            'XSS',
+        ]
+    );
 
     //import attendance
     Route::get('import/attendance/file', [AttendanceEmployeeController::class, 'importFile'])->name('attendance.file.import');

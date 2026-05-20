@@ -930,8 +930,10 @@ class AttendanceRegularisationController extends Controller
         return strtotime($clockIn) > strtotime($lateMarkTime);
     }
 
-    public function attendanceRequest()
+    public function attendanceRequest(Request $request)
     {
+        $status = $request->get('status', 'Approved');
+
         $user = \Auth::user();
         $employee = Employee::where('user_id', '=', $user->id)->first();
         $isManager = false;
@@ -948,12 +950,13 @@ class AttendanceRegularisationController extends Controller
                 ->toArray();
                 
             $regularisations = AttendanceRegularisation::whereIn('employee_id', $departmentEmployeeIds)
+                ->where('status', $status)
                 ->with('employee')
                 ->orderBy('date', 'desc')
                 ->orderBy('created_at', 'desc')
                 ->get();
 
-            return view('attendance.regularisation.attendance_request', compact('regularisations', 'isManager', 'employee'));
+            return view('attendance.regularisation.attendance_request', compact('regularisations', 'isManager', 'employee', 'status'));
         } else {
             return redirect()->back()->with('error', __('Permission denied.'));
         }

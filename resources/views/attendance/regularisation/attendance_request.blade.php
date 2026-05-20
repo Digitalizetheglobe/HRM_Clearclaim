@@ -21,15 +21,22 @@
         <div class="col-xl-12">
             <div class="card">
                 <div class="card-header card-body table-border-style">
+                    <!-- Status Tabs -->
+                    <ul class="nav nav-tabs mb-3" id="statusTabs">
+                        <li class="nav-item"><a class="nav-link {{ $status == 'Approved' ? 'active' : '' }}" href="{{ route('attendance.request', ['status' => 'Approved']) }}">{{ __('Approved') }}</a></li>
+                        <li class="nav-item"><a class="nav-link {{ $status == 'Pending' ? 'active' : '' }}" href="{{ route('attendance.request', ['status' => 'Pending']) }}">{{ __('Pending') }}</a></li>
+                    </ul>
                     <div class="table-responsive">
                         <table class="table" id="pc-dt-simple">
                             <thead>
                                 <tr>
-                                    <th width="50px">
-                                        <div class="form-check">
-                                            <input class="form-check-input" type="checkbox" id="selectAll">
-                                        </div>
-                                    </th>
+                                    @if ($status == 'Pending')
+                                        <th width="50px" data-sortable="false">
+                                            <div class="form-check">
+                                                <input class="form-check-input" type="checkbox" id="selectAll">
+                                            </div>
+                                        </th>
+                                    @endif
                                     <th>{{ __('Employee') }}</th>
                                     <th>{{ __('Date') }}</th>
                                     <th>{{ __('Punch In') }}</th>
@@ -43,15 +50,13 @@
                             <tbody>
                                 @forelse ($regularisations as $regularisation)
                                     <tr>
-                                        <td>
-                                            @if ($regularisation->status == 'Pending')
+                                        @if ($status == 'Pending')
+                                            <td>
                                                 <div class="form-check">
                                                     <input class="form-check-input request-checkbox" type="checkbox" value="{{ $regularisation->id }}">
                                                 </div>
-                                            @else
-                                                -
-                                            @endif
-                                        </td>
+                                            </td>
+                                        @endif
                                         <td>{{ $regularisation->employee->name ?? '-' }}</td>
                                         <td>{{ \Auth::user()->dateFormat($regularisation->date) }}</td>
                                         <td>{{ date('h:i A', strtotime($regularisation->punch_in_time)) }}</td>
@@ -101,7 +106,7 @@
                                     </tr>
                                 @empty
                                     <tr>
-                                        <td colspan="9" class="text-center">
+                                        <td colspan="{{ $status == 'Pending' ? '9' : '8' }}" class="text-center">
                                             {{ __('No regularisation requests found.') }}
                                         </td>
                                     </tr>

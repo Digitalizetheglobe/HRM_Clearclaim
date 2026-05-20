@@ -254,6 +254,12 @@
                             <a class="dash-link text-white hover:bg-[#001a3b] text-lg" href="{{ route('attendance.calendar') }}">{{ __('Attendance Calendar') }}</a>
                         </li>
 
+                        @if(\Auth::user()->type == 'employee' && \Auth::user()->employee && \Auth::user()->employee->designation && str_contains(strtolower(\Auth::user()->employee->designation->name), 'manager'))
+                            <li class="dash-item {{ Request::segment(1) == 'attendance-team-calendar' ? ' active' : '' }}">
+                                <a class="dash-link text-white hover:bg-[#001a3b] text-lg" href="{{ route('attendance.team.calendar') }}">{{ __('Team Calendar') }}</a>
+                            </li>
+                        @endif
+
                         <!-- @can('Manage Report')      
                             <li class="dash-item">
                                  <a class="dash-link text-white hover:text-white hover:bg-[#001a3b] text-lg" 
