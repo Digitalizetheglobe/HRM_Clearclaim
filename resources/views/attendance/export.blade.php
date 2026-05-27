@@ -56,6 +56,15 @@
                                 case 'Absent':
                                     $abbreviation = 'A';
                                     break;
+                                case 'Leave':
+                                    $abbreviation = 'Leave';
+                                    break;
+                                case 'LOP':
+                                    $abbreviation = 'LOP';
+                                    break;
+                                case 'Holiday':
+                                    $abbreviation = 'H-Day';
+                                    break;
                                 default:
                                     $abbreviation = substr($status, 0, 1);
                             }

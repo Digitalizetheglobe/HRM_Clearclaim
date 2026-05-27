@@ -149,93 +149,179 @@
 {{ Form::close() }}
 
 <script>
-    $(document).ready(function() {
-        // Set current date
-        var now = new Date();
-        var month = (now.getMonth() + 1).toString().padStart(2, '0');
-        var day = now.getDate().toString().padStart(2, '0');
-        var today = now.getFullYear() + '-' + month + '-' + day;
-        $('.current_date').val(today);
+    // ── Leave limit constants from server ────────────────────────────────────
+    var MONTHLY_LIMIT     = {{ $monthlyLeaveInfo['limit']     ?? 2 }};
+    var MONTHLY_USED      = {{ $monthlyLeaveInfo['used']      ?? 0 }};
+    var MONTHLY_REMAINING = Math.max(0, MONTHLY_LIMIT - MONTHLY_USED);
+    // ────────────────────────────────────────────────────────────────────────
 
-        // Function to calculate business days between two dates (excluding weekends)
-        function getBusinessDays(startDate, endDate) {
-            var count = 0;
-            var current = new Date(startDate);
-            var end = new Date(endDate);
-            
-            while (current <= end) {
-                var day = current.getDay();
-                if (day !== 0 && day !== 6) { // Skip Sunday (0) and Saturday (6)
-                    count++;
-                }
-                current.setDate(current.getDate() + 1);
-            }
-            return count;
-        }
+    $(document).ready(function () {
+
+        // Set today as default date
+        var now   = new Date();
+        var today = now.getFullYear() + '-'
+                  + String(now.getMonth() + 1).padStart(2, '0') + '-'
+                  + String(now.getDate()).padStart(2, '0');
+        $('.current_date').val(today);
 
     });
 
+    // ── Show / hide date & session rows based on duration ───────────────────
+    $(document).on('change', '#leave_duration', function () {
+        var duration = $(this).val();
 
-    // Show/hide date fields and session based on leave duration
-    $(document).on('change', '#leave_duration', function() {
-        var leaveDuration = $(this).val();
-        
-        if (leaveDuration) {
-            // Show date fields when duration is selected
+        if (duration) {
             $('#date_row').show();
             $('#start_date').prop('required', true);
             $('#end_date').prop('required', true);
-            
-            if (leaveDuration === 'Half Day') {
-                // Show session field for half day
+
+            if (duration === 'Half Day') {
                 $('#leave_session_row').show();
                 $('#leave_session').prop('required', true);
-                // For half day, start and end date should be the same
                 if ($('#start_date').val()) {
                     $('#end_date').val($('#start_date').val());
                 }
                 $('#end_date').prop('readonly', true);
             } else {
-                // Hide session field for full day
                 $('#leave_session_row').hide();
-                $('#leave_session').prop('required', false);
-                $('#leave_session').val('');
+                $('#leave_session').prop('required', false).val('');
                 $('#end_date').prop('readonly', false);
             }
+
+            // Re-apply max-date restriction after duration change
+            applyEndDateMax();
+
         } else {
-            // Hide everything if no duration selected
-            $('#date_row').hide();
-            $('#leave_session_row').hide();
-            $('#start_date').prop('required', false);
-            $('#end_date').prop('required', false);
+            $('#date_row, #leave_session_row').hide();
+            $('#start_date, #end_date').prop('required', false);
             $('#leave_session').prop('required', false);
         }
     });
 
-    // When start date changes for half day, update end date
-    $(document).on('change', '#start_date', function() {
-        if ($('#leave_duration').val() === 'Half Day') {
+    // ── When start date changes ──────────────────────────────────────────────
+    $(document).on('change', '#start_date', function () {
+        var duration = $('#leave_duration').val();
+
+        // For Half Day — end date = start date
+        if (duration === 'Half Day') {
             $('#end_date').val($(this).val());
+        } else {
+            // Clear end date so user re-picks within the allowed range
+            $('#end_date').val('');
         }
+
+        applyEndDateMax();
+        validateDays();
     });
 
-    // Add this to your @push('script-page') section
-$(document).on('change', '#start_date, #end_date', function() {
-    var startDate = new Date($('#start_date').val());
-    var endDate = new Date($('#end_date').val());
-    var leaveDuration = $('#leave_duration').val();
-    
-    if (startDate && endDate) {
-        // Calculate difference in days
-        var diffTime = Math.abs(endDate - startDate);
-        var diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24)) + 1;
-        
-        // For half day, it's 0.5 days
-        if (leaveDuration === 'Half Day') {
-            diffDays = 0.5;
+    // ── When end date changes ────────────────────────────────────────────────
+    $(document).on('change', '#end_date', validateDays);
+
+    // ── When leave type changes ──────────────────────────────────────────────
+    $(document).on('change', '#leave_type_selection', function () {
+        applyEndDateMax();
+        validateDays();
+    });
+
+    /**
+     * Set the max attribute on end_date based on:
+     *  - Paid leave  → start date + (MONTHLY_REMAINING - 1) days
+     *  - LOP leave   → no restriction (any number of days)
+     *  - Half Day    → same as start date (already readonly)
+     */
+    function applyEndDateMax() {
+        var startVal  = $('#start_date').val();
+        var leaveType = $('#leave_type_selection').val();
+        var duration  = $('#leave_duration').val();
+
+        if (!startVal || duration === 'Half Day') return;
+
+        if (leaveType === 'paid') {
+            // Max days the employee can still take this month (paid)
+            var maxDays = MONTHLY_REMAINING;   // e.g. 2 if nothing used yet
+
+            if (maxDays <= 0) {
+                // No paid days left — lock end_date same as start
+                $('#end_date').val(startVal).attr('max', startVal);
+                showError('You have no paid leaves remaining this month. Please select <strong>LOP</strong>.');
+                lockSubmit();
+                return;
+            }
+
+            // Calculate max end date = start + (maxDays - 1)
+            var startDate  = new Date(startVal);
+            var maxEndDate = new Date(startDate);
+            maxEndDate.setDate(startDate.getDate() + maxDays - 1);
+
+            var maxStr = maxEndDate.getFullYear() + '-'
+                       + String(maxEndDate.getMonth() + 1).padStart(2, '0') + '-'
+                       + String(maxEndDate.getDate()).padStart(2, '0');
+
+            $('#end_date').attr('max', maxStr);
+
+            // If currently selected end date exceeds new max, reset it
+            if ($('#end_date').val() && $('#end_date').val() > maxStr) {
+                $('#end_date').val(maxStr);
+            }
+
+        } else {
+            // LOP — remove restriction
+            $('#end_date').removeAttr('max');
         }
-        
-        $('#total_leave_days').val(diffDays);
+
+        clearError();
+        unlockSubmit();
     }
-});
-</script>
+
+    /**
+     * Validate selected days against monthly limit and update UI.
+     */
+    function validateDays() {
+        var startVal  = $('#start_date').val();
+        var endVal    = $('#end_date').val();
+        var leaveType = $('#leave_type_selection').val();
+        var duration  = $('#leave_duration').val();
+
+        if (!startVal || !endVal) return;
+
+        var totalDays;
+        if (duration === 'Half Day') {
+            totalDays = 0.5;
+        } else {
+            var start = new Date(startVal);
+            var end   = new Date(endVal);
+            totalDays = Math.round((end - start) / (1000 * 60 * 60 * 24)) + 1;
+        }
+
+        if (leaveType === 'paid') {
+            if (totalDays > MONTHLY_REMAINING) {
+                var remaining = MONTHLY_REMAINING > 0 ? MONTHLY_REMAINING : 0;
+                showError(
+                    '⚠️ You can only take <strong>' + remaining + '</strong> paid leave day(s) this month '
+                    + '(Limit: ' + MONTHLY_LIMIT + ' | Used: ' + MONTHLY_USED + '). '
+                    + (remaining === 0
+                        ? 'Please select <strong>LOP</strong>.'
+                        : 'Please reduce to <strong>' + remaining + '</strong> day(s) or select <strong>LOP</strong>.')
+                );
+                lockSubmit();
+            } else {
+                clearError();
+                unlockSubmit();
+            }
+        } else {
+            // LOP — always allowed
+            clearError();
+            unlockSubmit();
+        }
+    }
+
+    function showError(msg) {
+        $('#monthly-limit-error').remove();
+        $('<div id="monthly-limit-error" class="alert alert-danger mt-2 mb-0">' + msg + '</div>')
+            .insertBefore('#submit-btn');
+    }
+
+    function clearError()  { $('#monthly-limit-error').remove(); }
+    function lockSubmit()  { $('#submit-btn').prop('disabled', true); }
+    function unlockSubmit(){ $('#submit-btn').prop('disabled', false); }
+</script>

@@ -41,6 +41,8 @@ class AttendanceEmployeeController extends Controller
                 $emp = !empty(\Auth::user()->employee) ? \Auth::user()->employee->id : 0;
 
                 $attendanceEmployee = AttendanceEmployee::where('employee_id', $emp)
+                                ->where('status', '!=', AttendanceEmployee::STATUS_ABSENT) // Absent is derived on-the-fly
+                                ->where('clock_in', '!=', '00:00:00') // Only real punch records
                                 ->orderBy('date', 'desc')
                                 ->orderBy('clock_in', 'desc');
 
@@ -102,6 +104,8 @@ class AttendanceEmployeeController extends Controller
                 $employee = $employee->get()->pluck('id');
 
                 $attendanceEmployee = AttendanceEmployee::whereIn('employee_id', $employee)
+                                ->where('status', '!=', AttendanceEmployee::STATUS_ABSENT) // Absent is derived on-the-fly
+                                ->where('clock_in', '!=', '00:00:00') // Only real punch records
                                 ->orderBy('date', 'desc')
                                 ->orderBy('clock_in', 'desc');
                 
@@ -1283,7 +1287,8 @@ class AttendanceEmployeeController extends Controller
                             return [
                                 'start_date' => \Carbon\Carbon::parse($item->start_date)->format('Y-m-d'),
                                 'end_date' => \Carbon\Carbon::parse($item->end_date)->format('Y-m-d'),
-                                'leave_reason' => $item->leave_reason
+                                'leave_reason' => $item->leave_reason,
+                                'is_lop' => $item->is_lop
                             ];
                         });
 
@@ -1350,7 +1355,7 @@ class AttendanceEmployeeController extends Controller
 
                             if (!isset($employeeData[$formattedDate])) {
                                 $employeeData[$formattedDate] = [
-                                    'type' => 'leave',
+                                    'type' => !empty($leave['is_lop']) ? 'lop' : 'leave',
                                     'reason' => $leave['leave_reason']
                                 ];
                             }
@@ -1369,7 +1374,7 @@ class AttendanceEmployeeController extends Controller
                         }
                     }
 
-                    // Fill in 'absent' ONLY for current month dates (excluding Sundays)
+                    // Fill in 'absent' ONLY for current month working dates (excluding Saturday=6 and Sunday=0)
                     $monthStart = $currentDate->copy()->startOfMonth();
                     $monthEnd = $currentDate->copy()->endOfMonth();
                     $today = \Carbon\Carbon::today();
@@ -1379,10 +1384,11 @@ class AttendanceEmployeeController extends Controller
                         $dayOfWeek = $date->dayOfWeek; // 0 = Sunday, 6 = Saturday
 
                         if (!isset($employeeData[$dateFormatted])) {
-                            if ($date->lte($today) && $dayOfWeek != 0) { // Skip marking absent on Sundays
+                            // Skip Saturday (6) and Sunday (0) — both are Week Off
+                            if ($date->lte($today) && $dayOfWeek != 0 && $dayOfWeek != 6) {
                                 $employeeData[$dateFormatted] = ['type' => 'absent'];
                             }
-                            // Future dates remain unmarked
+                            // Future dates and Week Off days remain unmarked
                         }
                     }
 
@@ -1500,7 +1506,8 @@ class AttendanceEmployeeController extends Controller
                                 return [
                                     'start_date' => \Carbon\Carbon::parse($item->start_date)->format('Y-m-d'),
                                     'end_date' => \Carbon\Carbon::parse($item->end_date)->format('Y-m-d'),
-                                    'leave_reason' => $item->leave_reason
+                                    'leave_reason' => $item->leave_reason,
+                                    'is_lop' => $item->is_lop
                                 ];
                             });
 
@@ -1562,7 +1569,7 @@ class AttendanceEmployeeController extends Controller
                                 $formattedDate = $date->format('Y-m-d');
                                 if (!isset($employeeData[$formattedDate])) {
                                     $employeeData[$formattedDate] = [
-                                        'type' => 'leave',
+                                        'type' => !empty($leave['is_lop']) ? 'lop' : 'leave',
                                         'reason' => $leave['leave_reason']
                                     ];
                                 }
@@ -1580,17 +1587,18 @@ class AttendanceEmployeeController extends Controller
                             }
                         }
 
-                        // Fill in 'absent' ONLY for current month dates (excluding Sundays)
+                        // Fill in 'absent' ONLY for current month working dates (excluding Saturday=6 and Sunday=0)
                         $monthStart = $currentDate->copy()->startOfMonth();
                         $monthEnd = $currentDate->copy()->endOfMonth();
                         $today = \Carbon\Carbon::today();
                         
                         for ($date = $monthStart->copy(); $date->lte($monthEnd); $date->addDay()) {
                             $dateFormatted = $date->format('Y-m-d');
-                            $dayOfWeek = $date->dayOfWeek; // 0 = Sunday
+                            $dayOfWeek = $date->dayOfWeek; // 0 = Sunday, 6 = Saturday
 
                             if (!isset($employeeData[$dateFormatted])) {
-                                if ($date->lte($today) && $dayOfWeek != 0) {
+                                // Skip Saturday (6) and Sunday (0) — both are Week Off
+                                if ($date->lte($today) && $dayOfWeek != 0 && $dayOfWeek != 6) {
                                     $employeeData[$dateFormatted] = ['type' => 'absent'];
                                 }
                             }
@@ -1738,6 +1746,70 @@ class AttendanceEmployeeController extends Controller
                     'total' => $workedHours,
                     'minutes' => $dayMinutes
                 ];
+            }
+
+            // Fetch Holidays
+            $holidays = \App\Models\Holiday::where('created_by', \Auth::user()->creatorId())
+                ->whereBetween('date', [$start_date, $end_date])
+                ->get()
+                ->pluck('occasion', 'date')
+                ->toArray();
+                
+            // Fetch Leaves
+            $leaves = LocalLeave::whereIn('employee_id', $employeeIds)
+                ->where('status', 'Approved')
+                ->where(function($query) use ($start_date, $end_date) {
+                    $query->whereBetween('start_date', [$start_date, $end_date])
+                          ->orWhereBetween('end_date', [$start_date, $end_date])
+                          ->orWhere(function($q) use ($start_date, $end_date) {
+                              $q->where('start_date', '<=', $start_date)
+                                ->where('end_date', '>=', $end_date);
+                          });
+                })
+                ->get();
+
+            // Populate Leaves and Holidays into attendanceData
+            foreach ($employeeIds as $empId) {
+                if (!isset($attendanceData[$empId])) {
+                    $attendanceData[$empId] = [];
+                }
+                
+                // Add Holidays
+                foreach ($holidays as $date => $occasion) {
+                    if (!isset($attendanceData[$empId][$date])) {
+                        $attendanceData[$empId][$date] = [
+                            'status' => 'Holiday',
+                            'clock_in' => '-',
+                            'clock_out' => '-',
+                            'total' => '-'
+                        ];
+                    }
+                }
+                
+                // Add Leaves
+                foreach ($leaves as $leave) {
+                    if ($leave->employee_id == $empId) {
+                        $start = \Carbon\Carbon::parse($leave->start_date);
+                        $end = \Carbon\Carbon::parse($leave->end_date);
+                        $periodStart = \Carbon\Carbon::parse($start_date);
+                        $periodEnd = \Carbon\Carbon::parse($end_date);
+                        
+                        $processStart = $start->gt($periodStart) ? $start : $periodStart;
+                        $processEnd = $end->lt($periodEnd) ? $end : $periodEnd;
+                        
+                        for ($d = $processStart->copy(); $d->lte($processEnd); $d->addDay()) {
+                            $dateStr = $d->format('Y-m-d');
+                            if (!isset($attendanceData[$empId][$dateStr])) {
+                                $attendanceData[$empId][$dateStr] = [
+                                    'status' => !empty($leave->is_lop) ? 'LOP' : 'Leave',
+                                    'clock_in' => '-',
+                                    'clock_out' => '-',
+                                    'total' => '-'
+                                ];
+                            }
+                        }
+                    }
+                }
             }
             
             // Calculate summary data for single employee export

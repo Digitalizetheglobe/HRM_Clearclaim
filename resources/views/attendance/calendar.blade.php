@@ -310,6 +310,10 @@
                                                 $class .= ' bg-warning-light';
                                                 $badges[] = '<span class="badge bg-warning text-dark">Leave</span>';
                                                 $title = __('Leave: ') . ($dayData['reason'] ?? '');
+                                            } elseif ($status === 'lop') {
+                                                $class .= ' bg-danger-light';
+                                                $badges[] = '<span class="badge bg-danger">LOP</span>';
+                                                $title = __('LOP: ') . ($dayData['reason'] ?? '');
                                             } elseif ($status === 'holiday') {
                                                 $class .= ' bg-info-light';
                                                 $occasion = $dayData['reason'] ?? 'Holiday';

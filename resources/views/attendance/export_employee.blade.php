@@ -35,7 +35,21 @@
             @foreach($dates as $date)
                 <td>
                     @isset($attendanceData[$employee->id][$date]['status'])
-                        {{ substr($attendanceData[$employee->id][$date]['status'], 0, 1) }}
+                        @php
+                            $status = $attendanceData[$employee->id][$date]['status'];
+                            if ($status == 'Leave') {
+                                $display = 'Leave';
+                            } elseif ($status == 'LOP') {
+                                $display = 'LOP';
+                            } elseif ($status == 'Holiday') {
+                                $display = 'H-Day';
+                            } elseif ($status == 'Absent') {
+                                $display = 'A';
+                            } else {
+                                $display = substr($status, 0, 1);
+                            }
+                        @endphp
+                        {{ $display }}
                     @else
                         A
                     @endisset

@@ -225,8 +225,8 @@ class SalaryProcessingController extends Controller
         foreach ($allDates as $dateStr) {
             $date = Carbon::parse($dateStr);
             
-            // Skip Sundays - they should not be counted in LOP
-            if ($date->dayOfWeek == Carbon::SUNDAY) {
+            // Skip Sundays and Saturdays — both are Week Off, should not count in LOP
+            if ($date->dayOfWeek == Carbon::SUNDAY || $date->dayOfWeek == Carbon::SATURDAY) {
                 continue;
             }
             

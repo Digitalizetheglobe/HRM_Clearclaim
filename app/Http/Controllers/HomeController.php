@@ -294,11 +294,13 @@ class HomeController extends Controller
                                 }
                             }
                             
-                            // Mark absent for dates without attendance or leave (only for past dates)
+                            // Mark absent for past working days only (no attendance, no leave, not a weekend)
                             $today = Carbon::today();
                             for ($date = $startRange->copy(); $date->lte($endRange); $date->addDay()) {
                                 $dateFormatted = $date->format('Y-m-d');
-                                if (!isset($employeeData[$dateFormatted]) && $date->lte($today)) {
+                                $dayOfWeek = $date->dayOfWeek; // 0 = Sunday, 6 = Saturday
+                                if (!isset($employeeData[$dateFormatted]) && $date->lte($today)
+                                    && $dayOfWeek != 0 && $dayOfWeek != 6) {
                                     $employeeData[$dateFormatted] = ['type' => 'absent'];
                                 }
                             }

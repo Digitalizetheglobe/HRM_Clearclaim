@@ -271,29 +271,12 @@ class LeaveController extends Controller
             return redirect()->back()->with('error', __('Please select a leave type (Paid or LOP).'));
         }
 
-        // Check monthly paid leaves limit and validate selection
-        $now = now();
-        $leave_type = $this->getDefaultLeaveType();
-        $monthlyPaidLeavesUsed = LocalLeave::where('employee_id', $request->employee_id)
-            ->where('leave_type_id', $leave_type->id)
-            ->where('is_paid', true)
-            ->where('status', 'Approved')
-            ->whereYear('start_date', $now->year)
-            ->whereMonth('start_date', $now->month)
-            ->sum('total_leave_days');
-
-        $monthlyLimit = 2;
-
-        // If monthly limit exceeded, user MUST select LOP
-        if ($monthlyPaidLeavesUsed >= $monthlyLimit && $request->leave_type_selection == 'paid') {
-            return redirect()->back()->with('error', __('You have already used '.$monthlyPaidLeavesUsed.' paid leaves this month. You must select LOP (Loss of Pay) for additional leaves.'));
-        }
 
         if ($validator->fails()) {
             return redirect()->back()->with('error', $validator->errors()->first());
         }
 
-        // Calculate total leave days based on duration
+        // Calculate total leave days based on duration  (must happen FIRST before any limit checks)
         $leaveDuration = $request->leave_duration;
         if ($leaveDuration == 'Half Day') {
             $total_leave_days = 0.5;
@@ -301,19 +284,59 @@ class LeaveController extends Controller
             $request->merge(['end_date' => $request->start_date]);
         } else {
             $startDate = new \DateTime($request->start_date);
-            $endDate = new \DateTime($request->end_date);
+            $endDate   = new \DateTime($request->end_date);
             $endDate->add(new \DateInterval('P1D')); // Include end date in calculation
             $total_leave_days = $startDate->diff($endDate)->days;
         }
 
-        // Get default leave type
-        $leave_type = $this->getDefaultLeaveType();
+        // ── Hard cap: single paid leave request cannot exceed monthly limit ──
+        $monthlyLimit = 2;
+        if ($request->leave_type_selection == 'paid' && $total_leave_days > $monthlyLimit) {
+            return redirect()->back()->with('error',
+                __('You cannot apply for more than ' . $monthlyLimit . ' paid leave days at a time. Please apply for max ' . $monthlyLimit . ' days or select LOP.')
+            );
+        }
+        // ────────────────────────────────────────────────────────────────────
 
+        // ── Monthly Paid Leave Limit Check ──────────────────────────────────
+        // Count both Approved AND Pending paid leaves this month so a second
+        // pending request cannot bypass the limit.
+        $now        = now();
+        $leave_type = $this->getDefaultLeaveType();
+        // $monthlyLimit already set above = 2
+
+        $monthlyPaidLeavesUsed = LocalLeave::where('employee_id', $request->employee_id)
+            ->where('leave_type_id', $leave_type->id)
+            ->where('is_paid', true)
+            ->whereIn('status', ['Approved', 'Pending'])   // include pending too
+            ->whereYear('start_date', $now->year)
+            ->whereMonth('start_date', $now->month)
+            ->sum('total_leave_days');
+
+        $remainingMonthlyPaid = max(0, $monthlyLimit - $monthlyPaidLeavesUsed);
+
+        if ($request->leave_type_selection == 'paid') {
+            if ($monthlyPaidLeavesUsed >= $monthlyLimit) {
+                // Already at or over limit — must use LOP
+                return redirect()->back()->with('error',
+                    __('You have already used all ' . $monthlyLimit . ' paid leaves this month. Please select LOP (Loss of Pay).')
+                );
+            }
+
+            if (($monthlyPaidLeavesUsed + $total_leave_days) > $monthlyLimit) {
+                // Requested days would exceed the monthly limit
+                return redirect()->back()->with('error',
+                    __('You can only take ' . $remainingMonthlyPaid . ' more paid leave day(s) this month (limit: ' . $monthlyLimit . '). Please reduce the days or select LOP for the extra days.')
+                );
+            }
+        }
+        // ────────────────────────────────────────────────────────────────────
+
+        // Get default leave type (already fetched above)
         // Calculate pro-rata leave entitlement (15 leaves per year = 1.25 per month)
         $proRataLeaves = $this->calculateProRataLeaves($request->employee_id);
         
         // Check monthly balance if applicable
-        $now = now();
         $balance = EmployeeLeaveBalance::where('employee_id', $request->employee_id)
             ->where('leave_type_id', $leave_type->id)
             ->where('year', $now->year)
@@ -359,6 +382,7 @@ class LeaveController extends Controller
                 }
             }
         }
+
 
 
         // Use the user's explicit selection for leave type
