@@ -1384,8 +1384,8 @@ class AttendanceEmployeeController extends Controller
                         $dayOfWeek = $date->dayOfWeek; // 0 = Sunday, 6 = Saturday
 
                         if (!isset($employeeData[$dateFormatted])) {
-                            // Skip Saturday (6) and Sunday (0) — both are Week Off
-                            if ($date->lte($today) && $dayOfWeek != 0 && $dayOfWeek != 6) {
+                            // Skip Sunday (0) — it is a Week Off
+                            if ($date->lte($today) && $dayOfWeek != 0) {
                                 $employeeData[$dateFormatted] = ['type' => 'absent'];
                             }
                             // Future dates and Week Off days remain unmarked
@@ -1594,11 +1594,11 @@ class AttendanceEmployeeController extends Controller
                         
                         for ($date = $monthStart->copy(); $date->lte($monthEnd); $date->addDay()) {
                             $dateFormatted = $date->format('Y-m-d');
-                            $dayOfWeek = $date->dayOfWeek; // 0 = Sunday, 6 = Saturday
+                            $dayOfWeek = $date->dayOfWeek; // 0 = Sunday
 
                             if (!isset($employeeData[$dateFormatted])) {
-                                // Skip Saturday (6) and Sunday (0) — both are Week Off
-                                if ($date->lte($today) && $dayOfWeek != 0 && $dayOfWeek != 6) {
+                                // Skip Sunday (0) — it is a Week Off
+                                if ($date->lte($today) && $dayOfWeek != 0) {
                                     $employeeData[$dateFormatted] = ['type' => 'absent'];
                                 }
                             }
@@ -2188,7 +2188,7 @@ class AttendanceEmployeeController extends Controller
     /**
      * Count late marks for an employee in a given month (excluding current day)
      */
-    private function countLateMarksInMonthExcludingCurrent($employeeId, $currentDate)
+    public function countLateMarksInMonthExcludingCurrent($employeeId, $currentDate)
     {
         $carbonDate = Carbon::parse($currentDate);
         $startOfMonth = $carbonDate->copy()->startOfMonth()->format('Y-m-d');
@@ -2233,7 +2233,7 @@ class AttendanceEmployeeController extends Controller
      * 2. If punch-out is missing → "Half Day (Punch Miss)" with auto 4.5h calculation
      * 3. If 4th+ late mark → "Half Day (Late)" with auto 4.5h calculation
      */
-    private function calculateAttendanceStatusWithNewRules($clockIn, $clockOut, $date, $employeeId)
+    public function calculateAttendanceStatusWithNewRules($clockIn, $clockOut, $date, $employeeId)
     {
         // If no clock in at all, return Absent
         if (empty($clockIn) || $clockIn == '00:00:00') {

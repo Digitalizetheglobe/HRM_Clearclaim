@@ -102,10 +102,20 @@ class SalaryProcessingController extends Controller
         $presentDays = 0;
         $halfDayCount = 0;
         
+        $attendanceController = app(\App\Http\Controllers\AttendanceEmployeeController::class);
+        
         foreach ($attendanceRecords as $attendance) {
-            if ($attendance->status == 'Present') {
+            $dateString = $attendance->date instanceof \Carbon\Carbon ? $attendance->date->format('Y-m-d') : date('Y-m-d', strtotime($attendance->date));
+            $trueStatus = $attendanceController->calculateAttendanceStatusWithNewRules(
+                $attendance->clock_in,
+                $attendance->clock_out,
+                $dateString,
+                $employee->id
+            );
+            
+            if ($trueStatus == 'Present' || $trueStatus == 'Present (Late)') {
                 $presentDays++;
-            } elseif ($attendance->status == 'Half Day') {
+            } elseif ($trueStatus == 'Half Day') {
                 $halfDayCount++;
             }
         }
@@ -204,29 +214,42 @@ class SalaryProcessingController extends Controller
             }
         }
         
-        // Calculate payable days
-        $payableDays = $presentDays + $approvedLeaveDays;
-        
-        // Calculate LOP days (absent days + LOP leaves)
-        // LOP should only be calculated up to today (if current month), and Sundays should be excluded
-        // $lopEndDate is already set above based on whether it's current month or not
-        
-        // Find all dates in the month up to lopEndDate
+        $holidaysList = \App\Models\Holiday::whereBetween('date', [$startDate->format('Y-m-d'), $endDate->format('Y-m-d')])
+            ->pluck('date')->toArray();
+
+        // Calculate week offs (Sundays) and holidays up to lopEndDate
+        $weekOffDays = 0;
+        $holidayDays = 0;
         $allDates = [];
         $currentDate = $startDate->copy();
-        while ($currentDate->lte($lopEndDate)) {
-            $allDates[] = $currentDate->format('Y-m-d');
+        while ($currentDate->lte($endDate)) {
+            $dateStr = $currentDate->format('Y-m-d');
+            $allDates[] = $dateStr;
+            
+            if ($currentDate->dayOfWeek == Carbon::SUNDAY) {
+                $weekOffDays++;
+            } elseif (in_array($dateStr, $holidaysList)) {
+                $holidayDays++;
+            }
+            
             $currentDate->addDay();
         }
+
+        // Calculate payable days
+        $payableDays = $presentDays + $approvedLeaveDays + $weekOffDays + $holidayDays;
+        
+        // Calculate LOP days (absent days + LOP leaves)
+        // LOP should only be calculated up to today (if current month), and Sundays/Holidays should be excluded
+        // $lopEndDate is already set above based on whether it's current month or not
         
         // Find absent days (days with no attendance and no approved leave)
-        // Exclude Sundays from LOP calculation
+        // Exclude Sundays and Holidays from LOP calculation
         $absentDays = 0;
         foreach ($allDates as $dateStr) {
             $date = Carbon::parse($dateStr);
             
-            // Skip Sundays and Saturdays — both are Week Off, should not count in LOP
-            if ($date->dayOfWeek == Carbon::SUNDAY || $date->dayOfWeek == Carbon::SATURDAY) {
+            // If this is a weekend (Sunday) or a holiday, it does not count as LOP
+            if ($date->dayOfWeek == Carbon::SUNDAY || in_array($dateStr, $holidaysList)) {
                 continue;
             }
             
@@ -245,7 +268,20 @@ class SalaryProcessingController extends Controller
             });
             
             // If no attendance record, or if attendance status is "Absent", it counts as LOP
-            if (!$attendanceRecord || $attendanceRecord->status == 'Absent') {
+            if (!$attendanceRecord) {
+                $isAbsent = true;
+            } else {
+                $dateStringForLop = $attendanceRecord->date instanceof \Carbon\Carbon ? $attendanceRecord->date->format('Y-m-d') : date('Y-m-d', strtotime($attendanceRecord->date));
+                $trueStatusLop = $attendanceController->calculateAttendanceStatusWithNewRules(
+                    $attendanceRecord->clock_in,
+                    $attendanceRecord->clock_out,
+                    $dateStringForLop,
+                    $employee->id
+                );
+                $isAbsent = ($trueStatusLop == 'Absent');
+            }
+            
+            if ($isAbsent) {
                 // Check if there's an approved leave (non-LOP) for this date
                 $hasApprovedLeave = false;
                 $approvedLeaveIndex = 0;
@@ -291,6 +327,8 @@ class SalaryProcessingController extends Controller
             'total_monthly_days' => $totalMonthlyDays,
             'payable_days' => round($payableDays, 2),
             'present_days' => round($presentDays, 2),
+            'half_days' => $halfDayCount,
+            'half_days_payable' => round($halfDaysAsFull, 2),
             'approved_leave_days' => round($approvedLeaveDays, 2),
             'lop_days' => round($lopDays, 2),
             'actual_salary' => $actualSalary,

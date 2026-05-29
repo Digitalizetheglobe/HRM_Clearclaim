@@ -300,7 +300,7 @@ class HomeController extends Controller
                                 $dateFormatted = $date->format('Y-m-d');
                                 $dayOfWeek = $date->dayOfWeek; // 0 = Sunday, 6 = Saturday
                                 if (!isset($employeeData[$dateFormatted]) && $date->lte($today)
-                                    && $dayOfWeek != 0 && $dayOfWeek != 6) {
+                                    && $dayOfWeek != 0) {
                                     $employeeData[$dateFormatted] = ['type' => 'absent'];
                                 }
                             }

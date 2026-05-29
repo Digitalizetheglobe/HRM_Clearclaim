@@ -58,6 +58,7 @@
                                 <th>{{ __('Employee Name') }}</th>
                                 <th>{{ __('Total Monthly Days') }}</th>
                                 <th>{{ __('Payable Days') }}</th>
+                                <th>{{ __('Half Day') }}</th>
                                 <th>{{ __('LOP Days') }}</th>
                                 <th>{{ __('Actual Salary') }}</th>
                                 <th>{{ __('Monthly Salary') }}</th>
@@ -72,6 +73,7 @@
                                         <td>{{ $data['employee_name'] }}</td>
                                         <td>{{ $data['total_monthly_days'] }}</td>
                                         <td>{{ number_format($data['payable_days'], 2) }}</td>
+                                        <td>{{ $data['half_days'] }}</td>
                                         <td>{{ number_format($data['lop_days'], 2) }}</td>
                                         <td>{{ \Auth::user()->priceFormat($data['actual_salary']) }}</td>
                                         <td>{{ \Auth::user()->priceFormat($data['monthly_salary']) }}</td>
@@ -88,7 +90,7 @@
                         @if(count($salaryData) > 0)
                         <tfoot>
                             <tr>
-                                <th colspan="6" class="text-right">{{ __('Total:') }}</th>
+                                <th colspan="5" class="text-right">{{ __('Total:') }}</th>
                                 <th>{{ \Auth::user()->priceFormat(collect($salaryData)->sum('actual_salary')) }}</th>
                                 <th>{{ \Auth::user()->priceFormat(collect($salaryData)->sum('monthly_salary')) }}</th>
                                 <th>{{ \Auth::user()->priceFormat(collect($salaryData)->sum('salary_arrears')) }}</th>

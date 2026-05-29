@@ -172,7 +172,7 @@
                                 <div class="d-flex align-items-center"><span class="badge bg-success me-2">&nbsp;</span> {{ __('Present (9+ Hours)') }}</div>
                                 <div class="d-flex align-items-center"><span class="badge bg-warning text-dark me-2">&nbsp;</span> {{ __('Present (< 9 Hours)') }}</div>
                                 <div class="d-flex align-items-center"><span class="badge bg-danger me-2">&nbsp;</span> {{ __('Absent') }}</div>
-                                <div class="d-flex align-items-center"><span class="badge bg-warning me-2">&nbsp;</span> {{ __('Leave') }}</div>
+                                <div class="d-flex align-items-center"><span class="badge me-2" style="background-color: #6f42c1; color: white;">&nbsp;</span> {{ __('Leave') }}</div>
                                 <div class="d-flex align-items-center"><span class="badge bg-secondary me-2">&nbsp;</span> {{ __('WO (Week Off)') }}</div>
                                 <div class="d-flex align-items-center"><span class="badge bg-info me-2">&nbsp;</span> {{ __('H (Holiday)') }}</div>
                                 <div class="d-flex align-items-center"><span class="badge bg-primary me-2">&nbsp;</span> {{ __('Half Day') }}</div>
@@ -307,8 +307,8 @@
                                                 
                                                 $timeInfo = "In: {$formattedIn}<br>Out: {$displayClockOut}{$actualClockOutDisplay}<br>Total: 4h 30m";
                                             } elseif ($status === 'leave') {
-                                                $class .= ' bg-warning-light';
-                                                $badges[] = '<span class="badge bg-warning text-dark">Leave</span>';
+                                                $class .= ' bg-purple-light';
+                                                $badges[] = '<span class="badge" style="background-color: #6f42c1; color: white;">Leave</span>';
                                                 $title = __('Leave: ') . ($dayData['reason'] ?? '');
                                             } elseif ($status === 'lop') {
                                                 $class .= ' bg-danger-light';
@@ -462,6 +462,10 @@
         .calendar-day.bg-warning-light {
             background-color: rgba(255, 193, 7, 0.1) !important;
             color: #856404;
+        }
+        .calendar-day.bg-purple-light {
+            background-color: rgba(111, 66, 193, 0.1) !important;
+            color: #553098;
         }
         .calendar-day.bg-info-light {
             background-color: rgba(23, 162, 184, 0.08) !important;
