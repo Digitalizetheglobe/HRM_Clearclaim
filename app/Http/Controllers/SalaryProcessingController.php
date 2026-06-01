@@ -6,6 +6,7 @@ use App\Models\Employee;
 use App\Models\AttendanceEmployee;
 use App\Models\Leave;
 use App\Models\SalaryArrear;
+use App\Models\LateMarkDeduction;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Carbon\Carbon;
@@ -101,6 +102,7 @@ class SalaryProcessingController extends Controller
         // Calculate present days (full present days)
         $presentDays = 0;
         $halfDayCount = 0;
+        $totalLateMarks = 0;
         
         $attendanceController = app(\App\Http\Controllers\AttendanceEmployeeController::class);
         
@@ -113,9 +115,13 @@ class SalaryProcessingController extends Controller
                 $employee->id
             );
             
-            if ($trueStatus == 'Present' || $trueStatus == 'Present (Late)') {
+            if (AttendanceEmployee::isLateMarkForEmployee($employee->id, $attendance->clock_in)) {
+                $totalLateMarks++;
+            }
+            
+            if (in_array($trueStatus, ['Present', 'Present (Late)', 'Half Day (Late)'])) {
                 $presentDays++;
-            } elseif ($trueStatus == 'Half Day') {
+            } elseif (in_array($trueStatus, ['Half Day', 'Half Day (Punch Miss)'])) {
                 $halfDayCount++;
             }
         }
@@ -235,10 +241,6 @@ class SalaryProcessingController extends Controller
             $currentDate->addDay();
         }
 
-        // Calculate payable days
-        $payableDays = $presentDays + $approvedLeaveDays + $weekOffDays + $holidayDays;
-        
-        // Calculate LOP days (absent days + LOP leaves)
         // LOP should only be calculated up to today (if current month), and Sundays/Holidays should be excluded
         // $lopEndDate is already set above based on whether it's current month or not
         
@@ -305,19 +307,35 @@ class SalaryProcessingController extends Controller
         }
         
         $lopDays = $absentDays + $lopLeaveDays;
+
+        // Calculate payable days
+        $payableDays = $presentDays + $approvedLeaveDays + $weekOffDays + $holidayDays;
+        
+        // Get Late Mark Deduction (in days) for this month
+        $lateMarkDeduction = LateMarkDeduction::where('employee_id', $employee->id)
+            ->where('payment_month', $formate_month_year)
+            ->sum('amount');
+            
+        // Calculate actual payable days
+        $actualPayableDays = $payableDays - $lateMarkDeduction;
+        
+
         
         // Actual Salary
         $actualSalary = $employee->salary ?? 0;
         
-        // Monthly Salary = (Actual Salary / Total Monthly Days) * Payable Days
-        $monthlySalary = ($actualSalary / $totalMonthlyDays) * $payableDays;
+        // Daily Salary = Actual Salary / Total Monthly Days (rounded to 2 decimal places)
+        $dailySalary = $totalMonthlyDays > 0 ? round($actualSalary / $totalMonthlyDays, 2) : 0;
+        
+        // Monthly Salary = Daily Salary * Actual Payable Days
+        $monthlySalary = $dailySalary * $actualPayableDays;
         
         // Get Salary Arrears for this month
         $salaryArrears = SalaryArrear::where('employee_id', $employee->id)
             ->where('payment_month', 'like', $formate_month_year . '%')
             ->where('created_by', \Auth::user()->creatorId())
             ->sum('amount');
-        
+            
         // Final Payable Salary
         $finalPayableSalary = $monthlySalary + $salaryArrears;
         
@@ -325,15 +343,19 @@ class SalaryProcessingController extends Controller
             'employee_id' => $employee->id,
             'employee_name' => $employee->name,
             'total_monthly_days' => $totalMonthlyDays,
+            'total_late_marks' => $totalLateMarks > 3 ? $totalLateMarks - 3 : 0, // Exclude first 3 as requested
             'payable_days' => round($payableDays, 2),
+            'actual_payable_days' => round($actualPayableDays, 2),
             'present_days' => round($presentDays, 2),
             'half_days' => $halfDayCount,
             'half_days_payable' => round($halfDaysAsFull, 2),
             'approved_leave_days' => round($approvedLeaveDays, 2),
             'lop_days' => round($lopDays, 2),
             'actual_salary' => $actualSalary,
+            'daily_salary' => round($dailySalary, 2),
             'monthly_salary' => round($monthlySalary, 2),
             'salary_arrears' => round($salaryArrears, 2),
+            'late_mark_deduction_amount' => $lateMarkDeduction,
             'final_payable_salary' => round($finalPayableSalary, 2),
         ];
     }

@@ -1065,6 +1065,8 @@ Route::group(['middleware' => ['verified']], function () {
 
     // Salary Processing Routes
     Route::get('salary-processing', [\App\Http\Controllers\SalaryProcessingController::class, 'index'])->name('salary-processing.index')->middleware(['auth', 'XSS']);
+    Route::get('late-mark-deductions/create', [\App\Http\Controllers\LateMarkDeductionController::class, 'create'])->name('late-mark-deductions.create')->middleware(['auth', 'XSS']);
+    Route::post('late-mark-deductions', [\App\Http\Controllers\LateMarkDeductionController::class, 'store'])->name('late-mark-deductions.store')->middleware(['auth', 'XSS']);
 
 
     Route::resource('resignation', ResignationController::class)->middleware(

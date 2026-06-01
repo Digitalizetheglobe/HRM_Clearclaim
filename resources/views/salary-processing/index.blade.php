@@ -57,13 +57,17 @@
                             <tr>
                                 <th>{{ __('Employee Name') }}</th>
                                 <th>{{ __('Total Monthly Days') }}</th>
-                                <th>{{ __('Payable Days') }}</th>
-                                <th>{{ __('Half Day') }}</th>
+                                <th>{{ __('Total Late Marks') }}</th>
+                                <th>{{ __('Late Mark Deduction') }}</th>
                                 <th>{{ __('LOP Days') }}</th>
+                                <th>{{ __('Payable Days') }}</th>
+                                <th>{{ __('Actual Payable Days') }}</th>
                                 <th>{{ __('Actual Salary') }}</th>
-                                <th>{{ __('Monthly Salary') }}</th>
+                                <th>{{ __('Daily Salary') }}</th>
                                 <th>{{ __('Salary Arrears') }}</th>
+                                <th>{{ __('Monthly Salary') }}</th>
                                 <th>{{ __('Final Payable Salary') }}</th>
+                                <th>{{ __('Action') }}</th>
                             </tr>
                         </thead>
                         <tbody>
@@ -72,29 +76,47 @@
                                     <tr>
                                         <td>{{ $data['employee_name'] }}</td>
                                         <td>{{ $data['total_monthly_days'] }}</td>
-                                        <td>{{ number_format($data['payable_days'], 2) }}</td>
-                                        <td>{{ $data['half_days'] }}</td>
+                                        <td>{{ $data['total_late_marks'] }}</td>
+                                        <td>{{ $data['late_mark_deduction_amount'] ?? 0 }}</td>
                                         <td>{{ number_format($data['lop_days'], 2) }}</td>
+                                        <td>{{ number_format($data['payable_days'], 2) }}</td>
+                                        <td>{{ number_format($data['actual_payable_days'], 2) }}</td>
                                         <td>{{ \Auth::user()->priceFormat($data['actual_salary']) }}</td>
-                                        <td>{{ \Auth::user()->priceFormat($data['monthly_salary']) }}</td>
+                                        <td>{{ \Auth::user()->priceFormat($data['daily_salary']) }}</td>
                                         <td>{{ \Auth::user()->priceFormat($data['salary_arrears']) }}</td>
+                                        <td>{{ \Auth::user()->priceFormat($data['monthly_salary']) }}</td>
                                         <td><strong>{{ \Auth::user()->priceFormat($data['final_payable_salary']) }}</strong></td>
+                                        <td class="Action">
+                                            <span>
+                                                <div class="action-btn bg-primary ms-2">
+                                                    <a href="#" class="mx-3 btn btn-sm align-items-center"
+                                                        data-url="{{ route('late-mark-deductions.create', ['employee_id' => $data['employee_id'], 'month' => $year.'-'.$month]) }}"
+                                                        data-ajax-popup="true" data-title="{{ __('Add Late Mark Deductions') }}"
+                                                        data-bs-toggle="tooltip" title="{{ __('Add Late Mark Deductions') }}">
+                                                        <i class="ti ti-plus text-white"></i>
+                                                    </a>
+                                                </div>
+                                            </span>
+                                        </td>
                                     </tr>
                                 @endforeach
                             @else
                                 <tr>
-                                    <td colspan="10" class="text-center">{{ __('No employees with salary found.') }}</td>
+                                    <td colspan="14" class="text-center">{{ __('No employees with salary found.') }}</td>
                                 </tr>
                             @endif
                         </tbody>
                         @if(count($salaryData) > 0)
                         <tfoot>
                             <tr>
-                                <th colspan="5" class="text-right">{{ __('Total:') }}</th>
+                                <th>{{ collect($salaryData)->sum('late_mark_deduction_amount') }}</th>
+                                <th colspan="4" class="text-right">{{ __('Total:') }}</th>
                                 <th>{{ \Auth::user()->priceFormat(collect($salaryData)->sum('actual_salary')) }}</th>
-                                <th>{{ \Auth::user()->priceFormat(collect($salaryData)->sum('monthly_salary')) }}</th>
+                                <th>{{ \Auth::user()->priceFormat(collect($salaryData)->sum('daily_salary')) }}</th>
                                 <th>{{ \Auth::user()->priceFormat(collect($salaryData)->sum('salary_arrears')) }}</th>
+                                <th>{{ \Auth::user()->priceFormat(collect($salaryData)->sum('monthly_salary')) }}</th>
                                 <th><strong>{{ \Auth::user()->priceFormat(collect($salaryData)->sum('final_payable_salary')) }}</strong></th>
+                                <th></th>
                             </tr>
                         </tfoot>
                         @endif
