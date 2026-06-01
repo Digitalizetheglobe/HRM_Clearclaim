@@ -804,6 +804,8 @@ class AttendanceEmployeeController extends Controller
             if (!empty($request->branch) && !empty($request->department)) {
                 $startTime = Utility::getValByName('company_start_time');
                 $endTime   = Utility::getValByName('company_end_time');
+                $startTime = !empty($startTime) ? $startTime : '09:00:00';
+                $endTime   = !empty($endTime) ? $endTime : '18:00:00';
                 $date      = $request->date;
 
                 $employees = $request->employee_id;
@@ -815,8 +817,11 @@ class AttendanceEmployeeController extends Controller
                     $atte[]  = $present;
                     if ($request->$present == 'on') {
 
-                        $in  = date("H:i:s", strtotime($request->$in));
-                        $out = date("H:i:s", strtotime($request->$out));
+                        $inTime = $request->$in;
+                        $outTime = $request->$out;
+
+                        $in  = !empty($inTime) ? date("H:i:s", strtotime($inTime)) : '00:00:00';
+                        $out = !empty($outTime) ? date("H:i:s", strtotime($outTime)) : '00:00:00';
 
                         // Calculate late time based on department-specific punch-in time
                         $late = $this->calculateLateTime($in, $date, $employee);
@@ -865,22 +870,8 @@ class AttendanceEmployeeController extends Controller
                         $attendance = AttendanceEmployee::where('employee_id', '=', $employee)->where('date', '=', $request->date)->first();
 
                         if (!empty($attendance)) {
-                            $employeeAttendance = $attendance;
-                        } else {
-                            $employeeAttendance              = new AttendanceEmployee();
-                            $employeeAttendance->employee_id = $employee;
-                            $employeeAttendance->created_by  = \Auth::user()->creatorId();
+                            $attendance->delete();
                         }
-
-                        $employeeAttendance->status        = AttendanceEmployee::STATUS_ABSENT;
-                        $employeeAttendance->date          = $request->date;
-                        $employeeAttendance->clock_in      = '00:00:00';
-                        $employeeAttendance->clock_out     = '00:00:00';
-                        $employeeAttendance->late          = '00:00:00';
-                        $employeeAttendance->early_leaving = '00:00:00';
-                        $employeeAttendance->overtime      = '00:00:00';
-                        $employeeAttendance->total_rest    = '00:00:00';
-                        $employeeAttendance->save();
                     }
                 }
 

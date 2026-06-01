@@ -197,20 +197,20 @@
                                                         <input class="form-check-input present" type="checkbox"
                                                             name="present-{{ $employee->id }}"
                                                             id="present{{ $employee->id }}"
-                                                            {{ !empty($attendance) && $attendance->status == 'Present' ? 'checked' : '' }}>
+                                                            {{ !empty($attendance) && $attendance->status != 'Absent' ? 'checked' : '' }}>
                                                         <label class="custom-control-label"
                                                             for="present{{ $employee->id }}"></label>
                                                     </div>
                                                 </div>
                                             </div>
                                             <div
-                                                class="col-md-8 present_check_in {{ empty($attendance) ? 'd-none' : '' }} ">
+                                                class="col-md-8 present_check_in {{ empty($attendance) || $attendance->status == 'Absent' ? 'd-none' : '' }} ">
                                                 <div class="row">
                                                     <label class="col-md-2 control-label">{{ __('In') }}</label>
                                                     <div class="col-md-4">
                                                         <input type="time" class="form-control timepicker"
                                                             name="in-{{ $employee->id }}"
-                                                            value="{{ !empty($attendance) && $attendance->clock_in != '00:00:00' ? $attendance->clock_in : \Utility::getValByName('company_start_time') }}">
+                                                            value="{{ !empty($attendance) && $attendance->clock_in != '00:00:00' ? $attendance->clock_in : (!empty(\Utility::getValByName('company_start_time')) ? \Utility::getValByName('company_start_time') : '09:00:00') }}">
                                                     </div>
 
                                                     <label for="inputValue"
@@ -218,7 +218,7 @@
                                                     <div class="col-md-4">
                                                         <input type="time" class="form-control timepicker"
                                                             name="out-{{ $employee->id }}"
-                                                            value="{{ !empty($attendance) && $attendance->clock_out != '00:00:00' ? $attendance->clock_out : \Utility::getValByName('company_end_time') }}">
+                                                            value="{{ !empty($attendance) && $attendance->clock_out != '00:00:00' ? $attendance->clock_out : (!empty(\Utility::getValByName('company_end_time')) ? \Utility::getValByName('company_end_time') : '18:00:00') }}">
                                                     </div>
                                                 </div>
                                             </div>
