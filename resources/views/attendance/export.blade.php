@@ -32,6 +32,26 @@
                     @isset($attendanceData[$employee->id][$date]['status'])
                         @php
                             $status = $attendanceData[$employee->id][$date]['status'];
+                            
+                            $clockIn = $attendanceData[$employee->id][$date]['clock_in'] ?? null;
+                            $clockOut = $attendanceData[$employee->id][$date]['clock_out'] ?? null;
+                            if ($clockIn && $clockOut && $clockIn !== '00:00:00' && $clockOut !== '00:00:00' && $clockIn !== '00:00' && $clockOut !== '00:00' && !in_array($status, ['Absent', 'Leave', 'LOP', 'Holiday'])) {
+                                $inParts = explode(':', $clockIn);
+                                $outParts = explode(':', $clockOut);
+                                
+                                $inTotalMinutes = ((int)$inParts[0] * 60) + (int)$inParts[1];
+                                $outTotalMinutes = ((int)$outParts[0] * 60) + (int)$outParts[1];
+                                
+                                $diffMinutes = $outTotalMinutes - $inTotalMinutes;
+                                if ($diffMinutes < 0) {
+                                    $diffMinutes = (24 * 60) - $inTotalMinutes + $outTotalMinutes;
+                                }
+                                
+                                if ($diffMinutes > 0 && $diffMinutes < 300) {
+                                    $status = 'Half Day';
+                                }
+                            }
+                            
                             $abbreviation = 'A'; // Default for Absent
                             
                             switch($status) {

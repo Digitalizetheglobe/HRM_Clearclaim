@@ -980,6 +980,8 @@ Route::group(['middleware' => ['verified']], function () {
     Route::delete('salary-arrears/{id}', [\App\Http\Controllers\SalaryArrearController::class, 'destroy'])->name('salary-arrears.destroy')->middleware(['auth', 'XSS']);
     Route::get('salary-arrears/departments', [\App\Http\Controllers\SalaryArrearController::class, 'getDepartments'])->name('salary-arrears.departments')->middleware(['auth', 'XSS']);
     Route::post('salary-arrears/employees', [\App\Http\Controllers\SalaryArrearController::class, 'getEmployeesByDepartment'])->name('salary-arrears.employees')->middleware(['auth', 'XSS']);
+    Route::get('salary-arrears-popup/create', [\App\Http\Controllers\SalaryArrearController::class, 'createPopup'])->name('salary-arrears-popup.create')->middleware(['auth', 'XSS']);
+    Route::post('salary-arrears-popup/store', [\App\Http\Controllers\SalaryArrearController::class, 'storePopup'])->name('salary-arrears-popup.store')->middleware(['auth', 'XSS']);
 
     Route::get('payslip/paysalary/{id}/{date}', [PaySlipController::class, 'paysalary'])->name('payslip.paysalary')->middleware(
         [

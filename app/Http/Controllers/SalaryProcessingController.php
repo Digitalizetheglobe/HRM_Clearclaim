@@ -82,6 +82,19 @@ class SalaryProcessingController extends Controller
         $startDate = Carbon::create($year, $month, 1)->startOfMonth();
         $endDate = Carbon::create($year, $month, 1)->endOfMonth();
         
+        // Adjust start date to joining date if they joined this month
+        if (!empty($employee->company_doj)) {
+            $employeeDoj = Carbon::parse($employee->company_doj)->startOfDay();
+            // If joining date is after the month ends, they shouldn't get any salary
+            if ($employeeDoj->gt($endDate)) {
+                return null;
+            }
+            // If they joined during this month, start calculations from their joining date
+            if ($employeeDoj->gt($startDate) && $employeeDoj->format('Y-m') == $formate_month_year) {
+                $startDate = $employeeDoj;
+            }
+        }
+        
         // For LOP calculation: if viewing current month, only calculate up to today
         // For past months, calculate for entire month
         $today = Carbon::today();
@@ -163,29 +176,27 @@ class SalaryProcessingController extends Controller
             return $leave->is_lop == true || $leave->is_lop == 1;
         });
         
-        // Process non-LOP leaves (up to 2 leaves)
+        // Process non-LOP leaves
         foreach ($nonLopLeaves as $leave) {
-            if ($approvedLeaveCount < 2) {
-                $approvedLeaveCount++;
-                
-                $leaveStart = Carbon::parse($leave->start_date);
-                $leaveEnd = Carbon::parse($leave->end_date);
-                
-                // Only count days within the selected month
-                $actualStart = $leaveStart->lt($startDate) ? $startDate : $leaveStart;
-                $actualEnd = $leaveEnd->gt($endDate) ? $endDate : $leaveEnd;
-                
-                if ($leave->leave_duration == 'Half Day') {
-                    // Check if the half day is within the month
-                    if ($actualStart->lte($actualEnd)) {
-                        $approvedLeaveDays += 0.5;
-                    }
-                } else {
-                    // Full day leave - count all days within the month
-                    if ($actualStart->lte($actualEnd)) {
-                        $days = $actualStart->diffInDays($actualEnd) + 1;
-                        $approvedLeaveDays += $days;
-                    }
+            $approvedLeaveCount++;
+            
+            $leaveStart = Carbon::parse($leave->start_date);
+            $leaveEnd = Carbon::parse($leave->end_date);
+            
+            // Only count days within the selected month
+            $actualStart = $leaveStart->lt($startDate) ? $startDate : $leaveStart;
+            $actualEnd = $leaveEnd->gt($endDate) ? $endDate : $leaveEnd;
+            
+            if ($leave->leave_duration == 'Half Day') {
+                // Check if the half day is within the month
+                if ($actualStart->lte($actualEnd)) {
+                    $approvedLeaveDays += 0.5;
+                }
+            } else {
+                // Full day leave - count all days within the month
+                if ($actualStart->lte($actualEnd)) {
+                    $days = $actualStart->diffInDays($actualEnd) + 1;
+                    $approvedLeaveDays += $days;
                 }
             }
         }
@@ -241,72 +252,17 @@ class SalaryProcessingController extends Controller
             $currentDate->addDay();
         }
 
-        // LOP should only be calculated up to today (if current month), and Sundays/Holidays should be excluded
-        // $lopEndDate is already set above based on whether it's current month or not
+        // Calculate total days in the employee's active period this month
+        $totalDaysInPeriod = $startDate->diffInDays($endDate) + 1;
         
-        // Find absent days (days with no attendance and no approved leave)
-        // Exclude Sundays and Holidays from LOP calculation
-        $absentDays = 0;
-        foreach ($allDates as $dateStr) {
-            $date = Carbon::parse($dateStr);
-            
-            // If this is a weekend (Sunday) or a holiday, it does not count as LOP
-            if ($date->dayOfWeek == Carbon::SUNDAY || in_array($dateStr, $holidaysList)) {
-                continue;
-            }
-            
-            // Check if there's attendance
-            // Handle both string and date object formats
-            $attendanceRecord = $attendanceRecordsForLOP->first(function($attendance) use ($dateStr) {
-                // Convert date to string format for comparison
-                if ($attendance->date instanceof \Carbon\Carbon) {
-                    $attendanceDate = $attendance->date->format('Y-m-d');
-                } elseif (is_string($attendance->date)) {
-                    $attendanceDate = $attendance->date;
-                } else {
-                    $attendanceDate = date('Y-m-d', strtotime($attendance->date));
-                }
-                return $attendanceDate === $dateStr;
-            });
-            
-            // If no attendance record, or if attendance status is "Absent", it counts as LOP
-            if (!$attendanceRecord) {
-                $isAbsent = true;
-            } else {
-                $dateStringForLop = $attendanceRecord->date instanceof \Carbon\Carbon ? $attendanceRecord->date->format('Y-m-d') : date('Y-m-d', strtotime($attendanceRecord->date));
-                $trueStatusLop = $attendanceController->calculateAttendanceStatusWithNewRules(
-                    $attendanceRecord->clock_in,
-                    $attendanceRecord->clock_out,
-                    $dateStringForLop,
-                    $employee->id
-                );
-                $isAbsent = ($trueStatusLop == 'Absent');
-            }
-            
-            if ($isAbsent) {
-                // Check if there's an approved leave (non-LOP) for this date
-                $hasApprovedLeave = false;
-                $approvedLeaveIndex = 0;
-                foreach ($nonLopLeaves as $leave) {
-                    if ($approvedLeaveIndex < 2) {
-                        $leaveStart = Carbon::parse($leave->start_date);
-                        $leaveEnd = Carbon::parse($leave->end_date);
-                        
-                        if ($date->between($leaveStart, $leaveEnd)) {
-                            $hasApprovedLeave = true;
-                            break;
-                        }
-                        $approvedLeaveIndex++;
-                    }
-                }
-                
-                if (!$hasApprovedLeave) {
-                    $absentDays++;
-                }
-            }
+        // Calculate payable days first
+        $payableDays = $presentDays + $approvedLeaveDays + $weekOffDays + $holidayDays;
+        
+        // LOP days is simply the difference between the days they should have worked and the days they are getting paid for
+        $lopDays = $totalDaysInPeriod - $payableDays;
+        if ($lopDays < 0) {
+            $lopDays = 0;
         }
-        
-        $lopDays = $absentDays + $lopLeaveDays;
 
         // Calculate payable days
         $payableDays = $presentDays + $approvedLeaveDays + $weekOffDays + $holidayDays;

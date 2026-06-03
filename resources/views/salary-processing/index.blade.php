@@ -97,6 +97,22 @@
                                                     </a>
                                                 </div>
                                             </span>
+                                            <span>
+                                                @php
+                                                    $hasArrears = $data['salary_arrears'] > 0;
+                                                    $arrearsBtnClass = $hasArrears ? 'bg-success' : 'bg-info';
+                                                    $arrearsIcon = $hasArrears ? 'ti ti-pencil' : 'ti ti-plus';
+                                                    $arrearsTitle = $hasArrears ? __('Edit Salary Arrears') : __('Add Salary Arrears');
+                                                @endphp
+                                                <div class="action-btn {{ $arrearsBtnClass }} ms-2">
+                                                    <a href="#" class="mx-3 btn btn-sm align-items-center"
+                                                        data-url="{{ route('salary-arrears-popup.create', ['employee_id' => $data['employee_id'], 'month' => $year.'-'.$month]) }}"
+                                                        data-ajax-popup="true" data-title="{{ $arrearsTitle }}"
+                                                        data-bs-toggle="tooltip" title="{{ $arrearsTitle }}">
+                                                        <i class="{{ $arrearsIcon }} text-white"></i>
+                                                    </a>
+                                                </div>
+                                            </span>
                                         </td>
                                     </tr>
                                 @endforeach

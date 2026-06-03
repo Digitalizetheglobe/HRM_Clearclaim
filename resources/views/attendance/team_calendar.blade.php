@@ -224,6 +224,19 @@
                                             $status = $dayData['type'];
                                             
                                             if ($status === 'present') {
+                                                $clockInCheck = $dayData['clock_in'] ?? null;
+                                                $clockOutCheck = $dayData['clock_out'] ?? null;
+                                                if ($clockInCheck && $clockOutCheck && $clockInCheck !== '00:00:00' && $clockOutCheck !== '00:00:00' && $clockInCheck !== '00:00' && $clockOutCheck !== '00:00') {
+                                                    $totalHoursCheck = calculateTotalHours($clockInCheck, $clockOutCheck);
+                                                    if ($totalHoursCheck > 0 && $totalHoursCheck < 5) {
+                                                        $status = 'half_day';
+                                                        $dayData['type'] = 'half_day';
+                                                        $dayData['status'] = 'Half Day';
+                                                    }
+                                                }
+                                            }
+                                            
+                                            if ($status === 'present') {
                                                 $clockIn = $dayData['clock_in'];
                                                 $clockOut = $dayData['clock_out'];
                                                 $isLate = $dayData['is_late'] ?? false;
@@ -282,7 +295,7 @@
                                                 
                                                 $badges[] = '<span class="badge" style="background-color: ' . $badgeColor . '; color: white;">' . $badgeText . '</span>';
                                                 
-                                                // Calculate display punch-out time (4.5 hours after clock in)
+                                                // Calculate display punch-out time (5 hours after clock in)
                                                 $displayClockOut = $formattedOut;
                                                 $actualClockOutDisplay = '';
                                                 if ($clockIn && $clockIn !== '00:00:00' && $clockIn !== '00:00') {
@@ -290,7 +303,7 @@
                                                     $inHours = (int)$clockInParts[0];
                                                     $inMinutes = (int)$clockInParts[1];
                                                     
-                                                    $outTotalMinutes = ($inHours * 60 + $inMinutes) + 270; // 4.5 hours
+                                                    $outTotalMinutes = ($inHours * 60 + $inMinutes) + 300; // 5 hours
                                                     $outHours = floor($outTotalMinutes / 60) % 24;
                                                     $outMinutes = $outTotalMinutes % 60;
                                                     
@@ -303,7 +316,7 @@
                                                     }
                                                 }
                                                 
-                                                $timeInfo = "In: {$formattedIn}<br>Out: {$displayClockOut}{$actualClockOutDisplay}<br>Total: 4h 30m";
+                                                $timeInfo = "In: {$formattedIn}<br>Out: {$displayClockOut}{$actualClockOutDisplay}<br>Total: 5h 0m";
                                             } elseif ($status === 'leave') {
                                                 $class .= ' bg-purple-light';
                                                 $badges[] = '<span class="badge" style="background-color: #6f42c1; color: white;">Leave</span>';

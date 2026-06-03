@@ -391,8 +391,12 @@
                                                 $statusClass = '';
                                                 $statusText = $attendance->status;
                                                 
+                                                if ($totalMinutes !== null && $totalMinutes > 0 && $totalMinutes < 300 && !in_array($statusText, ['Absent', 'Leave', 'LOP', 'Holiday'])) {
+                                                    $statusText = 'Half Day';
+                                                }
+
                                                 // Determine status styling
-                                                switch($attendance->status) {
+                                                switch($statusText) {
                                                     case 'Present':
                                                         $statusClass = 'badge bg-success';
                                                         break;

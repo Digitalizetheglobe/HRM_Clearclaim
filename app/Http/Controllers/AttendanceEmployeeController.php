@@ -1370,7 +1370,16 @@ class AttendanceEmployeeController extends Controller
                     $monthEnd = $currentDate->copy()->endOfMonth();
                     $today = \Carbon\Carbon::today();
                     
-                    for ($date = $monthStart->copy(); $date->lte($monthEnd); $date->addDay()) {
+                    // Start filling absences only from DOJ if they joined this month
+                    $processStart = $monthStart->copy();
+                    if (!empty($selectedEmployee->company_doj)) {
+                        $doj = \Carbon\Carbon::parse($selectedEmployee->company_doj)->startOfDay();
+                        if ($doj->gt($processStart) && $doj->format('Y-m') == $processStart->format('Y-m')) {
+                            $processStart = $doj;
+                        }
+                    }
+                    
+                    for ($date = $processStart->copy(); $date->lte($monthEnd); $date->addDay()) {
                         $dateFormatted = $date->format('Y-m-d');
                         $dayOfWeek = $date->dayOfWeek; // 0 = Sunday, 6 = Saturday
 
@@ -1583,7 +1592,16 @@ class AttendanceEmployeeController extends Controller
                         $monthEnd = $currentDate->copy()->endOfMonth();
                         $today = \Carbon\Carbon::today();
                         
-                        for ($date = $monthStart->copy(); $date->lte($monthEnd); $date->addDay()) {
+                        // Start filling absences only from DOJ if they joined this month
+                        $processStart = $monthStart->copy();
+                        if (!empty($selectedEmployee->company_doj)) {
+                            $doj = \Carbon\Carbon::parse($selectedEmployee->company_doj)->startOfDay();
+                            if ($doj->gt($processStart) && $doj->format('Y-m') == $processStart->format('Y-m')) {
+                                $processStart = $doj;
+                            }
+                        }
+                        
+                        for ($date = $processStart->copy(); $date->lte($monthEnd); $date->addDay()) {
                             $dateFormatted = $date->format('Y-m-d');
                             $dayOfWeek = $date->dayOfWeek; // 0 = Sunday
 
@@ -2259,31 +2277,31 @@ class AttendanceEmployeeController extends Controller
             return AttendanceEmployee::STATUS_HALF_DAY_LATE;
         }
         
-        // Rule 1: If worked ≤ 4.5 hours OR punch-out within 4.5 hours, return Half Day
-        if ($totalMinutes <= 270) { // 4.5 hours = 270 minutes
-            // For late marks with ≤ 4.5 hours, still return Half Day (not Half Day Late)
+        // Rule 1: If worked ≤ 5 hours OR punch-out within 5 hours, return Half Day
+        if ($totalMinutes <= 300) { // 5 hours = 300 minutes
+            // For late marks with ≤ 5 hours, still return Half Day (not Half Day Late)
             return AttendanceEmployee::STATUS_HALF_DAY;
         }
         
-        // For employees who worked > 4.5 hours
+        // For employees who worked > 5 hours
         if ($isLateMark) {
-            // First 3 late marks with > 4.5 hours - Present (Late)
+            // First 3 late marks with > 5 hours - Present (Late)
             return AttendanceEmployee::STATUS_PRESENT_LATE;
         }
         
-        // If punch-out is after 4.5 hours and not late, mark as Present
+        // If punch-out is after 5 hours and not late, mark as Present
         return AttendanceEmployee::STATUS_PRESENT;
     }
 
 
     /**
-     * Handle Half Day (Punch Miss) status by calculating 4.5 hours and updating attendance
+     * Handle Half Day (Punch Miss) status by calculating 5 hours and updating attendance
      */
     private function handleHalfDayPunchMiss($attendance, $date)
     {
-        // Calculate 4.5 hours from punch-in time
+        // Calculate 5 hours from punch-in time
         $clockInTime = Carbon::parse($date . ' ' . $attendance->clock_in);
-        $calculatedClockOut = $clockInTime->copy()->addHours(4)->addMinutes(30);
+        $calculatedClockOut = $clockInTime->copy()->addHours(5)->addMinutes(0);
         
         // If calculated time goes past midnight (next day), cap it at end of day (23:59:59)
         $endOfDay = Carbon::parse($date . ' 23:59:59');
@@ -2322,13 +2340,13 @@ class AttendanceEmployeeController extends Controller
     }
 
     /**
-     * Handle Half Day status by calculating 4.5 hours and updating attendance
+     * Handle Half Day status by calculating 5 hours and updating attendance
      */
     private function handleHalfDayStatus($attendance, $date)
     {
-        // Calculate 4.5 hours from punch-in time
+        // Calculate 5 hours from punch-in time
         $clockInTime = Carbon::parse($date . ' ' . $attendance->clock_in);
-        $calculatedClockOut = $clockInTime->copy()->addHours(4)->addMinutes(30);
+        $calculatedClockOut = $clockInTime->copy()->addHours(5)->addMinutes(0);
         
         // If calculated time goes past midnight (next day), cap it at end of day (23:59:59)
         $endOfDay = Carbon::parse($date . ' 23:59:59');
