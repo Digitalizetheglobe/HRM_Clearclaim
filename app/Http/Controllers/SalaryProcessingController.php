@@ -10,6 +10,8 @@ use App\Models\LateMarkDeduction;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Carbon\Carbon;
+use Maatwebsite\Excel\Facades\Excel;
+use App\Exports\SalaryProcessingExport;
 
 class SalaryProcessingController extends Controller
 {
@@ -314,6 +316,53 @@ class SalaryProcessingController extends Controller
             'late_mark_deduction_amount' => $lateMarkDeduction,
             'final_payable_salary' => round($finalPayableSalary, 2),
         ];
+    }
+
+    public function export(Request $request)
+    {
+        if (\Auth::user()->can('Manage Pay Slip') || \Auth::user()->type == 'hr' || \Auth::user()->type == 'company') {
+            $monthOptions = [
+                '01' => 'JAN', '02' => 'FEB', '03' => 'MAR', '04' => 'APR',
+                '05' => 'MAY', '06' => 'JUN', '07' => 'JUL', '08' => 'AUG',
+                '09' => 'SEP', '10' => 'OCT', '11' => 'NOV', '12' => 'DEC',
+            ];
+            
+            $month = $request->get('month', date('m'));
+            $year = $request->get('year', date('Y'));
+            $month = str_pad($month, 2, '0', STR_PAD_LEFT);
+            
+            if (!isset($monthOptions[$month])) {
+                $month = date('m');
+            }
+            if (!is_numeric($year) || $year < 2000 || $year > 2100) {
+                $year = date('Y');
+            }
+            
+            $formate_month_year = $year . '-' . $month;
+            $terminatedEmployees = \App\Models\Termination::pluck('employee_id')->toArray();
+            
+            $employees = Employee::where('created_by', \Auth::user()->creatorId())
+                ->where('salary', '>', 0)
+                ->whereNotIn('id', $terminatedEmployees)
+                ->orderBy('name', 'asc')
+                ->get();
+            
+            $totalMonthlyDays = date('t', strtotime($formate_month_year . '-01'));
+            $salaryData = [];
+            
+            foreach ($employees as $employee) {
+                $data = $this->calculateEmployeeSalaryData($employee, $month, $year, $totalMonthlyDays);
+                if ($data) {
+                    $salaryData[] = $data;
+                }
+            }
+            
+            $fileName = 'Salary_Processing_' . $monthOptions[$month] . '_' . $year . '.xlsx';
+            
+            return Excel::download(new SalaryProcessingExport($salaryData), $fileName);
+        } else {
+            return redirect()->back()->with('error', __('Permission denied.'));
+        }
     }
 }
 

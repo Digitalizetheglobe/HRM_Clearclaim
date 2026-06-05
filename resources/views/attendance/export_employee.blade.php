@@ -64,14 +64,14 @@
                             } elseif ($status == 'Holiday') {
                                 $display = 'H-Day';
                             } elseif ($status == 'Absent') {
-                                $display = 'A';
+                                $display = (\Carbon\Carbon::parse($date)->dayOfWeek == \Carbon\Carbon::SUNDAY) ? 'WO' : 'A';
                             } else {
                                 $display = substr($status, 0, 1);
                             }
                         @endphp
                         {{ $display }}
                     @else
-                        A
+                        {{ (\Carbon\Carbon::parse($date)->dayOfWeek == \Carbon\Carbon::SUNDAY) ? 'WO' : 'A' }}
                     @endisset
                 </td>
             @endforeach

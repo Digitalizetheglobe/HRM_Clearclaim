@@ -35,6 +35,13 @@
                             {{ __('Filter') }}
                         </a>
                     </div>
+                    <div class="col-auto float-end ms-2 mt-4">
+                        <a href="{{ route('salary-processing.export', ['month' => $month, 'year' => $year]) }}" class="btn btn-success"
+                            data-bs-toggle="tooltip" title="{{ __('Export') }}"
+                            data-original-title="{{ __('Export') }}">
+                            <i class="ti ti-file-export"></i>
+                        </a>
+                    </div>
                 </div>
                 {{ Form::close() }}
             </div>
@@ -78,9 +85,9 @@
                                         <td>{{ $data['total_monthly_days'] }}</td>
                                         <td>{{ $data['total_late_marks'] }}</td>
                                         <td>{{ $data['late_mark_deduction_amount'] ?? 0 }}</td>
-                                        <td>{{ number_format($data['lop_days'], 2) }}</td>
-                                        <td>{{ number_format($data['payable_days'], 2) }}</td>
-                                        <td>{{ number_format($data['actual_payable_days'], 2) }}</td>
+                                        <td>{{ $data['lop_days'] + 0 }}</td>
+                                        <td>{{ $data['payable_days'] + 0 }}</td>
+                                        <td>{{ $data['actual_payable_days'] + 0 }}</td>
                                         <td>{{ \Auth::user()->priceFormat($data['actual_salary']) }}</td>
                                         <td>{{ \Auth::user()->priceFormat($data['daily_salary']) }}</td>
                                         <td>{{ \Auth::user()->priceFormat($data['salary_arrears']) }}</td>

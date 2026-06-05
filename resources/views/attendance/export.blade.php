@@ -74,7 +74,7 @@
                                     $abbreviation = 'H';
                                     break;
                                 case 'Absent':
-                                    $abbreviation = 'A';
+                                    $abbreviation = (\Carbon\Carbon::parse($date)->dayOfWeek == \Carbon\Carbon::SUNDAY) ? 'WO' : 'A';
                                     break;
                                 case 'Leave':
                                     $abbreviation = 'Leave';
@@ -91,7 +91,7 @@
                         @endphp
                         {{ $abbreviation }}
                     @else
-                        A
+                        {{ (\Carbon\Carbon::parse($date)->dayOfWeek == \Carbon\Carbon::SUNDAY) ? 'WO' : 'A' }}
                     @endisset
                 </td>
             @endforeach
