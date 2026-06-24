@@ -68,6 +68,110 @@
         .cursor-pointer {
             cursor: pointer;
         }
+        /* Premium UI Overhaul */
+        .card {
+            border: none;
+            border-radius: 15px;
+            box-shadow: 0 10px 30px 0 rgba(0,0,0,0.05);
+            background: rgba(255, 255, 255, 0.9);
+            backdrop-filter: blur(10px);
+            transition: transform 0.3s ease, box-shadow 0.3s ease;
+            margin-bottom: 30px;
+        }
+        .card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 15px 35px 0 rgba(0,0,0,0.1);
+        }
+        .card-header {
+            background-color: transparent;
+            border-bottom: 1px solid rgba(0,0,0,0.05);
+            padding: 20px 25px;
+        }
+        .card-header h5 {
+            margin-bottom: 0;
+            color: #2c3e50;
+            font-weight: 600;
+            font-size: 1.1rem;
+            position: relative;
+            padding-left: 15px;
+        }
+        .card-header h5::before {
+            content: '';
+            position: absolute;
+            left: 0;
+            top: 50%;
+            transform: translateY(-50%);
+            width: 4px;
+            height: 18px;
+            background: var(--bs-primary);
+            border-radius: 4px;
+        }
+        .form-control, .form-select, select.form-control {
+            border-radius: 8px;
+            border: 1px solid #e0e6ed;
+            padding: 10px 15px;
+            transition: all 0.3s ease;
+            background-color: #f8fafc;
+        }
+        .form-control:focus, .form-select:focus, select.form-control:focus {
+            box-shadow: 0 0 0 3px rgba(var(--bs-primary-rgb), 0.15);
+            border-color: var(--bs-primary);
+            background-color: #ffffff;
+        }
+        .form-label {
+            font-weight: 500;
+            color: #4a5568;
+            margin-bottom: 8px;
+            font-size: 0.9rem;
+        }
+        .btn-primary {
+            border-radius: 8px;
+            padding: 10px 24px;
+            font-weight: 600;
+            letter-spacing: 0.3px;
+            box-shadow: 0 4px 15px rgba(var(--bs-primary-rgb), 0.3);
+            transition: all 0.3s ease;
+        }
+        .btn-primary:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 20px rgba(var(--bs-primary-rgb), 0.4);
+        }
+        .bg-primary.document {
+            border-radius: 8px;
+            padding: 12px;
+            text-align: center;
+            background: rgba(var(--bs-primary-rgb), 0.1) !important;
+            color: var(--bs-primary);
+            border: 2px dashed rgba(var(--bs-primary-rgb), 0.3);
+            transition: all 0.3s ease;
+        }
+        .bg-primary.document:hover {
+            background: rgba(var(--bs-primary-rgb), 0.15) !important;
+            border-color: var(--bs-primary);
+        }
+        .bg-primary.document i {
+            font-size: 1.5rem;
+            margin-bottom: 5px;
+            display: block;
+        }
+        /* Style adjustments for radio buttons */
+        .radio-check .custom-control {
+            background: #f8fafc;
+            padding: 10px 20px;
+            border-radius: 8px;
+            border: 1px solid #e0e6ed;
+            margin-right: 10px;
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+        .radio-check .custom-control:hover {
+            border-color: var(--bs-primary);
+            background: rgba(var(--bs-primary-rgb), 0.05);
+        }
+        .form-check-input:checked + .form-check-label {
+            font-weight: 600;
+            color: var(--bs-primary);
+        }
     </style>
 @endpush
 
@@ -111,7 +215,10 @@
                                         {!! Form::text('phone', old('phone', $employee->phone), [
                                             'class' => 'form-control',
                                             'placeholder' => 'Enter employee phone',
-                                            'oninput' => 'validateNumbers()',
+                                            'oninput' => "this.value = this.value.replace(/[^0-9]/g, ''); if(this.value.length > 10) this.value = this.value.slice(0, 10);",
+                                            'minlength' => '10',
+                                            'maxlength' => '10',
+                                            'required' => 'required',
                                         ]) !!}
                                         <span id="phone-error" class="text-danger"></span>
                                     </div>
@@ -121,7 +228,9 @@
                                         {!! Form::text('office_phone_one', old('office_phone_one', $employee->office_phone_one), [
                                             'class' => 'form-control',
                                             'placeholder' => 'Enter office phone 1',
-                                            'oninput' => 'validateNumbers()',
+                                            'oninput' => "this.value = this.value.replace(/[^0-9]/g, ''); if(this.value.length > 10) this.value = this.value.slice(0, 10);",
+                                            'minlength' => '10',
+                                            'maxlength' => '10',
                                         ]) !!}
                                         <span id="office_phone_one-error" class="text-danger"></span>
                                     </div>
@@ -131,7 +240,9 @@
                                         {!! Form::text('office_phone_two', old('office_phone_two', $employee->office_phone_two), [
                                             'class' => 'form-control',
                                             'placeholder' => 'Enter office phone 2',
-                                            'oninput' => 'validateNumbers()',
+                                            'oninput' => "this.value = this.value.replace(/[^0-9]/g, ''); if(this.value.length > 10) this.value = this.value.slice(0, 10);",
+                                            'minlength' => '10',
+                                            'maxlength' => '10',
                                         ]) !!}
                                         <span id="office_phone_two-error" class="text-danger"></span>
                                     </div>
@@ -141,7 +252,9 @@
                                         {!! Form::text('emergency_number', old('emergency_number', $employee->emergency_number), [
                                             'class' => 'form-control',
                                             'placeholder' => 'Enter emergency number',
-                                            'oninput' => 'validateNumbers()',
+                                            'oninput' => "this.value = this.value.replace(/[^0-9]/g, ''); if(this.value.length > 10) this.value = this.value.slice(0, 10);",
+                                            'minlength' => '10',
+                                            'maxlength' => '10',
                                         ]) !!}
                                         <span id="emergency_number-error" class="text-danger"></span>
                                     </div>

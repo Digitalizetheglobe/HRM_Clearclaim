@@ -5,10 +5,11 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Connect360 | Innovative Business Solutions & HRM</title>
-  <meta name="description" content="Redefine your HR efficiency and employee satisfaction with Connect360's cutting-edge HRM software." />
+  <meta name="description"
+    content="Redefine your HR efficiency and employee satisfaction with Connect360's cutting-edge HRM software." />
 
   <!-- Tailwind CSS -->
-  <script src="{{ asset('assets/css/tailwind-cdn.js') }}"></script>
+  <script src="https://cdn.tailwindcss.com"></script>
   <script>
     tailwind.config = {
       theme: {
@@ -53,7 +54,9 @@
   <!-- Google Fonts -->
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=Outfit:wght@600;700;800&display=swap" rel="stylesheet" />
+  <link
+    href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=Outfit:wght@600;700;800&display=swap"
+    rel="stylesheet" />
 
   <!-- Font Awesome -->
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" />
@@ -63,131 +66,280 @@
   <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.2/ScrollTrigger.min.js" defer></script>
 
   <style>
-    body { font-family: 'Inter', sans-serif; overflow-x: hidden; }
-    h1, h2, h3, h4, h5, h6 { font-family: 'Outfit', sans-serif; }
+    body {
+      font-family: 'Inter', sans-serif;
+      overflow-x: hidden;
+    }
+
+    h1,
+    h2,
+    h3,
+    h4,
+    h5,
+    h6 {
+      font-family: 'Outfit', sans-serif;
+    }
 
     /* Cursor */
     .cursor-follower {
-      position: fixed; top: 0; left: 0; width: 20px; height: 20px;
-      border: 2px solid #2e9ec6; border-radius: 50%;
-      pointer-events: none; z-index: 10000;
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 20px;
+      height: 20px;
+      border: 2px solid #2e9ec6;
+      border-radius: 50%;
+      pointer-events: none;
+      z-index: 10000;
     }
 
     /* Hero background */
     .hero-bg {
-      background: linear-gradient(90deg, rgba(255,255,255,0.97) 30%, rgba(255,255,255,0.6)),
+      background: linear-gradient(90deg, rgba(255, 255, 255, 0.97) 30%, rgba(255, 255, 255, 0.6)),
         url('assets/hero-banner.png') center/cover no-repeat fixed;
     }
+
     .hero-bg::before {
-      content: ''; position: absolute; width: 500px; height: 500px;
-      background: #2e9ec6; filter: blur(150px); opacity: 0.05;
-      top: -100px; right: -100px; z-index: 0;
+      content: '';
+      position: absolute;
+      width: 500px;
+      height: 500px;
+      background: #2e9ec6;
+      filter: blur(150px);
+      opacity: 0.05;
+      top: -100px;
+      right: -100px;
+      z-index: 0;
     }
 
     /* Gradient text */
     .text-gradient {
       background: linear-gradient(to right, #2e9ec6, #2e9ec6);
-      -webkit-background-clip: text; background-clip: text; -webkit-text-fill-color: transparent;
+      -webkit-background-clip: text;
+      background-clip: text;
+      -webkit-text-fill-color: transparent;
     }
 
     /* Light premium bg */
     .bg-light-premium {
-      background: radial-gradient(circle at 10% 10%, rgba(46,158,198,0.08) 0%, transparent 40%),
-        radial-gradient(circle at 90% 90%, rgba(108,192,112,0.08) 0%, transparent 40%), #f8fafc;
+      background: radial-gradient(circle at 10% 10%, rgba(46, 158, 198, 0.08) 0%, transparent 40%),
+        radial-gradient(circle at 90% 90%, rgba(108, 192, 112, 0.08) 0%, transparent 40%), #f8fafc;
     }
 
     /* Header scrolled */
     header.scrolled {
-      padding-top: 0.75rem; padding-bottom: 0.75rem;
-      background: rgba(255,255,255,0.7); backdrop-filter: blur(15px);
-      box-shadow: 0 8px 32px 0 rgba(31,38,135,0.07);
-      border-bottom: 1px solid rgba(255,255,255,0.3);
+      padding-top: 0.75rem;
+      padding-bottom: 0.75rem;
+      background: rgba(255, 255, 255, 0.7);
+      backdrop-filter: blur(15px);
+      box-shadow: 0 8px 32px 0 rgba(31, 38, 135, 0.07);
+      border-bottom: 1px solid rgba(255, 255, 255, 0.3);
     }
 
     /* Mobile nav slide */
-    #mobile-nav { right: -100%; transition: right 0.4s cubic-bezier(0.4,0,0.2,1); }
-    #mobile-nav.active { right: 0; }
+    #mobile-nav {
+      right: -100%;
+      transition: right 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+    }
+
+    #mobile-nav.active {
+      right: 0;
+    }
 
     /* FAQ accordion */
-    .faq-answer { max-height: 0; overflow: hidden; transition: max-height 0.35s ease-out; }
-    .faq-item.active .faq-answer { max-height: 200px; }
-    .faq-item.active .faq-chevron { transform: rotate(180deg); }
-    .faq-chevron { transition: transform 0.3s; }
+    .faq-answer {
+      max-height: 0;
+      overflow: hidden;
+      transition: max-height 0.35s ease-out;
+    }
+
+    .faq-item.active .faq-answer {
+      max-height: 200px;
+    }
+
+    .faq-item.active .faq-chevron {
+      transform: rotate(180deg);
+    }
+
+    .faq-chevron {
+      transition: transform 0.3s;
+    }
 
     /* Pricing table sticky */
-    .pricing-table-container { overflow: auto; scrollbar-width: none; max-height: 580px; }
-    .pricing-table-container::-webkit-scrollbar { display: none; }
-    .pricing-table thead th { position: sticky; top: 0; z-index: 100; box-shadow: 0 2px 5px rgba(0,0,0,0.05); }
-    .pricing-table .sticky-col { position: sticky; left: 0; z-index: 50; }
-    .pricing-table thead th.sticky-col { z-index: 110; }
+    .pricing-table-container {
+      overflow: auto;
+      scrollbar-width: none;
+      max-height: 580px;
+    }
+
+    .pricing-table-container::-webkit-scrollbar {
+      display: none;
+    }
+
+    .pricing-table thead th {
+      position: sticky;
+      top: 0;
+      z-index: 100;
+      box-shadow: 0 2px 5px rgba(0, 0, 0, 0.05);
+    }
+
+    .pricing-table .sticky-col {
+      position: sticky;
+      left: 0;
+      z-index: 50;
+    }
+
+    .pricing-table thead th.sticky-col {
+      z-index: 110;
+    }
 
     /* Popular badge */
     .popular-tab {
-      position: absolute; top: -38px; left: 50%; transform: translateX(-50%);
-      background: #2e9ec6; color: white; padding: 3px 16px; font-size: 0.68rem;
-      font-weight: 700; border-radius: 9999px; text-transform: uppercase;
-      white-space: nowrap; box-shadow: 0 4px 10px rgba(46,158,198,0.3);
+      position: absolute;
+      top: -38px;
+      left: 50%;
+      transform: translateX(-50%);
+      background: #2e9ec6;
+      color: white;
+      padding: 3px 16px;
+      font-size: 0.68rem;
+      font-weight: 700;
+      border-radius: 9999px;
+      text-transform: uppercase;
+      white-space: nowrap;
+      box-shadow: 0 4px 10px rgba(46, 158, 198, 0.3);
     }
 
     /* Phone mockup */
     .phone-mockup {
-      width: 250px; height: 500px; background: #222;
-      border: 8px solid #333; border-radius: 40px;
-      margin: 0 auto; position: relative;
-      box-shadow: 0 50px 100px -20px rgba(0,0,0,0.5);
+      width: 250px;
+      height: 500px;
+      background: #222;
+      border: 8px solid #333;
+      border-radius: 40px;
+      margin: 0 auto;
+      position: relative;
+      box-shadow: 0 50px 100px -20px rgba(0, 0, 0, 0.5);
     }
+
     .phone-screen {
-      background: white; width: 100%; height: 100%;
-      border-radius: 32px; overflow: hidden;
+      background: white;
+      width: 100%;
+      height: 100%;
+      border-radius: 32px;
+      overflow: hidden;
     }
 
     /* Video modal */
-    #videoModal { display: none; }
-    #videoModal.open { display: flex; }
+    #videoModal {
+      display: none;
+    }
+
+    #videoModal.open {
+      display: flex;
+    }
 
     /* Showcase visual glow */
     .showcase-visual::after {
-      content: ''; position: absolute; width: 300px; height: 300px;
-      background: #2e9ec6; filter: blur(120px); opacity: 0.1; z-index: 0;
+      content: '';
+      position: absolute;
+      width: 300px;
+      height: 300px;
+      background: #2e9ec6;
+      filter: blur(120px);
+      opacity: 0.1;
+      z-index: 0;
     }
 
     /* Button base transitions */
-    .btn-primary { transition: all 0.3s cubic-bezier(0.4,0,0.2,1); }
-    .btn-primary:hover { background: white !important; color: #2e9ec6 !important; }
-    .btn-outline:hover { background: #2e9ec6; color: white !important; }
-    .btn-success:hover { transform: translateY(-3px); box-shadow: 0 15px 25px -5px rgba(108,192,112,0.5); }
+    .btn-primary {
+      transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    }
+
+    .btn-primary:hover {
+      background: white !important;
+      color: #2e9ec6 !important;
+    }
+
+    .btn-outline:hover {
+      background: #2e9ec6;
+      color: white !important;
+    }
+
+    .btn-success:hover {
+      transform: translateY(-3px);
+      box-shadow: 0 15px 25px -5px rgba(108, 192, 112, 0.5);
+    }
 
     /* Tagline */
     .tagline {
-      display: block; color: #2e9ec6; text-transform: uppercase;
-      font-weight: 700; letter-spacing: 2px; font-size: 0.82rem; margin-bottom: 12px;
+      display: block;
+      color: #2e9ec6;
+      text-transform: uppercase;
+      font-weight: 700;
+      letter-spacing: 2px;
+      font-size: 0.82rem;
+      margin-bottom: 12px;
     }
 
     /* Input focus ring */
     .form-input:focus {
-      outline: none; border-color: #2e9ec6; background: white;
-      box-shadow: 0 0 0 4px rgba(46,158,198,0.12);
+      outline: none;
+      border-color: #2e9ec6;
+      background: white;
+      box-shadow: 0 0 0 4px rgba(46, 158, 198, 0.12);
     }
 
     /* Module card hover */
-    .module-card { transition: all 0.4s ease; }
-    .module-card:hover { transform: translateY(-10px); border-color: #2e9ec6; box-shadow: 0 20px 40px -10px rgba(0,0,0,0.06); }
+    .module-card {
+      transition: all 0.4s ease;
+    }
+
+    .module-card:hover {
+      transform: translateY(-10px);
+      border-color: #2e9ec6;
+      box-shadow: 0 20px 40px -10px rgba(0, 0, 0, 0.06);
+    }
 
     /* Social link hover */
-    .social-link { transition: all 0.3s cubic-bezier(0.4,0,0.2,1); }
-    .social-link:hover { background: #2e9ec6; color: white; border-color: #2e9ec6; transform: translateY(-3px); box-shadow: 0 4px 12px rgba(46,158,198,0.2); }
+    .social-link {
+      transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    }
+
+    .social-link:hover {
+      background: #2e9ec6;
+      color: white;
+      border-color: #2e9ec6;
+      transform: translateY(-3px);
+      box-shadow: 0 4px 12px rgba(46, 158, 198, 0.2);
+    }
 
     /* Testimonial card */
-    .testimonial-card { transition: transform 0.3s ease; }
-    .testimonial-card:hover { transform: translateY(-5px); }
+    .testimonial-card {
+      transition: transform 0.3s ease;
+    }
+
+    .testimonial-card:hover {
+      transform: translateY(-5px);
+    }
 
     /* Nav link */
-    .nav-link { transition: color 0.2s; }
-    .nav-link:hover { color: #2e9ec6; }
+    .nav-link {
+      transition: color 0.2s;
+    }
+
+    .nav-link:hover {
+      color: #2e9ec6;
+    }
 
     /* Form card hover */
-    .form-card { transition: transform 0.3s ease; }
-    .form-card:hover { transform: translateY(-5px); }
+    .form-card {
+      transition: transform 0.3s ease;
+    }
+
+    .form-card:hover {
+      transform: translateY(-5px);
+    }
   </style>
 </head>
 
@@ -201,7 +353,7 @@
     <div class="max-w-[1400px] mx-auto px-[5%] flex justify-between items-center">
       <!-- Logo -->
       <a href="#" class="flex items-center h-[50px] sm:h-[60px] overflow-hidden">
-        <img src="{{ asset('images/logo_1.png') }}" alt="Connect360" class="w-[200px] sm:w-[230px]" />
+        <img src="images/logo_1.png" alt="Connect360" class="w-[200px] sm:w-[230px]" />
       </a>
 
       <!-- Desktop Nav -->
@@ -215,23 +367,27 @@
 
       <!-- Header Buttons -->
       <div class="flex items-center gap-3">
-        <a href="/login" class="btn-outline hidden lg:inline-flex items-center gap-2 px-6 py-2.5 rounded-full font-semibold text-sm border-2 border-[#2e9ec6] text-[#2e9ec6] transition-all duration-300">Login</a>
+        <a href="/login"
+          class="btn-outline hidden lg:inline-flex items-center gap-2 px-6 py-2.5 rounded-full font-semibold text-sm border-2 border-[#2e9ec6] text-[#2e9ec6] transition-all duration-300">Login</a>
         <!-- Mobile toggle -->
-        <button id="mobile-toggle" aria-label="Toggle Menu" class="lg:hidden text-gray-700 text-2xl p-1.5 z-[1001] cursor-pointer bg-transparent border-none">
+        <button id="mobile-toggle" aria-label="Toggle Menu"
+          class="lg:hidden text-gray-700 text-2xl p-1.5 z-[1001] cursor-pointer bg-transparent border-none">
           <i class="fas fa-bars"></i>
         </button>
       </div>
     </div>
 
     <!-- Mobile Nav -->
-    <div id="mobile-nav" class="fixed top-0 w-4/5 max-w-sm h-screen bg-white z-[1000] shadow-2xl flex items-center px-10 py-20">
+    <div id="mobile-nav"
+      class="fixed top-0 w-4/5 max-w-sm h-screen bg-white z-[1000] shadow-2xl flex items-center px-10 py-20">
       <div class="w-full flex flex-col gap-6">
         <a href="#modules" class="text-lg font-semibold text-gray-800 py-2.5 border-b border-slate-100">Modules</a>
         <a href="#about" class="text-lg font-semibold text-gray-800 py-2.5 border-b border-slate-100">Why Us</a>
         <a href="#pricing" class="text-lg font-semibold text-gray-800 py-2.5 border-b border-slate-100">Pricing</a>
         <a href="#testimonials" class="text-lg font-semibold text-gray-800 py-2.5 border-b border-slate-100">Clients</a>
         <a href="#faq" class="text-lg font-semibold text-gray-800 py-2.5 border-b border-slate-100">FAQ</a>
-        <a href="/login" class="mt-4 inline-flex justify-center items-center gap-2 px-6 py-3 rounded-full font-semibold text-sm bg-[#2e9ec6] text-white transition-all duration-300">Login</a>
+        <a href="/login"
+          class="mt-4 inline-flex justify-center items-center gap-2 px-6 py-3 rounded-full font-semibold text-sm bg-[#2e9ec6] text-white transition-all duration-300">Login</a>
       </div>
     </div>
   </header>
@@ -249,39 +405,59 @@
             <span class="text-gradient block pb-1">HR Management</span>
           </h1>
           <p class="text-lg text-gray-500 mb-9 max-w-xl">
-            Transform your HR operations with Connect360's integrated ecosystem. Automated payroll, real-time attendance, and seamless employee engagement all in one place.
+            Transform your HR operations with Connect360's integrated ecosystem. Automated payroll, real-time
+            attendance, and seamless employee engagement all in one place.
           </p>
           <div class="hero-btns flex flex-wrap gap-4">
-            <a href="#modules" class="btn-primary inline-flex items-center gap-2.5 px-7 py-3 rounded-full font-semibold text-sm text-white border-2 border-[#2e9ec6] shadow-lg" style="background: linear-gradient(135deg,#2e9ec6,#2e9ec6); box-shadow: 0 10px 20px -5px rgba(46,158,198,0.4);">
+            <a href="#modules"
+              class="btn-primary inline-flex items-center gap-2.5 px-7 py-3 rounded-full font-semibold text-sm text-white border-2 border-[#2e9ec6] shadow-lg"
+              style="background: linear-gradient(135deg,#2e9ec6,#2e9ec6); box-shadow: 0 10px 20px -5px rgba(46,158,198,0.4);">
               Explore Modules <i class="fas fa-arrow-right"></i>
             </a>
-            <a href="#video" class="btn-outline inline-flex items-center gap-2.5 px-7 py-3 rounded-full font-semibold text-sm border-2 border-[#2e9ec6] text-[#2e9ec6] transition-all duration-300">
+            <a href="#video"
+              class="btn-outline inline-flex items-center gap-2.5 px-7 py-3 rounded-full font-semibold text-sm border-2 border-[#2e9ec6] text-[#2e9ec6] transition-all duration-300">
               <i class="fas fa-play-circle"></i> Watch Demo
             </a>
           </div>
         </div>
 
         <!-- Right: Demo Form -->
-        <div class="hero-form-card form-card bg-white/90 backdrop-blur-md p-10 rounded-3xl border border-white/50 shadow-form">
+        <div
+          class="hero-form-card form-card bg-white/90 backdrop-blur-md p-10 rounded-3xl border border-white/50 shadow-form">
           <h3 class="font-heading font-bold text-xl text-center mb-6">Request a Free Demo</h3>
           <form id="demo-form" class="space-y-4">
-            <input class="form-input w-full px-5 py-3.5 rounded-lg border border-slate-200 bg-slate-50 font-body text-sm transition-all duration-300" type="text" placeholder="Full Name" required />
-            <input class="form-input w-full px-5 py-3.5 rounded-lg border border-slate-200 bg-slate-50 font-body text-sm transition-all duration-300" type="email" placeholder="Work Email" required />
-            <input class="form-input w-full px-5 py-3.5 rounded-lg border border-slate-200 bg-slate-50 font-body text-sm transition-all duration-300" type="tel" placeholder="Phone Number" required />
-            <textarea class="form-input w-full px-5 py-3.5 rounded-lg border border-slate-200 bg-slate-50 font-body text-sm transition-all duration-300 resize-none" rows="3" placeholder="Tell us about your organization"></textarea>
+            <input
+              class="form-input w-full px-5 py-3.5 rounded-lg border border-slate-200 bg-slate-50 font-body text-sm transition-all duration-300"
+              type="text" placeholder="Full Name" required />
+            <input
+              class="form-input w-full px-5 py-3.5 rounded-lg border border-slate-200 bg-slate-50 font-body text-sm transition-all duration-300"
+              type="email" placeholder="Work Email" required />
+            <input
+              class="form-input w-full px-5 py-3.5 rounded-lg border border-slate-200 bg-slate-50 font-body text-sm transition-all duration-300"
+              type="tel" placeholder="Phone Number" required />
+            <textarea
+              class="form-input w-full px-5 py-3.5 rounded-lg border border-slate-200 bg-slate-50 font-body text-sm transition-all duration-300 resize-none"
+              rows="3" placeholder="Tell us about your organization"></textarea>
 
             <!-- Captcha -->
             <div class="captcha-container grid grid-cols-[1.2fr_1fr] gap-2.5 items-stretch">
-              <div class="captcha-box flex items-center justify-between bg-slate-100 px-4 py-3 rounded-lg border border-slate-200 font-bold text-brand-dark text-lg">
-                <span id="captcha-question" class="select-none text-[#2e9ec6] whitespace-nowrap font-heading">? + ?</span>
-                <button type="button" id="refresh-captcha" title="Refresh" class="text-gray-400 hover:text-[#2e9ec6] cursor-pointer bg-none border-none text-sm transition-all duration-300 p-1">
+              <div
+                class="captcha-box flex items-center justify-between bg-slate-100 px-4 py-3 rounded-lg border border-slate-200 font-bold text-brand-dark text-lg">
+                <span id="captcha-question" class="select-none text-[#2e9ec6] whitespace-nowrap font-heading">? +
+                  ?</span>
+                <button type="button" id="refresh-captcha" title="Refresh"
+                  class="text-gray-400 hover:text-[#2e9ec6] cursor-pointer bg-none border-none text-sm transition-all duration-300 p-1">
                   <i class="fas fa-sync-alt"></i>
                 </button>
               </div>
-              <input id="captcha-input" class="form-input w-full px-4 py-3 rounded-lg border border-slate-200 bg-slate-50 font-body text-sm transition-all duration-300" type="number" placeholder="Enter result" required />
+              <input id="captcha-input"
+                class="form-input w-full px-4 py-3 rounded-lg border border-slate-200 bg-slate-50 font-body text-sm transition-all duration-300"
+                type="number" placeholder="Enter result" required />
             </div>
 
-            <button type="submit" class="btn-success w-full flex justify-center items-center gap-2.5 px-7 py-3.5 rounded-full font-semibold text-sm text-white cursor-pointer border-none transition-all duration-300" style="background:#6cc070; box-shadow: 0 10px 20px -5px rgba(108,192,112,0.4);">
+            <button type="submit"
+              class="btn-success w-full flex justify-center items-center gap-2.5 px-7 py-3.5 rounded-full font-semibold text-sm text-white cursor-pointer border-none transition-all duration-300"
+              style="background:#6cc070; box-shadow: 0 10px 20px -5px rgba(108,192,112,0.4);">
               Send Request
             </button>
           </form>
@@ -315,61 +491,77 @@
 
       <div class="modules-grid grid gap-7" style="grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));">
         <!-- Card Template -->
-        <div class="module-card bg-white p-9 rounded-2xl border border-slate-100 relative overflow-hidden cursor-default">
+        <div
+          class="module-card bg-white p-9 rounded-2xl border border-slate-100 relative overflow-hidden cursor-default">
           <div class="w-14 h-14 bg-blue-50 rounded-xl flex items-center justify-center text-2xl text-[#2e9ec6] mb-5">
             <i class="fas fa-money-bill-wave"></i>
           </div>
           <h4 class="font-heading font-bold text-lg mb-3">Payroll Management</h4>
-          <p class="text-gray-500 text-sm leading-relaxed">Automated salary calculations, tax compliance, and instant payslip generation.</p>
+          <p class="text-gray-500 text-sm leading-relaxed">Automated salary calculations, tax compliance, and instant
+            payslip generation.</p>
         </div>
-        <div class="module-card bg-white p-9 rounded-2xl border border-slate-100 relative overflow-hidden cursor-default">
+        <div
+          class="module-card bg-white p-9 rounded-2xl border border-slate-100 relative overflow-hidden cursor-default">
           <div class="w-14 h-14 bg-blue-50 rounded-xl flex items-center justify-center text-2xl text-[#2e9ec6] mb-5">
             <i class="fas fa-user-clock"></i>
           </div>
           <h4 class="font-heading font-bold text-lg mb-3">Attendance Tracking</h4>
-          <p class="text-gray-500 text-sm leading-relaxed">Geofenced mobile check-ins and biometric integration for real-time monitoring.</p>
+          <p class="text-gray-500 text-sm leading-relaxed">Geofenced mobile check-ins and biometric integration for
+            real-time monitoring.</p>
         </div>
-        <div class="module-card bg-white p-9 rounded-2xl border border-slate-100 relative overflow-hidden cursor-default">
+        <div
+          class="module-card bg-white p-9 rounded-2xl border border-slate-100 relative overflow-hidden cursor-default">
           <div class="w-14 h-14 bg-blue-50 rounded-xl flex items-center justify-center text-2xl text-[#2e9ec6] mb-5">
             <i class="fas fa-calendar-minus"></i>
           </div>
           <h4 class="font-heading font-bold text-lg mb-3">Leave Management</h4>
-          <p class="text-gray-500 text-sm leading-relaxed">Simplified leave requests and multi-level approval workflows for better planning.</p>
+          <p class="text-gray-500 text-sm leading-relaxed">Simplified leave requests and multi-level approval workflows
+            for better planning.</p>
         </div>
-        <div class="module-card bg-white p-9 rounded-2xl border border-slate-100 relative overflow-hidden cursor-default">
+        <div
+          class="module-card bg-white p-9 rounded-2xl border border-slate-100 relative overflow-hidden cursor-default">
           <div class="w-14 h-14 bg-blue-50 rounded-xl flex items-center justify-center text-2xl text-[#2e9ec6] mb-5">
             <i class="fas fa-chart-line"></i>
           </div>
           <h4 class="font-heading font-bold text-lg mb-3">Performance Management</h4>
-          <p class="text-gray-500 text-sm leading-relaxed">360-degree feedback, OKRs, and goal tracking to drive employee growth.</p>
+          <p class="text-gray-500 text-sm leading-relaxed">360-degree feedback, OKRs, and goal tracking to drive
+            employee growth.</p>
         </div>
-        <div class="module-card bg-white p-9 rounded-2xl border border-slate-100 relative overflow-hidden cursor-default">
+        <div
+          class="module-card bg-white p-9 rounded-2xl border border-slate-100 relative overflow-hidden cursor-default">
           <div class="w-14 h-14 bg-blue-50 rounded-xl flex items-center justify-center text-2xl text-[#2e9ec6] mb-5">
             <i class="fas fa-user-plus"></i>
           </div>
           <h4 class="font-heading font-bold text-lg mb-3">Recruitment</h4>
-          <p class="text-gray-500 text-sm leading-relaxed">Applicant tracking system (ATS) and talent acquisition tools for hiring the best.</p>
+          <p class="text-gray-500 text-sm leading-relaxed">Applicant tracking system (ATS) and talent acquisition tools
+            for hiring the best.</p>
         </div>
-        <div class="module-card bg-white p-9 rounded-2xl border border-slate-100 relative overflow-hidden cursor-default">
+        <div
+          class="module-card bg-white p-9 rounded-2xl border border-slate-100 relative overflow-hidden cursor-default">
           <div class="w-14 h-14 bg-blue-50 rounded-xl flex items-center justify-center text-2xl text-[#2e9ec6] mb-5">
             <i class="fas fa-user-check"></i>
           </div>
           <h4 class="font-heading font-bold text-lg mb-3">Onboarding & Offboarding</h4>
-          <p class="text-gray-500 text-sm leading-relaxed">Manage the complete employee lifecycle from digital welcome to smooth exit transitions.</p>
+          <p class="text-gray-500 text-sm leading-relaxed">Manage the complete employee lifecycle from digital welcome
+            to smooth exit transitions.</p>
         </div>
-        <div class="module-card bg-white p-9 rounded-2xl border border-slate-100 relative overflow-hidden cursor-default">
+        <div
+          class="module-card bg-white p-9 rounded-2xl border border-slate-100 relative overflow-hidden cursor-default">
           <div class="w-14 h-14 bg-blue-50 rounded-xl flex items-center justify-center text-2xl text-[#2e9ec6] mb-5">
             <i class="fas fa-hand-holding-usd"></i>
           </div>
           <h4 class="font-heading font-bold text-lg mb-3">Income & Incentive Management</h4>
-          <p class="text-gray-500 text-sm leading-relaxed">Comprehensive management of bonuses, incentives, and variable pay structures.</p>
+          <p class="text-gray-500 text-sm leading-relaxed">Comprehensive management of bonuses, incentives, and variable
+            pay structures.</p>
         </div>
-        <div class="module-card bg-white p-9 rounded-2xl border border-slate-100 relative overflow-hidden cursor-default">
+        <div
+          class="module-card bg-white p-9 rounded-2xl border border-slate-100 relative overflow-hidden cursor-default">
           <div class="w-14 h-14 bg-blue-50 rounded-xl flex items-center justify-center text-2xl text-[#2e9ec6] mb-5">
             <i class="fas fa-ticket-alt"></i>
           </div>
           <h4 class="font-heading font-bold text-lg mb-3">Ticket Management</h4>
-          <p class="text-gray-500 text-sm leading-relaxed">Streamlined internal helpdesk for employee queries, IT support, and issue resolution.</p>
+          <p class="text-gray-500 text-sm leading-relaxed">Streamlined internal helpdesk for employee queries, IT
+            support, and issue resolution.</p>
         </div>
       </div>
     </div>
@@ -378,14 +570,19 @@
   <!-- ===================== MOBILE APP SHOWCASE ===================== -->
   <section class="py-24 bg-light-premium">
     <div class="max-w-[1400px] mx-auto px-[5%]">
-      <div class="feature-showcase bg-white/60 backdrop-blur-xl rounded-4xl p-10 md:p-20 border border-white/80 relative overflow-hidden" style="box-shadow: 0 40px 100px -20px rgba(31,38,135,0.08);">
-        <div class="feature-showcase-glow absolute inset-0 pointer-events-none" style="background: radial-gradient(circle at center, rgba(46,158,198,0.05) 0%, transparent 60%);"></div>
+      <div
+        class="feature-showcase bg-white/60 backdrop-blur-xl rounded-4xl p-10 md:p-20 border border-white/80 relative overflow-hidden"
+        style="box-shadow: 0 40px 100px -20px rgba(31,38,135,0.08);">
+        <div class="feature-showcase-glow absolute inset-0 pointer-events-none"
+          style="background: radial-gradient(circle at center, rgba(46,158,198,0.05) 0%, transparent 60%);"></div>
         <div class="grid md:grid-cols-2 gap-20 items-center relative z-10">
           <!-- Left Content -->
           <div class="showcase-content">
             <span class="tagline" style="color:#6cc070;">Our Mobile App</span>
-            <h2 class="font-heading font-bold text-3xl md:text-4xl text-brand-dark mb-4">Empower Your Workforce on the Go</h2>
-            <p class="text-gray-500 mb-8">Our mobile app gives employees the power to manage their professional lives from anywhere.</p>
+            <h2 class="font-heading font-bold text-3xl md:text-4xl text-brand-dark mb-4">Empower Your Workforce on the
+              Go</h2>
+            <p class="text-gray-500 mb-8">Our mobile app gives employees the power to manage their professional lives
+              from anywhere.</p>
             <ul class="showcase-list space-y-6">
               <li class="flex gap-5">
                 <i class="fas fa-check-circle text-[#6cc070] text-xl mt-1 flex-shrink-0"></i>
@@ -414,7 +611,8 @@
           <div class="showcase-visual relative flex justify-center items-center">
             <div class="phone-mockup">
               <div class="phone-screen">
-                <video src="{{ asset('images/mobile.mp4') }}" autoplay loop muted playsinline class="w-full h-full object-cover block"></video>
+                <video src="assets/mobile.mp4" autoplay loop muted playsinline
+                  class="w-full h-full object-cover block"></video>
               </div>
             </div>
           </div>
@@ -429,13 +627,17 @@
       <div class="grid md:grid-cols-2 gap-20 items-center">
         <!-- Visual -->
         <div class="about-visual">
-          <img src="assets/dashboard-preview.png" alt="Dashboard Preview" class="rounded-3xl" style="box-shadow: 0 40px 80px rgba(0,0,0,0.1);" />
+          <img src="assets/dashboard-preview.png" alt="Dashboard Preview" class="rounded-3xl"
+            style="box-shadow: 0 40px 80px rgba(0,0,0,0.1);" />
         </div>
         <!-- Content -->
         <div class="about-content">
           <span class="tagline" style="color:#6cc070;">Why Connect360?</span>
-          <h2 class="font-heading font-semibold text-3xl text-brand-dark mb-5 leading-snug">Redefining Business Operations with 360° Vision</h2>
-          <p class="text-gray-500 mb-8 leading-relaxed">Connect360 is more than just software. It's a holistic ecosystem designed to simplify complex business workflows. Powered by Digitalize The Globe, we bring innovation to your fingertips.</p>
+          <h2 class="font-heading font-semibold text-3xl text-brand-dark mb-5 leading-snug">Redefining Business
+            Operations with 360° Vision</h2>
+          <p class="text-gray-500 mb-8 leading-relaxed">Connect360 is more than just software. It's a holistic ecosystem
+            designed to simplify complex business workflows. Powered by Digitalize The Globe, we bring innovation to
+            your fingertips.</p>
           <div class="stats-grid grid grid-cols-2 gap-7">
             <div class="stat-item">
               <h3 class="font-heading font-bold text-[2rem] text-[#2e9ec6]">250+</h3>
@@ -465,136 +667,206 @@
       <div class="text-center mb-14 max-w-2xl mx-auto">
         <span class="tagline">Pricing Plans</span>
         <h2 class="font-heading font-bold text-4xl text-brand-dark mb-4">Choose the Right Plan for Your Team</h2>
-        <p class="text-gray-500">Transparent pricing that grows with your business. No hidden fees, just pure efficiency.</p>
+        <p class="text-gray-500">Transparent pricing that grows with your business. No hidden fees, just pure
+          efficiency.</p>
       </div>
 
-      <div class="pricing-table-container mt-10 bg-white rounded-2xl shadow-pricing border border-slate-100 max-w-5xl mx-auto relative" style="box-shadow:0 15px 40px rgba(0,0,0,0.08);">
+      <div
+        class="pricing-table-container mt-10 bg-white rounded-2xl shadow-pricing border border-slate-100 max-w-5xl mx-auto relative"
+        style="box-shadow:0 15px 40px rgba(0,0,0,0.08);">
         <table class="pricing-table w-full border-collapse text-center text-sm">
           <thead>
             <tr>
-              <th class="sticky-col bg-[#fcfcfc] text-left font-bold text-gray-700 px-6 py-12 border-b border-r-2 border-slate-100 min-w-[220px]">Features</th>
+              <th
+                class="sticky-col bg-[#fcfcfc] text-left font-bold text-gray-700 px-6 py-12 border-b border-r-2 border-slate-100 min-w-[220px]">
+                Features</th>
               <th class="bg-[#fcfcfc] px-4 py-12 border-b border-r border-slate-100 min-w-[140px]">
                 <div class="relative pt-2">
                   <span class="block text-[0.78rem] text-gray-400 font-bold uppercase tracking-wide mb-1">Starter</span>
-                  <div class="text-2xl font-bold font-heading text-brand-dark">₹3,499<small class="text-xs font-medium text-gray-400">/mo</small></div>
-                  <span class="inline-block mt-1 text-[0.72rem] font-semibold text-[#2e9ec6] bg-blue-50 px-3 py-0.5 rounded-full">70 Employees</span>
+                  <div class="text-2xl font-bold font-heading text-brand-dark">₹3,499<small
+                      class="text-xs font-medium text-gray-400">/mo</small></div>
+                  <span
+                    class="inline-block mt-1 text-[0.72rem] font-semibold text-[#2e9ec6] bg-blue-50 px-3 py-0.5 rounded-full">70
+                    Employees</span>
                 </div>
               </th>
               <th class="bg-slate-100 px-4 py-12 border-b border-r border-slate-200 min-w-[140px]">
                 <div class="relative pt-2">
                   <div class="popular-tab">Most Popular</div>
-                  <span class="block text-[0.78rem] text-gray-400 font-bold uppercase tracking-wide mb-1">Essential</span>
-                  <div class="text-2xl font-bold font-heading text-brand-dark">₹4,599<small class="text-xs font-medium text-gray-400">/mo</small></div>
-                  <span class="inline-block mt-1 text-[0.72rem] font-semibold text-[#2e9ec6] bg-blue-50 px-3 py-0.5 rounded-full">150 Employees</span>
+                  <span
+                    class="block text-[0.78rem] text-gray-400 font-bold uppercase tracking-wide mb-1">Essential</span>
+                  <div class="text-2xl font-bold font-heading text-brand-dark">₹4,599<small
+                      class="text-xs font-medium text-gray-400">/mo</small></div>
+                  <span
+                    class="inline-block mt-1 text-[0.72rem] font-semibold text-[#2e9ec6] bg-blue-50 px-3 py-0.5 rounded-full">150
+                    Employees</span>
                 </div>
               </th>
               <th class="bg-[#fcfcfc] px-4 py-12 border-b border-r border-slate-100 min-w-[140px]">
                 <div class="relative pt-2">
                   <span class="block text-[0.78rem] text-gray-400 font-bold uppercase tracking-wide mb-1">Growth</span>
-                  <div class="text-2xl font-bold font-heading text-brand-dark">₹5,999<small class="text-xs font-medium text-gray-400">/mo</small></div>
-                  <span class="inline-block mt-1 text-[0.72rem] font-semibold text-[#2e9ec6] bg-blue-50 px-3 py-0.5 rounded-full">250 Employees</span>
+                  <div class="text-2xl font-bold font-heading text-brand-dark">₹5,999<small
+                      class="text-xs font-medium text-gray-400">/mo</small></div>
+                  <span
+                    class="inline-block mt-1 text-[0.72rem] font-semibold text-[#2e9ec6] bg-blue-50 px-3 py-0.5 rounded-full">250
+                    Employees</span>
                 </div>
               </th>
               <th class="bg-[#fcfcfc] px-4 py-12 border-b border-slate-100 min-w-[140px]">
                 <div class="relative pt-2">
-                  <span class="block text-[0.78rem] text-gray-400 font-bold uppercase tracking-wide mb-1">Enterprise</span>
-                  <div class="text-2xl font-bold font-heading text-brand-dark">₹6,599<small class="text-xs font-medium text-gray-400">/mo</small></div>
-                  <span class="inline-block mt-1 text-[0.72rem] font-semibold text-[#2e9ec6] bg-blue-50 px-3 py-0.5 rounded-full">300 Employees</span>
+                  <span
+                    class="block text-[0.78rem] text-gray-400 font-bold uppercase tracking-wide mb-1">Enterprise</span>
+                  <div class="text-2xl font-bold font-heading text-brand-dark">₹6,599<small
+                      class="text-xs font-medium text-gray-400">/mo</small></div>
+                  <span
+                    class="inline-block mt-1 text-[0.72rem] font-semibold text-[#2e9ec6] bg-blue-50 px-3 py-0.5 rounded-full">300
+                    Employees</span>
                 </div>
               </th>
             </tr>
           </thead>
           <tbody>
             <!-- Category -->
-            <tr><td colspan="5" class="bg-slate-100 text-left px-6 py-3 font-extrabold text-xs uppercase tracking-widest text-gray-700 border-b border-slate-200">Core HR Features</td></tr>
+            <tr>
+              <td colspan="5"
+                class="bg-slate-100 text-left px-6 py-3 font-extrabold text-xs uppercase tracking-widest text-gray-700 border-b border-slate-200">
+                Core HR Features</td>
+            </tr>
             <tr class="border-b border-slate-100">
-              <td class="sticky-col bg-white text-left px-6 py-4 font-semibold text-gray-700 border-r-2 border-slate-100">Monthly Attendance</td>
+              <td
+                class="sticky-col bg-white text-left px-6 py-4 font-semibold text-gray-700 border-r-2 border-slate-100">
+                Monthly Attendance</td>
               <td class="py-4 border-r border-slate-100"><i class="fas fa-check-circle text-[#6cc070]"></i></td>
-              <td class="py-4 bg-slate-50 border-r border-slate-200"><i class="fas fa-check-circle text-[#6cc070]"></i></td>
+              <td class="py-4 bg-slate-50 border-r border-slate-200"><i class="fas fa-check-circle text-[#6cc070]"></i>
+              </td>
               <td class="py-4 border-r border-slate-100"><i class="fas fa-check-circle text-[#6cc070]"></i></td>
               <td class="py-4"><i class="fas fa-check-circle text-[#6cc070]"></i></td>
             </tr>
             <tr class="border-b border-slate-100">
-              <td class="sticky-col bg-white text-left px-6 py-4 font-semibold text-gray-700 border-r-2 border-slate-100">Account Statement</td>
+              <td
+                class="sticky-col bg-white text-left px-6 py-4 font-semibold text-gray-700 border-r-2 border-slate-100">
+                Account Statement</td>
               <td class="py-4 border-r border-slate-100"><i class="fas fa-check-circle text-[#6cc070]"></i></td>
-              <td class="py-4 bg-slate-50 border-r border-slate-200"><i class="fas fa-check-circle text-[#6cc070]"></i></td>
-              <td class="py-4 border-r border-slate-100"><i class="fas fa-check-circle text-[#6cc070]"></i></td>
-              <td class="py-4"><i class="fas fa-check-circle text-[#6cc070]"></i></td>
-            </tr>
-            <tr class="border-b border-slate-100">
-              <td class="sticky-col bg-white text-left px-6 py-4 font-semibold text-gray-700 border-r-2 border-slate-100">Meeting Management</td>
-              <td class="py-4 border-r border-slate-100"><i class="fas fa-check-circle text-[#6cc070]"></i></td>
-              <td class="py-4 bg-slate-50 border-r border-slate-200"><i class="fas fa-check-circle text-[#6cc070]"></i></td>
+              <td class="py-4 bg-slate-50 border-r border-slate-200"><i class="fas fa-check-circle text-[#6cc070]"></i>
+              </td>
               <td class="py-4 border-r border-slate-100"><i class="fas fa-check-circle text-[#6cc070]"></i></td>
               <td class="py-4"><i class="fas fa-check-circle text-[#6cc070]"></i></td>
             </tr>
             <tr class="border-b border-slate-100">
-              <td class="sticky-col bg-white text-left px-6 py-4 font-semibold text-gray-700 border-r-2 border-slate-100">Notification Management</td>
+              <td
+                class="sticky-col bg-white text-left px-6 py-4 font-semibold text-gray-700 border-r-2 border-slate-100">
+                Meeting Management</td>
               <td class="py-4 border-r border-slate-100"><i class="fas fa-check-circle text-[#6cc070]"></i></td>
-              <td class="py-4 bg-slate-50 border-r border-slate-200"><i class="fas fa-check-circle text-[#6cc070]"></i></td>
-              <td class="py-4 border-r border-slate-100"><i class="fas fa-check-circle text-[#6cc070]"></i></td>
-              <td class="py-4"><i class="fas fa-check-circle text-[#6cc070]"></i></td>
-            </tr>
-
-            <!-- Category -->
-            <tr><td colspan="5" class="bg-slate-100 text-left px-6 py-3 font-extrabold text-xs uppercase tracking-widest text-gray-700 border-b border-slate-200">Advanced Management</td></tr>
-            <tr class="border-b border-slate-100">
-              <td class="sticky-col bg-white text-left px-6 py-4 font-semibold text-gray-700 border-r-2 border-slate-100">Income & Expense Dashboard</td>
-              <td class="py-4 border-r border-slate-100"><i class="fas fa-times-circle text-slate-200"></i></td>
-              <td class="py-4 bg-slate-50 border-r border-slate-200"><i class="fas fa-check-circle text-[#6cc070]"></i></td>
+              <td class="py-4 bg-slate-50 border-r border-slate-200"><i class="fas fa-check-circle text-[#6cc070]"></i>
+              </td>
               <td class="py-4 border-r border-slate-100"><i class="fas fa-check-circle text-[#6cc070]"></i></td>
               <td class="py-4"><i class="fas fa-check-circle text-[#6cc070]"></i></td>
             </tr>
             <tr class="border-b border-slate-100">
-              <td class="sticky-col bg-white text-left px-6 py-4 font-semibold text-gray-700 border-r-2 border-slate-100">Payroll Management</td>
-              <td class="py-4 border-r border-slate-100"><i class="fas fa-times-circle text-slate-200"></i></td>
-              <td class="py-4 bg-slate-50 border-r border-slate-200"><i class="fas fa-check-circle text-[#6cc070]"></i></td>
+              <td
+                class="sticky-col bg-white text-left px-6 py-4 font-semibold text-gray-700 border-r-2 border-slate-100">
+                Notification Management</td>
               <td class="py-4 border-r border-slate-100"><i class="fas fa-check-circle text-[#6cc070]"></i></td>
-              <td class="py-4"><i class="fas fa-check-circle text-[#6cc070]"></i></td>
-            </tr>
-            <tr class="border-b border-slate-100">
-              <td class="sticky-col bg-white text-left px-6 py-4 font-semibold text-gray-700 border-r-2 border-slate-100">Performance Management</td>
-              <td class="py-4 border-r border-slate-100"><i class="fas fa-times-circle text-slate-200"></i></td>
-              <td class="py-4 bg-slate-50 border-r border-slate-200"><i class="fas fa-check-circle text-[#6cc070]"></i></td>
-              <td class="py-4 border-r border-slate-100"><i class="fas fa-check-circle text-[#6cc070]"></i></td>
-              <td class="py-4"><i class="fas fa-check-circle text-[#6cc070]"></i></td>
-            </tr>
-            <tr class="border-b border-slate-100">
-              <td class="sticky-col bg-white text-left px-6 py-4 font-semibold text-gray-700 border-r-2 border-slate-100">Job Management</td>
-              <td class="py-4 border-r border-slate-100"><i class="fas fa-times-circle text-slate-200"></i></td>
-              <td class="py-4 bg-slate-50 border-r border-slate-200"><i class="fas fa-times-circle text-slate-200"></i></td>
-              <td class="py-4 border-r border-slate-100"><i class="fas fa-check-circle text-[#6cc070]"></i></td>
-              <td class="py-4"><i class="fas fa-check-circle text-[#6cc070]"></i></td>
-            </tr>
-            <tr class="border-b border-slate-100">
-              <td class="sticky-col bg-white text-left px-6 py-4 font-semibold text-gray-700 border-r-2 border-slate-100">Zoom Meeting Integration</td>
-              <td class="py-4 border-r border-slate-100"><i class="fas fa-times-circle text-slate-200"></i></td>
-              <td class="py-4 bg-slate-50 border-r border-slate-200"><i class="fas fa-times-circle text-slate-200"></i></td>
+              <td class="py-4 bg-slate-50 border-r border-slate-200"><i class="fas fa-check-circle text-[#6cc070]"></i>
+              </td>
               <td class="py-4 border-r border-slate-100"><i class="fas fa-check-circle text-[#6cc070]"></i></td>
               <td class="py-4"><i class="fas fa-check-circle text-[#6cc070]"></i></td>
             </tr>
 
             <!-- Category -->
-            <tr><td colspan="5" class="bg-slate-100 text-left px-6 py-3 font-extrabold text-xs uppercase tracking-widest text-gray-700 border-b border-slate-200">Enterprise Solutions</td></tr>
+            <tr>
+              <td colspan="5"
+                class="bg-slate-100 text-left px-6 py-3 font-extrabold text-xs uppercase tracking-widest text-gray-700 border-b border-slate-200">
+                Advanced Management</td>
+            </tr>
             <tr class="border-b border-slate-100">
-              <td class="sticky-col bg-white text-left px-6 py-4 font-semibold text-gray-700 border-r-2 border-slate-100">Asset Management</td>
+              <td
+                class="sticky-col bg-white text-left px-6 py-4 font-semibold text-gray-700 border-r-2 border-slate-100">
+                Income & Expense Dashboard</td>
               <td class="py-4 border-r border-slate-100"><i class="fas fa-times-circle text-slate-200"></i></td>
-              <td class="py-4 bg-slate-50 border-r border-slate-200"><i class="fas fa-times-circle text-slate-200"></i></td>
+              <td class="py-4 bg-slate-50 border-r border-slate-200"><i class="fas fa-check-circle text-[#6cc070]"></i>
+              </td>
+              <td class="py-4 border-r border-slate-100"><i class="fas fa-check-circle text-[#6cc070]"></i></td>
+              <td class="py-4"><i class="fas fa-check-circle text-[#6cc070]"></i></td>
+            </tr>
+            <tr class="border-b border-slate-100">
+              <td
+                class="sticky-col bg-white text-left px-6 py-4 font-semibold text-gray-700 border-r-2 border-slate-100">
+                Payroll Management</td>
+              <td class="py-4 border-r border-slate-100"><i class="fas fa-times-circle text-slate-200"></i></td>
+              <td class="py-4 bg-slate-50 border-r border-slate-200"><i class="fas fa-check-circle text-[#6cc070]"></i>
+              </td>
+              <td class="py-4 border-r border-slate-100"><i class="fas fa-check-circle text-[#6cc070]"></i></td>
+              <td class="py-4"><i class="fas fa-check-circle text-[#6cc070]"></i></td>
+            </tr>
+            <tr class="border-b border-slate-100">
+              <td
+                class="sticky-col bg-white text-left px-6 py-4 font-semibold text-gray-700 border-r-2 border-slate-100">
+                Performance Management</td>
+              <td class="py-4 border-r border-slate-100"><i class="fas fa-times-circle text-slate-200"></i></td>
+              <td class="py-4 bg-slate-50 border-r border-slate-200"><i class="fas fa-check-circle text-[#6cc070]"></i>
+              </td>
+              <td class="py-4 border-r border-slate-100"><i class="fas fa-check-circle text-[#6cc070]"></i></td>
+              <td class="py-4"><i class="fas fa-check-circle text-[#6cc070]"></i></td>
+            </tr>
+            <tr class="border-b border-slate-100">
+              <td
+                class="sticky-col bg-white text-left px-6 py-4 font-semibold text-gray-700 border-r-2 border-slate-100">
+                Job Management</td>
+              <td class="py-4 border-r border-slate-100"><i class="fas fa-times-circle text-slate-200"></i></td>
+              <td class="py-4 bg-slate-50 border-r border-slate-200"><i class="fas fa-times-circle text-slate-200"></i>
+              </td>
+              <td class="py-4 border-r border-slate-100"><i class="fas fa-check-circle text-[#6cc070]"></i></td>
+              <td class="py-4"><i class="fas fa-check-circle text-[#6cc070]"></i></td>
+            </tr>
+            <tr class="border-b border-slate-100">
+              <td
+                class="sticky-col bg-white text-left px-6 py-4 font-semibold text-gray-700 border-r-2 border-slate-100">
+                Zoom Meeting Integration</td>
+              <td class="py-4 border-r border-slate-100"><i class="fas fa-times-circle text-slate-200"></i></td>
+              <td class="py-4 bg-slate-50 border-r border-slate-200"><i class="fas fa-times-circle text-slate-200"></i>
+              </td>
+              <td class="py-4 border-r border-slate-100"><i class="fas fa-check-circle text-[#6cc070]"></i></td>
+              <td class="py-4"><i class="fas fa-check-circle text-[#6cc070]"></i></td>
+            </tr>
+
+            <!-- Category -->
+            <tr>
+              <td colspan="5"
+                class="bg-slate-100 text-left px-6 py-3 font-extrabold text-xs uppercase tracking-widest text-gray-700 border-b border-slate-200">
+                Enterprise Solutions</td>
+            </tr>
+            <tr class="border-b border-slate-100">
+              <td
+                class="sticky-col bg-white text-left px-6 py-4 font-semibold text-gray-700 border-r-2 border-slate-100">
+                Asset Management</td>
+              <td class="py-4 border-r border-slate-100"><i class="fas fa-times-circle text-slate-200"></i></td>
+              <td class="py-4 bg-slate-50 border-r border-slate-200"><i class="fas fa-times-circle text-slate-200"></i>
+              </td>
               <td class="py-4 border-r border-slate-100"><i class="fas fa-times-circle text-slate-200"></i></td>
               <td class="py-4"><i class="fas fa-check-circle text-[#6cc070]"></i></td>
             </tr>
             <tr class="border-b border-slate-100">
-              <td class="sticky-col bg-white text-left px-6 py-4 font-semibold text-gray-700 border-r-2 border-slate-100">Chat Messenger</td>
+              <td
+                class="sticky-col bg-white text-left px-6 py-4 font-semibold text-gray-700 border-r-2 border-slate-100">
+                Chat Messenger</td>
               <td class="py-4 border-r border-slate-100"><i class="fas fa-times-circle text-slate-200"></i></td>
-              <td class="py-4 bg-slate-50 border-r border-slate-200"><i class="fas fa-times-circle text-slate-200"></i></td>
+              <td class="py-4 bg-slate-50 border-r border-slate-200"><i class="fas fa-times-circle text-slate-200"></i>
+              </td>
               <td class="py-4 border-r border-slate-100"><i class="fas fa-times-circle text-slate-200"></i></td>
               <td class="py-4"><i class="fas fa-check-circle text-[#6cc070]"></i></td>
             </tr>
 
             <!-- Category -->
-            <tr><td colspan="5" class="bg-slate-100 text-left px-6 py-3 font-extrabold text-xs uppercase tracking-widest text-gray-700 border-b border-slate-200">Growth Scaling</td></tr>
+            <tr>
+              <td colspan="5"
+                class="bg-slate-100 text-left px-6 py-3 font-extrabold text-xs uppercase tracking-widest text-gray-700 border-b border-slate-200">
+                Growth Scaling</td>
+            </tr>
             <tr class="border-b border-slate-100">
-              <td class="sticky-col bg-white text-left px-6 py-4 font-semibold text-gray-700 border-r-2 border-slate-100">Additional Employee Cost</td>
+              <td
+                class="sticky-col bg-white text-left px-6 py-4 font-semibold text-gray-700 border-r-2 border-slate-100">
+                Additional Employee Cost</td>
               <td class="py-4 border-r border-slate-100 text-gray-400 text-xs">NA</td>
               <td class="py-4 bg-slate-50 border-r border-slate-200 text-xs font-semibold text-gray-600">₹30 / emp</td>
               <td class="py-4 border-r border-slate-100 text-xs font-semibold text-gray-600">₹50 / emp</td>
@@ -603,18 +875,27 @@
           </tbody>
           <tfoot>
             <tr>
-              <td class="sticky-col bg-[#fcfcfc] border-r-2 border-slate-100 border-t-2 border-slate-100 px-6 py-7"></td>
+              <td class="sticky-col bg-[#fcfcfc] border-r-2 border-slate-100 border-t-2 border-slate-100 px-6 py-7">
+              </td>
               <td class="bg-[#fcfcfc] border-t-2 border-slate-100 border-r border-slate-100 py-7 px-4">
-                <a href="#hero" class="inline-flex justify-center items-center px-5 py-2.5 rounded-full border-2 border-[#2e9ec6] text-[#2e9ec6] font-semibold text-xs transition-all duration-300 btn-outline min-w-[110px]">Get Started</a>
+                <a href="#hero"
+                  class="inline-flex justify-center items-center px-5 py-2.5 rounded-full border-2 border-[#2e9ec6] text-[#2e9ec6] font-semibold text-xs transition-all duration-300 btn-outline min-w-[110px]">Get
+                  Started</a>
               </td>
               <td class="bg-slate-100 border-t-2 border-slate-200 border-r border-slate-200 py-7 px-4">
-                <a href="#hero" class="inline-flex justify-center items-center px-5 py-2.5 rounded-full font-semibold text-xs text-white transition-all duration-300 min-w-[110px]" style="background:linear-gradient(135deg,#2e9ec6,#2e9ec6);">Start Trial</a>
+                <a href="#hero"
+                  class="inline-flex justify-center items-center px-5 py-2.5 rounded-full font-semibold text-xs text-white transition-all duration-300 min-w-[110px]"
+                  style="background:linear-gradient(135deg,#2e9ec6,#2e9ec6);">Start Trial</a>
               </td>
               <td class="bg-[#fcfcfc] border-t-2 border-slate-100 border-r border-slate-100 py-7 px-4">
-                <a href="#hero" class="inline-flex justify-center items-center px-5 py-2.5 rounded-full border-2 border-[#2e9ec6] text-[#2e9ec6] font-semibold text-xs transition-all duration-300 btn-outline min-w-[110px]">Scale Up</a>
+                <a href="#hero"
+                  class="inline-flex justify-center items-center px-5 py-2.5 rounded-full border-2 border-[#2e9ec6] text-[#2e9ec6] font-semibold text-xs transition-all duration-300 btn-outline min-w-[110px]">Scale
+                  Up</a>
               </td>
               <td class="bg-[#fcfcfc] border-t-2 border-slate-100 py-7 px-4">
-                <a href="#hero" class="inline-flex justify-center items-center px-5 py-2.5 rounded-full border-2 border-[#2e9ec6] text-[#2e9ec6] font-semibold text-xs transition-all duration-300 btn-outline min-w-[110px]">Contact Sales</a>
+                <a href="#hero"
+                  class="inline-flex justify-center items-center px-5 py-2.5 rounded-full border-2 border-[#2e9ec6] text-[#2e9ec6] font-semibold text-xs transition-all duration-300 btn-outline min-w-[110px]">Contact
+                  Sales</a>
               </td>
             </tr>
           </tfoot>
@@ -633,9 +914,11 @@
       <div class="testimonial-grid grid gap-7 md:grid-cols-3">
         <div class="testimonial-card bg-white p-10 rounded-2xl shadow-card">
           <div class="flex gap-1 text-amber-400 mb-5">
-            <i class="fas fa-star"></i><i class="fas fa-star"></i><i class="fas fa-star"></i><i class="fas fa-star"></i><i class="fas fa-star"></i>
+            <i class="fas fa-star"></i><i class="fas fa-star"></i><i class="fas fa-star"></i><i
+              class="fas fa-star"></i><i class="fas fa-star"></i>
           </div>
-          <p class="italic text-gray-600 mb-6">"Connect360 reduced our payroll processing time by 70%. The automated compliance checks are a lifesaver."</p>
+          <p class="italic text-gray-600 mb-6">"Connect360 reduced our payroll processing time by 70%. The automated
+            compliance checks are a lifesaver."</p>
           <div class="flex items-center gap-4">
             <div class="w-12 h-12 rounded-full bg-slate-200"></div>
             <div>
@@ -646,9 +929,11 @@
         </div>
         <div class="testimonial-card bg-white p-10 rounded-2xl shadow-card">
           <div class="flex gap-1 text-amber-400 mb-5">
-            <i class="fas fa-star"></i><i class="fas fa-star"></i><i class="fas fa-star"></i><i class="fas fa-star"></i><i class="fas fa-star"></i>
+            <i class="fas fa-star"></i><i class="fas fa-star"></i><i class="fas fa-star"></i><i
+              class="fas fa-star"></i><i class="fas fa-star"></i>
           </div>
-          <p class="italic text-gray-600 mb-6">"The mobile attendance feature solved our field workforce tracking issues once and for all. Brilliant interface!"</p>
+          <p class="italic text-gray-600 mb-6">"The mobile attendance feature solved our field workforce tracking issues
+            once and for all. Brilliant interface!"</p>
           <div class="flex items-center gap-4">
             <div class="w-12 h-12 rounded-full bg-slate-200"></div>
             <div>
@@ -659,9 +944,11 @@
         </div>
         <div class="testimonial-card bg-white p-10 rounded-2xl shadow-card">
           <div class="flex gap-1 text-amber-400 mb-5">
-            <i class="fas fa-star"></i><i class="fas fa-star"></i><i class="fas fa-star"></i><i class="fas fa-star"></i><i class="fas fa-star"></i>
+            <i class="fas fa-star"></i><i class="fas fa-star"></i><i class="fas fa-star"></i><i
+              class="fas fa-star"></i><i class="fas fa-star"></i>
           </div>
-          <p class="italic text-gray-600 mb-6">"Most comprehensive HRMS we've used. The 360-degree integration truly connects all our departments."</p>
+          <p class="italic text-gray-600 mb-6">"Most comprehensive HRMS we've used. The 360-degree integration truly
+            connects all our departments."</p>
           <div class="flex items-center gap-4">
             <div class="w-12 h-12 rounded-full bg-slate-200"></div>
             <div>
@@ -683,30 +970,36 @@
       </div>
       <div class="faq-container max-w-3xl mx-auto space-y-4">
         <div class="faq-item border border-slate-200 rounded-2xl overflow-hidden">
-          <button class="faq-question w-full flex justify-between items-center px-6 py-5 bg-white font-heading font-semibold text-base text-left cursor-pointer border-none">
+          <button
+            class="faq-question w-full flex justify-between items-center px-6 py-5 bg-white font-heading font-semibold text-base text-left cursor-pointer border-none">
             Is Connect360 customizable for my industry?
             <i class="fas fa-chevron-down faq-chevron text-gray-400 ml-4 flex-shrink-0"></i>
           </button>
           <div class="faq-answer bg-slate-50">
-            <p class="px-6 pb-5 text-gray-500 text-sm leading-relaxed">Yes, Connect360 is built on a modular architecture that allows us to tailor features specifically for retail, manufacturing, IT, and more.</p>
+            <p class="px-6 pb-5 text-gray-500 text-sm leading-relaxed">Yes, Connect360 is built on a modular
+              architecture that allows us to tailor features specifically for retail, manufacturing, IT, and more.</p>
           </div>
         </div>
         <div class="faq-item border border-slate-200 rounded-2xl overflow-hidden">
-          <button class="faq-question w-full flex justify-between items-center px-6 py-5 bg-white font-heading font-semibold text-base text-left cursor-pointer border-none">
+          <button
+            class="faq-question w-full flex justify-between items-center px-6 py-5 bg-white font-heading font-semibold text-base text-left cursor-pointer border-none">
             How secure is our employee data?
             <i class="fas fa-chevron-down faq-chevron text-gray-400 ml-4 flex-shrink-0"></i>
           </button>
           <div class="faq-answer bg-slate-50">
-            <p class="px-6 pb-5 text-gray-500 text-sm leading-relaxed">We use enterprise-grade AES-256 encryption and are fully SOC2 and GDPR compliant to ensure your data never leaves safe hands.</p>
+            <p class="px-6 pb-5 text-gray-500 text-sm leading-relaxed">We use enterprise-grade AES-256 encryption and
+              are fully SOC2 and GDPR compliant to ensure your data never leaves safe hands.</p>
           </div>
         </div>
         <div class="faq-item border border-slate-200 rounded-2xl overflow-hidden">
-          <button class="faq-question w-full flex justify-between items-center px-6 py-5 bg-white font-heading font-semibold text-base text-left cursor-pointer border-none">
+          <button
+            class="faq-question w-full flex justify-between items-center px-6 py-5 bg-white font-heading font-semibold text-base text-left cursor-pointer border-none">
             Can we integrate our existing biometric systems?
             <i class="fas fa-chevron-down faq-chevron text-gray-400 ml-4 flex-shrink-0"></i>
           </button>
           <div class="faq-answer bg-slate-50">
-            <p class="px-6 pb-5 text-gray-500 text-sm leading-relaxed">Connect360 supports API-level integration with most major biometric hardware manufacturers for seamless attendance syncing.</p>
+            <p class="px-6 pb-5 text-gray-500 text-sm leading-relaxed">Connect360 supports API-level integration with
+              most major biometric hardware manufacturers for seamless attendance syncing.</p>
           </div>
         </div>
       </div>
@@ -718,16 +1011,28 @@
     <div class="max-w-[1400px] mx-auto px-[5%]">
       <div class="flex flex-wrap justify-between items-center gap-5">
         <div class="flex gap-7 flex-wrap">
-          <a href="#pricing" class="text-gray-700 font-medium text-sm hover:text-[#2e9ec6] transition-colors duration-300">Pricing</a>
-          <a href="#hero" class="text-gray-700 font-medium text-sm hover:text-[#2e9ec6] transition-colors duration-300">Contact</a>
-          <a href="#" class="text-gray-700 font-medium text-sm hover:text-[#2e9ec6] transition-colors duration-300">Privacy Policy</a>
+          <a href="#pricing"
+            class="text-gray-700 font-medium text-sm hover:text-[#2e9ec6] transition-colors duration-300">Pricing</a>
+          <a href="#hero"
+            class="text-gray-700 font-medium text-sm hover:text-[#2e9ec6] transition-colors duration-300">Contact</a>
+          <a href="#"
+            class="text-gray-700 font-medium text-sm hover:text-[#2e9ec6] transition-colors duration-300">Privacy
+            Policy</a>
         </div>
         <p class="text-gray-400 text-sm">&copy; 2024 Connect360. All rights reserved.</p>
         <div class="flex gap-3 items-center">
-          <a href="#" aria-label="Facebook" class="social-link w-9 h-9 inline-flex items-center justify-center bg-slate-100 text-brand-dark rounded-full border border-slate-200 text-sm"><i class="fa-brands fa-facebook-f"></i></a>
-          <a href="#" aria-label="X" class="social-link w-9 h-9 inline-flex items-center justify-center bg-slate-100 text-brand-dark rounded-full border border-slate-200 text-sm"><i class="fa-brands fa-x"></i></a>
-          <a href="#" aria-label="LinkedIn" class="social-link w-9 h-9 inline-flex items-center justify-center bg-slate-100 text-brand-dark rounded-full border border-slate-200 text-sm"><i class="fa-brands fa-linkedin-in"></i></a>
-          <a href="#" aria-label="Instagram" class="social-link w-9 h-9 inline-flex items-center justify-center bg-slate-100 text-brand-dark rounded-full border border-slate-200 text-sm"><i class="fa-brands fa-instagram"></i></a>
+          <a href="#" aria-label="Facebook"
+            class="social-link w-9 h-9 inline-flex items-center justify-center bg-slate-100 text-brand-dark rounded-full border border-slate-200 text-sm"><i
+              class="fa-brands fa-facebook-f"></i></a>
+          <a href="#" aria-label="X"
+            class="social-link w-9 h-9 inline-flex items-center justify-center bg-slate-100 text-brand-dark rounded-full border border-slate-200 text-sm"><i
+              class="fa-brands fa-x"></i></a>
+          <a href="#" aria-label="LinkedIn"
+            class="social-link w-9 h-9 inline-flex items-center justify-center bg-slate-100 text-brand-dark rounded-full border border-slate-200 text-sm"><i
+              class="fa-brands fa-linkedin-in"></i></a>
+          <a href="#" aria-label="Instagram"
+            class="social-link w-9 h-9 inline-flex items-center justify-center bg-slate-100 text-brand-dark rounded-full border border-slate-200 text-sm"><i
+              class="fa-brands fa-instagram"></i></a>
         </div>
       </div>
     </div>
@@ -736,7 +1041,8 @@
   <!-- ===================== VIDEO MODAL ===================== -->
   <div id="videoModal" class="fixed inset-0 z-[2000] bg-black/90 backdrop-blur-lg items-center justify-center">
     <div class="video-modal-content relative w-[90%] max-w-4xl rounded-3xl overflow-hidden">
-      <span class="close-modal absolute top-5 right-5 text-white text-4xl font-bold cursor-pointer z-[2001] leading-none hover:text-[#2e9ec6] transition-colors duration-300">&times;</span>
+      <span
+        class="close-modal absolute top-5 right-5 text-white text-4xl font-bold cursor-pointer z-[2001] leading-none hover:text-[#2e9ec6] transition-colors duration-300">&times;</span>
       <div class="aspect-video w-full bg-black">
         <video id="modalVideo" controls class="w-full h-full object-contain">
           <source src="assets/mobile.mp4" type="video/mp4" />
@@ -970,4 +1276,5 @@
     });
   </script>
 </body>
+
 </html>

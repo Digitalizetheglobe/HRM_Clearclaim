@@ -1,5 +1,134 @@
 @extends('layouts.admin')
 
+@push('css')
+    <style>
+        /* Premium Profile Dashboard UI */
+        .profile-header {
+            background: linear-gradient(135deg, rgba(var(--bs-primary-rgb), 0.1) 0%, rgba(var(--bs-primary-rgb), 0.05) 100%);
+            border-radius: 15px;
+            padding: 30px;
+            margin-bottom: 30px;
+            border: 1px solid rgba(var(--bs-primary-rgb), 0.1);
+        }
+        .profile-avatar {
+            width: 100px;
+            height: 100px;
+            border-radius: 50%;
+            background: var(--bs-primary);
+            color: white;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 2.5rem;
+            font-weight: bold;
+            box-shadow: 0 10px 25px rgba(var(--bs-primary-rgb), 0.3);
+            margin: 0 auto 15px;
+        }
+        .card {
+            border: none;
+            border-radius: 15px;
+            box-shadow: 0 10px 30px 0 rgba(0,0,0,0.05);
+            background: rgba(255, 255, 255, 0.9);
+            backdrop-filter: blur(10px);
+            transition: transform 0.3s ease, box-shadow 0.3s ease;
+            margin-bottom: 30px;
+            height: 100%;
+        }
+        .card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 15px 35px 0 rgba(0,0,0,0.1);
+        }
+        .card-header {
+            background-color: transparent;
+            border-bottom: 1px solid rgba(0,0,0,0.05);
+            padding: 20px 25px;
+        }
+        .card-header h6 {
+            margin-bottom: 0;
+            color: #2c3e50;
+            font-weight: 600;
+            font-size: 1.1rem;
+            position: relative;
+            padding-left: 15px;
+        }
+        .card-header h6::before {
+            content: '';
+            position: absolute;
+            left: 0;
+            top: 50%;
+            transform: translateY(-50%);
+            width: 4px;
+            height: 18px;
+            background: var(--bs-primary);
+            border-radius: 4px;
+        }
+        .card-body p {
+            margin-bottom: 15px;
+            color: #4a5568;
+            font-size: 0.95rem;
+        }
+        .card-body strong {
+            color: #2d3748;
+            font-weight: 600;
+            display: block;
+            margin-bottom: 4px;
+            font-size: 0.75rem;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            opacity: 0.8;
+        }
+        .info-block {
+            padding: 15px;
+            background: #f8fafc;
+            border-radius: 10px;
+            height: 100%;
+            transition: all 0.3s ease;
+            border: 1px solid #e2e8f0;
+        }
+        .info-block:hover {
+            background: #ffffff;
+            border-color: var(--bs-primary);
+            box-shadow: 0 5px 15px rgba(0,0,0,0.05);
+        }
+        .btn-sm {
+            border-radius: 6px;
+            font-weight: 500;
+            padding: 6px 12px;
+            transition: all 0.2s ease;
+        }
+        .btn-sm:hover {
+            transform: translateY(-2px);
+        }
+        .doc-card {
+            background: #fff;
+            border: 1px solid #e2e8f0;
+            border-radius: 10px;
+            padding: 15px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin-bottom: 15px;
+            transition: all 0.3s ease;
+        }
+        .doc-card:hover {
+            border-color: var(--bs-primary);
+            box-shadow: 0 5px 15px rgba(0,0,0,0.05);
+        }
+        .doc-icon {
+            width: 40px;
+            height: 40px;
+            background: rgba(var(--bs-primary-rgb), 0.1);
+            color: var(--bs-primary);
+            border-radius: 8px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.2rem;
+            margin-right: 15px;
+        }
+    </style>
+@endpush
+
 @section('page-title')
     {{ __('Employee') }}
 @endsection
@@ -340,22 +469,36 @@
         <!-- Approve Modal -->
         <div class="modal fade" id="approveModal" tabindex="-1" aria-labelledby="approveModalLabel" aria-hidden="true">
             <div class="modal-dialog">
-                <div class="modal-content">
+                <div class="modal-content border-top border-success border-3">
                     <div class="modal-header">
-                        <h5 class="modal-title" id="approveModalLabel">{{ __('Approve Employee Details') }}</h5>
+                        <h5 class="modal-title text-success" id="approveModalLabel">
+                            <i class="ti ti-circle-check me-1"></i>{{ __('Approve Employee Details') }}
+                        </h5>
                         <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
                     </div>
-                    <div class="modal-body">
-                        <p>{{ __('Are you sure you want to approve this employee\'s details?') }}</p>
-                        <p>{{ __('Once approved, the employee will not be able to edit their information.') }}</p>
+                    <div class="modal-body text-center">
+                        <div class="bg-success-subtle text-success rounded-circle d-inline-flex p-3 mb-3 mt-2">
+                            <i class="ti ti-check fs-2"></i>
+                        </div>
+                        <h6 class="mb-2">{{ __('Are you sure you want to approve this employee\'s details?') }}</h6>
+                        <p class="text-muted mb-0">{{ __('Once approved, the employee will not be able to edit their information without requesting approval again.') }}</p>
                     </div>
-                    <div class="modal-footer">
-                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">{{ __('Cancel') }}</button>
-                        <form action="{{ route('employee.approve', $employee->id) }}" method="POST">
+                    <div class="modal-footer border-top-0 pt-0 justify-content-center">
+                        <button type="button" class="btn btn-light" data-bs-dismiss="modal">{{ __('Cancel') }}</button>
+                        <form action="{{ route('employee.approve', $employee->id) }}" method="POST" id="approveForm" class="m-0">
                             @csrf
-                            <button type="submit" class="btn btn-success">{{ __('Approve') }}</button>
+                            <button type="submit" class="btn btn-success" id="approveBtn">
+                                <i class="ti ti-check me-1"></i>{{ __('Confirm Approval') }}
+                            </button>
                         </form>
                     </div>
+                    <script>
+                        document.getElementById('approveForm').addEventListener('submit', function(e) {
+                            const submitBtn = document.getElementById('approveBtn');
+                            submitBtn.disabled = true;
+                            submitBtn.innerHTML = '<span class="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true"></span> {{ __("Approving...") }}';
+                        });
+                    </script>
                 </div>
             </div>
         </div>
@@ -363,25 +506,46 @@
         <!-- Reject Modal -->
         <div class="modal fade" id="rejectModal" tabindex="-1" aria-labelledby="rejectModalLabel" aria-hidden="true">
             <div class="modal-dialog">
-                <div class="modal-content">
+                <div class="modal-content border-top border-danger border-3">
                     <div class="modal-header">
-                        <h5 class="modal-title" id="rejectModalLabel">{{ __('Reject Employee Details') }}</h5>
+                        <h5 class="modal-title text-danger" id="rejectModalLabel">
+                            <i class="ti ti-alert-circle me-1"></i>{{ __('Reject Employee Details') }}
+                        </h5>
                         <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
                     </div>
-                    <form action="{{ route('employee.reject', $employee->id) }}" method="POST">
+                    <form action="{{ route('employee.reject', $employee->id) }}" method="POST" class="needs-validation" novalidate id="rejectForm">
                         @csrf
                         <div class="modal-body">
-                            <p>{{ __('Please provide a reason for rejecting this employee\'s details:') }}</p>
-                            <div class="form-group">
-                                <textarea name="rejection_reason" class="form-control" rows="3" required 
-                                          placeholder="{{ __('Enter rejection reason...') }}"></textarea>
+                            <p class="text-muted">{{ __('Please provide a clear reason for rejecting these details so the employee can correct them.') }}</p>
+                            <div class="form-group mb-0">
+                                <label for="rejection_reason" class="form-label fw-bold">{{ __('Rejection Reason') }} <span class="text-danger">*</span></label>
+                                <textarea name="rejection_reason" id="rejection_reason" class="form-control" rows="4" required 
+                                          placeholder="{{ __('E.g., Document missing, incorrect date of birth...') }}"></textarea>
+                                <div class="invalid-feedback">
+                                    {{ __('A rejection reason is required.') }}
+                                </div>
                             </div>
                         </div>
-                        <div class="modal-footer">
-                            <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">{{ __('Cancel') }}</button>
-                            <button type="submit" class="btn btn-danger">{{ __('Reject') }}</button>
+                        <div class="modal-footer border-top-0 pt-0">
+                            <button type="button" class="btn btn-light" data-bs-dismiss="modal">{{ __('Cancel') }}</button>
+                            <button type="submit" class="btn btn-danger" id="rejectBtn">
+                                <i class="ti ti-x me-1"></i>{{ __('Confirm Rejection') }}
+                            </button>
                         </div>
                     </form>
+                    <script>
+                        document.getElementById('rejectForm').addEventListener('submit', function(e) {
+                            if (!this.checkValidity()) {
+                                e.preventDefault();
+                                e.stopPropagation();
+                                this.classList.add('was-validated');
+                                return;
+                            }
+                            const submitBtn = document.getElementById('rejectBtn');
+                            submitBtn.disabled = true;
+                            submitBtn.innerHTML = '<span class="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true"></span> {{ __("Rejecting...") }}';
+                        });
+                    </script>
                 </div>
             </div>
         </div>
@@ -395,28 +559,45 @@
                     <h5 class="modal-title" id="appointmentDateModalLabel">{{ __('Select Appointment Date') }}</h5>
                     <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
                 </div>
-                <form action="{{ route('custom.appointment.letter.download.pdf.with.date', $employee->id) }}" method="GET" id="appointmentDateForm">
+                <form action="{{ route('custom.appointment.letter.download.pdf.with.date', $employee->id) }}" method="GET" id="appointmentDateForm" class="needs-validation" novalidate>
                     @csrf
                     <div class="modal-body">
-                        <p>{{ __('Please add your appointment date') }}:</p>
-                        <div class="form-group">
-                            <label for="appointment_date" class="form-label">{{ __('Appointment Date') }}</label>
+                        <div class="text-center mb-4">
+                            <div class="bg-primary-subtle text-primary rounded-circle d-inline-flex p-3 mb-2">
+                                <i class="ti ti-calendar-event fs-3"></i>
+                            </div>
+                            <p class="text-muted mt-2">{{ __('Please select the appointment date to generate the letter.') }}</p>
+                        </div>
+                        <div class="form-group position-relative">
+                            <label for="appointment_date" class="form-label fw-bold">{{ __('Appointment Date') }} <span class="text-danger">*</span></label>
                             <input type="date" 
                                    id="appointment_date" 
                                    name="appointment_date" 
                                    class="form-control" 
                                    required 
                                    value="{{ $employee->company_doj ? (is_string($employee->company_doj) ? $employee->company_doj : $employee->company_doj->format('Y-m-d')) : '' }}">
+                            <div class="invalid-feedback">
+                                {{ __('Please provide a valid appointment date.') }}
+                            </div>
                         </div>
                     </div>
-                    <div class="modal-footer">
-                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">{{ __('Cancel') }}</button>
-                        <button type="submit" class="btn btn-primary" id="downloadBtn">{{ __('Download PDF') }}</button>
+                    <div class="modal-footer border-top-0 pt-0">
+                        <button type="button" class="btn btn-light" data-bs-dismiss="modal">{{ __('Cancel') }}</button>
+                        <button type="submit" class="btn btn-primary" id="downloadBtn">
+                            <i class="ti ti-download me-1"></i> {{ __('Download PDF') }}
+                        </button>
                     </div>
                 </form>
                 
                 <script>
                 document.getElementById('appointmentDateForm').addEventListener('submit', function(e) {
+                    if (!this.checkValidity()) {
+                        e.preventDefault();
+                        e.stopPropagation();
+                        this.classList.add('was-validated');
+                        return;
+                    }
+
                     e.preventDefault();
                     
                     const submitBtn = document.getElementById('downloadBtn');
@@ -424,7 +605,7 @@
                     
                     // Disable button to prevent multiple submissions
                     submitBtn.disabled = true;
-                    submitBtn.innerHTML = '<span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span> Downloading...';
+                    submitBtn.innerHTML = '<span class="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true"></span> {{ __("Downloading...") }}';
                     
                     // Get form data
                     const formData = new FormData(this);
@@ -447,7 +628,8 @@
                         
                         // Reset button
                         submitBtn.disabled = false;
-                        submitBtn.innerHTML = '{{ __('Download PDF') }}';
+                        submitBtn.innerHTML = '<i class="ti ti-download me-1"></i> {{ __('Download PDF') }}';
+                        this.classList.remove('was-validated');
                     }, 1000);
                 });
                 </script>

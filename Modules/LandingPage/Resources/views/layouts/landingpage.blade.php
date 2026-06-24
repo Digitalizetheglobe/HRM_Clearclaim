@@ -1,887 +1,973 @@
-
 <!DOCTYPE html>
-<html lang="en">
+<html lang="en" class="scroll-smooth">
+
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title> Connect360 | Innovative Business Solutions and HRM Functions  </title>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Connect360 | Innovative Business Solutions & HRM</title>
+  <meta name="description" content="Redefine your HR efficiency and employee satisfaction with Connect360's cutting-edge HRM software." />
 
-        <!-- <link rel="stylesheet" href="zohocustom.css"> -->
-        <link rel="stylesheet" href="{{ Module::asset('LandingPage:Resources/views/layouts/zohocustom.css') }}">
-        <!-- <link rel="stylesheet" href="{{ Module::asset('LandingPage:Resources/views/layouts/2474.css') }}"> -->
-        <link rel="stylesheet" href="{{ Module::asset('LandingPage:Resources/views/layouts/style.css') }}">
-        <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;600;700;800&display=swap" rel="stylesheet">
-        <!-- Bootstrap CSS -->
-        <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css">
-        <link rel="stylesheet" href="{{ Module::asset('LandingPage:Resources/views/layouts/footer.css') }}">
-        <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/intl-tel-input/17.0.19/css/intlTelInput.css">
-        <script src="https://cdnjs.cloudflare.com/ajax/libs/intl-tel-input/17.0.19/js/intlTelInput.min.js"></script>
+  <!-- Tailwind CSS -->
+  <script src="{{ asset('assets/css/tailwind-cdn.js') }}"></script>
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          colors: {
+            brand: {
+              blue: '#2e9ec6',
+              green: '#6cc070',
+              dark: '#0f172a',
+            }
+          },
+          fontFamily: {
+            heading: ['Outfit', 'sans-serif'],
+            body: ['Inter', 'sans-serif'],
+          },
+          borderRadius: {
+            '4xl': '2.5rem',
+          },
+          boxShadow: {
+            'glass': '0 8px 32px 0 rgba(31,38,135,0.07)',
+            'card': '0 10px 30px rgba(0,0,0,0.04)',
+            'card-hover': '0 20px 40px -10px rgba(0,0,0,0.08)',
+            'form': '0 30px 60px -12px rgba(0,0,0,0.15)',
+            'phone': '0 50px 100px -20px rgba(0,0,0,0.5)',
+            'pricing': '0 15px 40px rgba(0,0,0,0.08)',
+          },
+          backgroundImage: {
+            'hero': "linear-gradient(90deg, rgba(255,255,255,0.97) 30%, rgba(255,255,255,0.6)), url('assets/hero-banner.png')",
+            'gradient-light': 'radial-gradient(circle at 10% 10%, rgba(46,158,198,0.08) 0%, transparent 40%), radial-gradient(circle at 90% 90%, rgba(108,192,112,0.08) 0%, transparent 40%), #f8fafc',
+          },
+          keyframes: {
+            fadeUp: { from: { opacity: '0', transform: 'translateY(20px)' }, to: { opacity: '1', transform: 'translateY(0)' } },
+          },
+          animation: {
+            'fade-up': 'fadeUp 0.6s ease forwards',
+          }
+        }
+      }
+    }
+  </script>
 
+  <!-- Google Fonts -->
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=Outfit:wght@600;700;800&display=swap" rel="stylesheet" />
 
-        <!-- jQuery and Bootstrap JS -->
-        <script src="https://code.jquery.com/jquery-3.5.1.slim.min.js"></script>
-        <script src="https://cdn.jsdelivr.net/npm/@popperjs/core@2.9.2/dist/umd/popper.min.js"></script>
-        <script src="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/js/bootstrap.min.js"></script>
+  <!-- Font Awesome -->
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" />
 
-        <!-- <script src="https://cdn.emailjs.com/dist/email.min.js"></script> -->
-        <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+  <!-- GSAP -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.2/gsap.min.js" defer></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.2/ScrollTrigger.min.js" defer></script>
 
-           <!-- CSS for intl-tel-input -->
-        <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/intl-tel-input/17.0.8/css/intlTelInput.css">
-        
-        
-        
-        
-        <!-- Meta Tags for SEO -->
-        <meta charset="UTF-8">
-        <meta name="viewport" content="width=device-width, initial-scale=1.0">
-        <meta name="description" content="Connect360 provides innovative business solutions and expert marketing strategies to help businesses succeed. Discover efficient HRM functions that streamline workforce management, automate payroll, organize employee documents, and ensure compliance.">
-        <meta name="keywords" content="Connect360, business solutions, marketing strategies, HRM, workforce management, payroll automation, employee document organization, compliance">
-        <meta name="author" content="Connect360">
-        <meta name="robots" content="index, follow">
-        
-        <!-- Open Graph / Facebook Meta Tags -->
-        <meta property="og:type" content="website">
-        <meta property="og:title" content="Connect360 - Business Solutions & Expert Marketing Strategies">
-        <meta property="og:description" content="Empowering businesses with innovative HRM functions and expert marketing strategies. Streamline workforce management, automate payroll, and more with Connect360.">
-        <meta property="og:image" content="URL_to_image">
-        <meta property="og:url" content="https://www.connect360.com">
-        
-        <!-- Twitter Meta Tags -->
-        <meta name="twitter:card" content="summary_large_image">
-        <meta name="twitter:title" content="Connect360 - Business Solutions & Expert Marketing Strategies">
-        <meta name="twitter:description" content="Boost your business with Connect360's HRM and marketing solutions. Manage your workforce efficiently, automate payroll, and stay compliant.">
-        <meta name="twitter:image" content="URL_to_image">
-        <meta name="twitter:url" content="https://www.connect360.com">
-        
-        <!-- Favicon -->
-        <link rel="icon" href="favicon.ico" type="image/x-icon">
+  <style>
+    body { font-family: 'Inter', sans-serif; overflow-x: hidden; }
+    h1, h2, h3, h4, h5, h6 { font-family: 'Outfit', sans-serif; }
 
-        
-        
-        
-        
-        
+    /* Cursor */
+    .cursor-follower {
+      position: fixed; top: 0; left: 0; width: 20px; height: 20px;
+      border: 2px solid #2e9ec6; border-radius: 50%;
+      pointer-events: none; z-index: 10000;
+    }
 
-        <!-- JavaScript for intl-tel-input -->
-        <script src="https://cdnjs.cloudflare.com/ajax/libs/intl-tel-input/17.0.8/js/intlTelInput.min.js"></script>
+    /* Hero background */
+    .hero-bg {
+      background: linear-gradient(90deg, rgba(255,255,255,0.97) 30%, rgba(255,255,255,0.6)),
+        url('assets/hero-banner.png') center/cover no-repeat fixed;
+    }
+    .hero-bg::before {
+      content: ''; position: absolute; width: 500px; height: 500px;
+      background: #2e9ec6; filter: blur(150px); opacity: 0.05;
+      top: -100px; right: -100px; z-index: 0;
+    }
 
+    /* Gradient text */
+    .text-gradient {
+      background: linear-gradient(to right, #2e9ec6, #2e9ec6);
+      -webkit-background-clip: text; background-clip: text; -webkit-text-fill-color: transparent;
+    }
 
-       
-        <script type="text/javascript" src="https://cdn.jsdelivr.net/npm/@emailjs/browser@4/dist/email.min.js">
-        </script>
-        <script type="text/javascript">
-            (function(){
-                emailjs.init({
-                    publicKey: "0256Hqry936XqMD-e",
-                });
-            })();
-        </script>
+    /* Light premium bg */
+    .bg-light-premium {
+      background: radial-gradient(circle at 10% 10%, rgba(46,158,198,0.08) 0%, transparent 40%),
+        radial-gradient(circle at 90% 90%, rgba(108,192,112,0.08) 0%, transparent 40%), #f8fafc;
+    }
 
+    /* Header scrolled */
+    header.scrolled {
+      padding-top: 0.75rem; padding-bottom: 0.75rem;
+      background: rgba(255,255,255,0.7); backdrop-filter: blur(15px);
+      box-shadow: 0 8px 32px 0 rgba(31,38,135,0.07);
+      border-bottom: 1px solid rgba(255,255,255,0.3);
+    }
 
+    /* Mobile nav slide */
+    #mobile-nav { right: -100%; transition: right 0.4s cubic-bezier(0.4,0,0.2,1); }
+    #mobile-nav.active { right: 0; }
 
- 
+    /* FAQ accordion */
+    .faq-answer { max-height: 0; overflow: hidden; transition: max-height 0.35s ease-out; }
+    .faq-item.active .faq-answer { max-height: 200px; }
+    .faq-item.active .faq-chevron { transform: rotate(180deg); }
+    .faq-chevron { transition: transform 0.3s; }
+
+    /* Pricing table sticky */
+    .pricing-table-container { overflow: auto; scrollbar-width: none; max-height: 580px; }
+    .pricing-table-container::-webkit-scrollbar { display: none; }
+    .pricing-table thead th { position: sticky; top: 0; z-index: 100; box-shadow: 0 2px 5px rgba(0,0,0,0.05); }
+    .pricing-table .sticky-col { position: sticky; left: 0; z-index: 50; }
+    .pricing-table thead th.sticky-col { z-index: 110; }
+
+    /* Popular badge */
+    .popular-tab {
+      position: absolute; top: -38px; left: 50%; transform: translateX(-50%);
+      background: #2e9ec6; color: white; padding: 3px 16px; font-size: 0.68rem;
+      font-weight: 700; border-radius: 9999px; text-transform: uppercase;
+      white-space: nowrap; box-shadow: 0 4px 10px rgba(46,158,198,0.3);
+    }
+
+    /* Phone mockup */
+    .phone-mockup {
+      width: 250px; height: 500px; background: #222;
+      border: 8px solid #333; border-radius: 40px;
+      margin: 0 auto; position: relative;
+      box-shadow: 0 50px 100px -20px rgba(0,0,0,0.5);
+    }
+    .phone-screen {
+      background: white; width: 100%; height: 100%;
+      border-radius: 32px; overflow: hidden;
+    }
+
+    /* Video modal */
+    #videoModal { display: none; }
+    #videoModal.open { display: flex; }
+
+    /* Showcase visual glow */
+    .showcase-visual::after {
+      content: ''; position: absolute; width: 300px; height: 300px;
+      background: #2e9ec6; filter: blur(120px); opacity: 0.1; z-index: 0;
+    }
+
+    /* Button base transitions */
+    .btn-primary { transition: all 0.3s cubic-bezier(0.4,0,0.2,1); }
+    .btn-primary:hover { background: white !important; color: #2e9ec6 !important; }
+    .btn-outline:hover { background: #2e9ec6; color: white !important; }
+    .btn-success:hover { transform: translateY(-3px); box-shadow: 0 15px 25px -5px rgba(108,192,112,0.5); }
+
+    /* Tagline */
+    .tagline {
+      display: block; color: #2e9ec6; text-transform: uppercase;
+      font-weight: 700; letter-spacing: 2px; font-size: 0.82rem; margin-bottom: 12px;
+    }
+
+    /* Input focus ring */
+    .form-input:focus {
+      outline: none; border-color: #2e9ec6; background: white;
+      box-shadow: 0 0 0 4px rgba(46,158,198,0.12);
+    }
+
+    /* Module card hover */
+    .module-card { transition: all 0.4s ease; }
+    .module-card:hover { transform: translateY(-10px); border-color: #2e9ec6; box-shadow: 0 20px 40px -10px rgba(0,0,0,0.06); }
+
+    /* Social link hover */
+    .social-link { transition: all 0.3s cubic-bezier(0.4,0,0.2,1); }
+    .social-link:hover { background: #2e9ec6; color: white; border-color: #2e9ec6; transform: translateY(-3px); box-shadow: 0 4px 12px rgba(46,158,198,0.2); }
+
+    /* Testimonial card */
+    .testimonial-card { transition: transform 0.3s ease; }
+    .testimonial-card:hover { transform: translateY(-5px); }
+
+    /* Nav link */
+    .nav-link { transition: color 0.2s; }
+    .nav-link:hover { color: #2e9ec6; }
+
+    /* Form card hover */
+    .form-card { transition: transform 0.3s ease; }
+    .form-card:hover { transform: translateY(-5px); }
+  </style>
 </head>
-<body></body>
-<body>
 
-    <div class="navbar-connect">
-        <div class="navbar-logo">
-            <a href="https://connect360.in/">
-                <img src="<?php echo asset('Modules/LandingPage/Resources/views/layouts/images/logo.png'); ?>" alt="Connect360">
+<body class="bg-white text-gray-800 antialiased">
+
+  <!-- Cursor Follower -->
+  <div class="cursor-follower hidden md:block"></div>
+
+  <!-- ===================== HEADER ===================== -->
+  <header id="header" class="fixed top-0 left-0 w-full z-[1000] py-5 transition-all duration-400">
+    <div class="max-w-[1400px] mx-auto px-[5%] flex justify-between items-center">
+      <!-- Logo -->
+      <a href="#" class="flex items-center h-[50px] sm:h-[60px] overflow-hidden">
+        <img src="{{ asset('images/logo_1.png') }}" alt="Connect360" class="w-[200px] sm:w-[230px]" />
+      </a>
+
+      <!-- Desktop Nav -->
+      <nav class="hidden lg:flex items-center gap-8">
+        <a href="#modules" class="nav-link font-medium text-gray-700 opacity-80 hover:opacity-100">Modules</a>
+        <a href="#about" class="nav-link font-medium text-gray-700 opacity-80 hover:opacity-100">Why Us</a>
+        <a href="#pricing" class="nav-link font-medium text-gray-700 opacity-80 hover:opacity-100">Pricing</a>
+        <a href="#testimonials" class="nav-link font-medium text-gray-700 opacity-80 hover:opacity-100">Clients</a>
+        <a href="#faq" class="nav-link font-medium text-gray-700 opacity-80 hover:opacity-100">FAQ</a>
+      </nav>
+
+      <!-- Header Buttons -->
+      <div class="flex items-center gap-3">
+        <a href="/login" class="btn-outline hidden lg:inline-flex items-center gap-2 px-6 py-2.5 rounded-full font-semibold text-sm border-2 border-[#2e9ec6] text-[#2e9ec6] transition-all duration-300">Login</a>
+        <!-- Mobile toggle -->
+        <button id="mobile-toggle" aria-label="Toggle Menu" class="lg:hidden text-gray-700 text-2xl p-1.5 z-[1001] cursor-pointer bg-transparent border-none">
+          <i class="fas fa-bars"></i>
+        </button>
+      </div>
+    </div>
+
+    <!-- Mobile Nav -->
+    <div id="mobile-nav" class="fixed top-0 w-4/5 max-w-sm h-screen bg-white z-[1000] shadow-2xl flex items-center px-10 py-20">
+      <div class="w-full flex flex-col gap-6">
+        <a href="#modules" class="text-lg font-semibold text-gray-800 py-2.5 border-b border-slate-100">Modules</a>
+        <a href="#about" class="text-lg font-semibold text-gray-800 py-2.5 border-b border-slate-100">Why Us</a>
+        <a href="#pricing" class="text-lg font-semibold text-gray-800 py-2.5 border-b border-slate-100">Pricing</a>
+        <a href="#testimonials" class="text-lg font-semibold text-gray-800 py-2.5 border-b border-slate-100">Clients</a>
+        <a href="#faq" class="text-lg font-semibold text-gray-800 py-2.5 border-b border-slate-100">FAQ</a>
+        <a href="/login" class="mt-4 inline-flex justify-center items-center gap-2 px-6 py-3 rounded-full font-semibold text-sm bg-[#2e9ec6] text-white transition-all duration-300">Login</a>
+      </div>
+    </div>
+  </header>
+
+  <!-- ===================== HERO ===================== -->
+  <section id="hero" class="hero-bg min-h-screen pt-[120px] pb-14 flex items-center relative overflow-hidden">
+    <div class="max-w-[1400px] mx-auto px-[5%] w-full relative z-10">
+      <div class="grid lg:grid-cols-[1.2fr_0.8fr] gap-16 items-center">
+
+        <!-- Left Content -->
+        <div class="hero-content">
+          <span class="tagline">The Future of Workforce Management</span>
+          <h1 class="font-heading font-bold text-brand-dark leading-tight mb-6 text-5xl lg:text-6xl">
+            Streamline Success Through
+            <span class="text-gradient block pb-1">HR Management</span>
+          </h1>
+          <p class="text-lg text-gray-500 mb-9 max-w-xl">
+            Transform your HR operations with Connect360's integrated ecosystem. Automated payroll, real-time attendance, and seamless employee engagement all in one place.
+          </p>
+          <div class="hero-btns flex flex-wrap gap-4">
+            <a href="#modules" class="btn-primary inline-flex items-center gap-2.5 px-7 py-3 rounded-full font-semibold text-sm text-white border-2 border-[#2e9ec6] shadow-lg" style="background: linear-gradient(135deg,#2e9ec6,#2e9ec6); box-shadow: 0 10px 20px -5px rgba(46,158,198,0.4);">
+              Explore Modules <i class="fas fa-arrow-right"></i>
             </a>
+            <a href="#video" class="btn-outline inline-flex items-center gap-2.5 px-7 py-3 rounded-full font-semibold text-sm border-2 border-[#2e9ec6] text-[#2e9ec6] transition-all duration-300">
+              <i class="fas fa-play-circle"></i> Watch Demo
+            </a>
+          </div>
         </div>
 
-        <ul class="navbar-menu" id="nav-links">
-            <li><a href="{{ route('pricing') }}">Pricing</a></li>
-            <li><a href="{{ route('blog') }}">Blog</a></li>
-            <li><a href="{{ route('contact') }}">Contact</a></li>
-            
-        </ul>
+        <!-- Right: Demo Form -->
+        <div class="hero-form-card form-card bg-white/90 backdrop-blur-md p-10 rounded-3xl border border-white/50 shadow-form">
+          <h3 class="font-heading font-bold text-xl text-center mb-6">Request a Free Demo</h3>
+          <form id="demo-form" class="space-y-4">
+            <input class="form-input w-full px-5 py-3.5 rounded-lg border border-slate-200 bg-slate-50 font-body text-sm transition-all duration-300" type="text" placeholder="Full Name" required />
+            <input class="form-input w-full px-5 py-3.5 rounded-lg border border-slate-200 bg-slate-50 font-body text-sm transition-all duration-300" type="email" placeholder="Work Email" required />
+            <input class="form-input w-full px-5 py-3.5 rounded-lg border border-slate-200 bg-slate-50 font-body text-sm transition-all duration-300" type="tel" placeholder="Phone Number" required />
+            <textarea class="form-input w-full px-5 py-3.5 rounded-lg border border-slate-200 bg-slate-50 font-body text-sm transition-all duration-300 resize-none" rows="3" placeholder="Tell us about your organization"></textarea>
 
-        <div class="navbar-login">
-            <a href="{{ route('login') }}">Login</a>
-        </div>
+            <!-- Captcha -->
+            <div class="captcha-container grid grid-cols-[1.2fr_1fr] gap-2.5 items-stretch">
+              <div class="captcha-box flex items-center justify-between bg-slate-100 px-4 py-3 rounded-lg border border-slate-200 font-bold text-brand-dark text-lg">
+                <span id="captcha-question" class="select-none text-[#2e9ec6] whitespace-nowrap font-heading">? + ?</span>
+                <button type="button" id="refresh-captcha" title="Refresh" class="text-gray-400 hover:text-[#2e9ec6] cursor-pointer bg-none border-none text-sm transition-all duration-300 p-1">
+                  <i class="fas fa-sync-alt"></i>
+                </button>
+              </div>
+              <input id="captcha-input" class="form-input w-full px-4 py-3 rounded-lg border border-slate-200 bg-slate-50 font-body text-sm transition-all duration-300" type="number" placeholder="Enter result" required />
+            </div>
 
-        <div class="navbar-toggle" id="mobile-menu">
-            <span class="bar"></span>
-            <span class="bar"></span>
-            <span class="bar"></span>
+            <button type="submit" class="btn-success w-full flex justify-center items-center gap-2.5 px-7 py-3.5 rounded-full font-semibold text-sm text-white cursor-pointer border-none transition-all duration-300" style="background:#6cc070; box-shadow: 0 10px 20px -5px rgba(108,192,112,0.4);">
+              Send Request
+            </button>
+          </form>
         </div>
+      </div>
     </div>
-
-    <script>
-        // JavaScript to toggle mobile menu
-        document.getElementById('mobile-menu').addEventListener('click', function() {
-            const navLinks = document.getElementById('nav-links');
-            navLinks.classList.toggle('active');
-        });
-
-
-        window.addEventListener('scroll', function() {
-            const navbar = document.querySelector('.navbar-connect');
-            if (window.scrollY > 0) {
-                navbar.classList.add('scrolled'); // Add shadow when scrolling
-            } else {
-                navbar.classList.remove('scrolled'); // Remove shadow when at the top
-            }
-        });
-
-
-    </script>
-
-    
-    
-    
-    <!-- Banner -->
-    
-    <section id="banner">
-        <div class="container-banner">
-            <div class="text-section">
-                <h2 class="hone">STREAMLINE SUCCESS THROUGH.</h2>
-                <h1 class="htwo">HR Management</h1>
-                <p>
-                    Boost your HR efficiency and employee satisfaction with our cutting-edge HRM software, tailored to meet the unique needs of your organization.
-                </p>
-            </div>
-            <div class="form-section">
-                <form id="contactForm">
-                    <input type="text" name="name" id="name" placeholder="Full Name" required>
-
-                    <!-- Phone input field for intl-tel-input -->
-                    <input type="tel" id="phone" name="phone" placeholder="Phone Number" required><br>
-
-                    <br>  
-                    <input type="email" id="email" name="email" placeholder="Email Address" required>
-
-                    <textarea name="message" id="message" rows="4" placeholder="Message" required></textarea>
-
-                    
-                    <div id="captcha-section" class="captcha-container">
-                        <div class="captcha-box">
-                            <span id="captcha-equation"></span>
-                        </div>
-                        <input type="number" id="captcha-answer" placeholder="Answer" required class="captcha-input">
-                        </div>
-
-
-                    <button class="table-button1" type="submit">Submit</button>
-                </form>
-
-                <p id="error-message" style="color: red;"></p> <!-- Error message display -->
-            </div>
-
-
-        </div>
-
-
-        
-            
-        <script>
-                    // Initialize intl-tel-input for the phone input field
-            var phoneInput = document.querySelector("#phone");
-
-            var iti = window.intlTelInput(phoneInput, {
-                initialCountry: "auto", // Automatically set the user's country
-                geoIpLookup: function (success, failure) {
-                    fetch('https://ipinfo.io/json', { headers: { 'Accept': 'application/json' } })
-                        .then((resp) => resp.json())
-                        .then((resp) => { success(resp.country); })
-                        .catch(() => { success('us'); });
-                },
-                separateDialCode: true, // Show the country code separately
-                utilsScript: "https://cdnjs.cloudflare.com/ajax/libs/intl-tel-input/17.0.8/js/utils.js", // Required for validation/formatting
-            });
-
-            // Initialize EmailJS
-            emailjs.init('0256Hqry936XqMD-e'); // Replace with your user ID
-
-            // CAPTCHA Logic
-            function generateCaptcha() {
-                const num1 = Math.floor(Math.random() * 10) + 1; // Random number 1
-                const num2 = Math.floor(Math.random() * 10) + 1; // Random number 2
-                const operators = ['+', '-', '*']; // Supported operators
-                const operator = operators[Math.floor(Math.random() * operators.length)]; // Randomly select operator
-
-                let captchaAnswer;
-                let captchaEquation;
-
-                // Calculate answer based on operator
-                if (operator === '+') {
-                    captchaAnswer = num1 + num2;
-                    captchaEquation = `${num1} + ${num2}`;
-                } else if (operator === '-') {
-                    captchaAnswer = num1 - num2;
-                    captchaEquation = `${num1} - ${num2}`;
-                } else if (operator === '*') {
-                    captchaAnswer = num1 * num2;
-                    captchaEquation = `${num1} * ${num2}`;
-                }
-
-                // Display CAPTCHA equation
-                document.getElementById('captcha-equation').innerText = `${captchaEquation} = `;
-
-                // Return the correct answer for validation
-                return captchaAnswer;
-            }
-
-            // Generate the initial CAPTCHA question
-            let correctAnswer = generateCaptcha();
-
-            // Handle form submission
-            document.getElementById('contactForm').addEventListener('submit', function (event) {
-                event.preventDefault();
-
-                var phoneNumber = iti.getNumber(); // Get the full international number
-                var email = document.getElementById('email').value;
-                var name = document.getElementById('name').value;
-                var message = document.getElementById('message').value;
-                var captchaInput = parseInt(document.getElementById('captcha-answer').value);
-                var errorMessage = document.getElementById('error-message');
-
-                // Validate the phone number
-                if (!iti.isValidNumber()) {
-                    errorMessage.innerText = 'Please enter a valid phone number.';
-                    return;
-                }
-
-                // Validate CAPTCHA
-                if (captchaInput !== correctAnswer) {
-                    errorMessage.innerText = 'Incorrect CAPTCHA. Please try again.';
-                    correctAnswer = generateCaptcha(); // Reset CAPTCHA
-                    document.getElementById('captcha-answer').value = ''; // Clear answer field
-                    return;
-                }
-
-                // Prepare EmailJS template parameters
-                var templateParams = {
-                    to_name: 'EmailJS Team', // Replace with recipient's name if needed
-                    from_name: name,
-                    email: email,
-                    phone: phoneNumber,
-                    message: message
-                };
-
-                // Send the email
-                emailjs.send('service_qtjhqpi', 'template_0bb4t27', templateParams)
-                    .then(function (response) {
-                        alert('Message sent successfully!');
-                        errorMessage.innerText = ''; // Clear the error message
-                        correctAnswer = generateCaptcha(); // Reset CAPTCHA
-                        document.getElementById('contactForm').reset(); // Reset form fields
-                    }, function (error) {
-                        errorMessage.innerText = 'Failed to send the message. Please try again later.';
-                        console.error('EmailJS error:', error);
-                    });
-            });
-
-        </script>
-
-
-    </section>
-    <!-- Banner End -->
-     <!-- Feature Section -->
-     <section class="feature-section">
-        <div class="feature-text">
-            <h2>Our Amazing Features Helpful for Your HR</h2>
-            <p>
-                Streamline your HR tasks with our powerful features. From payroll processing to project tracking, our tools simplify management, boost productivity, and enhance employee satisfaction.
-            </p>
-        </div>
-
-        <div class="feature-image">
-            <img src="{{ asset('Modules/LandingPage/Resources/views/layouts/images/HRM.gif') }}" alt="Description of image">
-        </div>
-    </section>
-
-    <!-- End Feture Section -->
-    <!-- Feture SHow -->
-        <section id="feture-show">
-            <div class="unique-container">
-                <h2 class="unique-heading">Transforming<span style="color: #005b33; font-weight: bold;"> HR Management</span> for Success</h2>
-                <div class="unique-buttons">
-                    <a href="#" class="unique-btn-demo">Book A Demo!</a>
-                    <a href="#function-section" class="unique-btn-features">See All Features</a>
-                </div>
-            </div>
-            <div class="image-container">
-                <img src="{{ asset('Modules/LandingPage/Resources/views/layouts/images/HRMFE.gif') }}" alt="HR Management" class="big-image">
-            </div>  
-        </section>
-
-    
-    
-     
-     <!-- End Feture Show -->
-
-     <!-- Function SHow -->
-     <section id="function-section">
-        <h2 class="function-heading">Discover Our Comprehensive <span style="color: #005b33;">HRM Functions</span></h2>
-        <p class="function-paragraph">
-            Explore our range of powerful HRM functions designed to streamline your processes and enhance efficiency across every aspect of human resource management.
-        </p>
-
-        <!-- First Card Section -->
-        <div class="card-section">
-            <div class="container">
-                <div class="card">
-                    <img src="{{ asset('Modules/LandingPage/Resources/views/layouts/images/meeting.gif') }}" alt="Meeting Icon">
-                    <h3>Streamline Workforce Management</h3>
-                    <p>Effortlessly manage onboarding, development, and offboarding. Keep your team organized and productive.</p>
-                </div>
-                <div class="card">
-                    <img src="{{ asset('Modules/LandingPage/Resources/views/layouts/images/clock.gif') }}" alt="Clock Icon">
-                    <h3>Simplify Attendance Tracking</h3>
-                    <p>Effortlessly monitor employee attendance, ensuring accountability and boosting overall productivity.</p>
-                </div>
-                <div class="card">
-                    <img src="{{ asset('Modules/LandingPage/Resources/views/layouts/images/leave.gif') }}" alt="Leave Icon">
-                    <h3>Streamlined Leave Requests</h3>
-                    <p>Enable easy leave requests and approvals, promoting a healthy work-life balance for your team.</p>
-                </div>
-            </div>
-        </div>
-
-        <!-- Second Card Section with Background -->
-        <div class="card-section second-card">
-            <div class="container">
-                <div class="card">
-                    <img src="{{ asset('Modules/LandingPage/Resources/views/layouts/images/salary.gif') }}" alt="Salary Icon">
-                    <h3>Automate Payroll Processing</h3>
-                    <p>Quickly and accurately calculate payroll, reducing errors and ensuring timely payments.</p>
-                </div>
-                <div class="card">
-                    <img src="{{ asset('Modules/LandingPage/Resources/views/layouts/images/document.gif') }}" alt="Document Icon">
-                    <h3>Organize Employee Documents</h3>
-                    <p>Manage employee documentation with ease, ensuring everything is secure and organized.</p>
-                </div>
-                <div class="card last-crad">
-                    <img src="{{ asset('Modules/LandingPage/Resources/views/layouts/images/tick.gif') }}" alt="Tick Icon">
-                    <h3>Ensure Compliance</h3>
-                    <p>Stay compliant with HR regulations by managing employee data and processes efficiently.</p>
-                </div>
-            </div>
-        </div>
-    </section>
-
-
-    <script>
-         document.addEventListener("DOMContentLoaded", function() {
-            const cards = document.querySelectorAll(".card");
-            
-            const observer = new IntersectionObserver((entries) => {
-                entries.forEach(entry => {
-                    if (entry.isIntersecting) {
-                        entry.target.classList.add("show"); // Add class to show the card
-                        observer.unobserve(entry.target); // Stop observing once it's shown
-                    }
-                });
-            }, {
-                threshold: 0.5 // Trigger when 10% of the card is visible
-            });
-
-            cards.forEach(card => {
-                observer.observe(card); // Observe each card
-            });
-        });
-
-
-    </script>
-
-
-
-      
-     
-     <!-- End Function Show -->
-
-     
-
-      <!-- Why choose us -->
-       
-
-    <section class="special-features-section">
-        <h2 class="slider-heading" style="font-size: 2.5rem;">Special Features</h2>
-        <div class="icon-line"></div>
-        <p class="slider-paragraph" style="font-size: 1.2rem;">Connect360 is launched with everything you need. We've got a lot of amazing and cool features, so here we go, with unlimited features, go and check out!</p>
-    </section>
-
-    <section>
-        <div class="main-container">
-            <!-- First Div - Gradient Cards -->
-            <div class="section first-section">
-                <div class="gradient-card fetaure-box">
-                    <h5>Comprehensive HRM solutions tailored for your business.</h5>
-                </div>
-                <div class="gradient-card">
-                    <h5>Intuitive interface designed for easy everyday use.</h5>
-                </div>
-                <div class="gradient-card">
-                    <h5>Scalable system suitable for all business sizes.</h5>
-                </div>
-            </div>
-
-            <!-- Second Div - Mobile Preview with Video -->
-            <div class="section middle-section">
-                <div class="phone-container">
-                    <video autoplay loop muted playsinline>
-                        <source src="{{ asset('Modules/LandingPage/Resources/views/layouts/images/mobile.mp4') }}" type="video/mp4">
-                        Your browser does not support the video tag.
-                    </video>
-                </div>
-            </div>
-
-            <!-- Third Div - Gradient Cards -->
-            <div class="section third-section">
-                <div class="gradient-card">
-                    <h5>Expert support available around the clock, 24/7.</h5>
-                </div>
-                <div class="gradient-card">
-                    <h5>Advanced reporting to drive informed business decisions.</h5>
-                </div>
-                <div class="gradient-card">
-                    <h5>Secure platform ensuring compliance and data protection.</h5>
-                </div>
-            </div>
-        </div>
-    </section>
-
-       <!-- End Why choose us  -->
-
-    <!-- contact form -->
-    <section class="app-section">
-        <div class="container-call call-to-action">
-            <div class="app-content">
-                <h2>Ready for a Game Changer? Book Your Demo Today!</h2>
-                <p>Discover how our solution fits your needs. Book a demo today for a quick, personalized tour of the features that matter most to you.</p>
-                <div class="app-buttons">
-                    <a href="{{ route('contact') }}" class="google-play-button">
-                        Schedule A Demo
-                    </a>
-                </div>
-            </div>
-            <div class="app-image">
-                <img src="{{ asset('Modules/LandingPage/Resources/views/layouts/images/call-to.gif') }}" alt="Demo Image">
-            </div>
-        </div>
-    </section>
-
-
-
-
-
-
-        
-     <!-- End contact form -->
-
-    <!-- whatsapp button -->
-
-         <section>
-
-			<!-- WhatsApp Button -->
-			<div id="whatsapp-button" 
-				 style="position: fixed; z-index: 100;
-						bottom: 20px; 
-						right: 20px; 
-						background-color: #1fb355; 
-						color: white; 
-						border-radius: 50px; 
-						padding: 10px 20px; 
-						font-size: 18px; 
-						display: flex; 
-						align-items: center; 
-						text-decoration: none; 
-						box-shadow: 0px 4px 6px rgba(0, 0, 0, 0.1); 
-						cursor: pointer;">
-				<img src="{{ asset('Modules/LandingPage/Resources/views/layouts/images/whatsapp.png') }}" 
-					 alt="WhatsApp" 
-					 style="width: 24px; z-index: 100;
-							height: 24px; 
-							margin-right: 10px;">
-				Let's Chat 
-			 
-			</div>
-		
-			<!-- Chatbox -->
-			<div id="chatbox" 
-				 style="position: fixed; z-index: 100;
-						bottom: 80px; 
-						right: 20px; 
-						width: 350px; 
-						height: 450px; 
-						border: 1px solid #ddd; 
-						border-radius: 10px; 
-						background-color: #fff; 
-						display: none; 
-						flex-direction: column; 
-						box-shadow: 0px 4px 8px rgba(0, 0, 0, 0.2);">
-				<!-- Chatbox Header -->
-				<div style="background-color: #075E54; z-index: 100;
-							color: white; 
-							padding: 15px; 
-							border-top-left-radius: 10px; 
-							border-top-right-radius: 10px; 
-							font-size: 16px; 
-							text-align: center;">
-					Connect360
-					<div style="font-size: 12px; z-index: 100;
-								color: #C2C2C2; 
-								margin-top: 5px;">
-						Replies within few hours
-					</div>
-				</div>
-		
-				<!-- Chatbox Body -->
-				<div style="flex: 1; 
-				z-index: 100;
-							padding: 10px; 
-							overflow-y: auto; 
-							background-color: #ECE5DD;">
-					<p style="background-color: white; 
-					z-index: 100;
-							  padding: 10px; 
-							  border-radius: 8px; 
-							  width: fit-content; 
-							  margin: 10px 0;">
-						Hey! 👋 How can we help you?
-					</p>
-					<div id="user-message" 
-						 style="background-color: #DCF8C6; 
-						 z-index: 100;
-								padding: 10px; 
-								border-radius: 8px; 
-								width: fit-content; 
-								margin: 10px 0;">
-						<!-- User messages will appear here -->
-					</div>
-				</div>
-		
-				<!-- Chatbox Footer -->
-				<div style="padding: 10px; 
-							border-top: 1px solid #ddd;">
-					<input id="chat-input" 
-						   type="text" 
-						   placeholder="Type a message..." 
-						   style="width: 100%;
-						   z-index: 100; 
-								  padding: 10px; 
-								  border: 1px solid #ddd; 
-								  border-radius: 5px;">
-					<button id="send-button" 
-							style="margin-top: 10px; 
-								z-index: 100;
-								   width: 100%; 
-								   padding: 10px; 
-								   background-color: #25D366; 
-								   color: white; 
-								   border: none; 
-								   border-radius: 5px; 
-								   cursor: pointer;">
-						Start chat
-					</button>
-				</div>
-			</div>
-		
-			<script>
-				// Toggle chatbox visibility
-				document.getElementById('whatsapp-button').addEventListener('click', function() {
-					var chatbox = document.getElementById('chatbox');
-					if (chatbox.style.display === 'none') {
-						chatbox.style.display = 'flex';
-					} else {
-						chatbox.style.display = 'none';
-					}
-				});
-		
-				// Send message and open WhatsApp
-				document.getElementById('send-button').addEventListener('click', function() {
-					var message = document.getElementById('chat-input').value;
-					if (message.trim() !== "") {
-						var whatsappUrl = "https://wa.me/9834969704?text=" + encodeURIComponent(message);
-						document.getElementById('user-message').textContent = message;
-						window.open(whatsappUrl, '_blank');
-					}
-				});
-			</script>
-		
-		</section>
-    <!-- end whatsapp button  -->
-
-
-
-    <!-- main popup -->
-    <div id="mainMiddelPopup" class="main-middel-popup">
-        <div class="main-middel-popup-content">
-            <!-- Left side content -->
-            <div class="main-left-content">
-                <h2>Level up your HR game</h2>
-                <p>Explore how Connect360 can help you save time on HR tasks.</p>
-                <div class="main-button-container">
-                    <button class="main-btn main-red-btn">
-                        <a href="{{ route('contact') }}" class="main-btn main-red-btn">REQUEST A DEMO</a>
-                    </button>
-                </div>
-            </div>
-            <!-- Right side image -->
-            <div class="main-right-image">
-                <img src="{{ asset('Modules/LandingPage/Resources/views/layouts/images/middel.png') }}" alt="Person with Laptop">
-            </div>
-            <!-- Close button -->
-            <span class="main-close-btn">&times;</span>
-        </div>
+  </section>
+
+  <!-- ===================== TRUSTED BY ===================== -->
+  <section class="trusted-by py-10 bg-[#fcfcfc] border-t border-b border-slate-100">
+    <div class="max-w-[1400px] mx-auto px-[5%]">
+      <div class="logo-slider flex justify-center items-center gap-10 opacity-50 grayscale flex-wrap">
+        <i class="fa-brands fa-google text-4xl"></i>
+        <i class="fa-brands fa-amazon text-4xl"></i>
+        <i class="fa-brands fa-microsoft text-4xl"></i>
+        <i class="fa-brands fa-apple text-4xl"></i>
+        <i class="fa-brands fa-facebook text-4xl"></i>
+        <i class="fa-brands fa-slack text-4xl"></i>
+      </div>
     </div>
+  </section>
 
-<script>
-    // Wait for the DOM to load
-    document.addEventListener('DOMContentLoaded', function () {
-        const mainMiddelPopup = document.getElementById("mainMiddelPopup");
-        const closeBtn = document.querySelector(".main-close-btn");
+  <!-- ===================== MODULES ===================== -->
+  <section id="modules" class="py-24">
+    <div class="max-w-[1400px] mx-auto px-[5%]">
+      <div class="text-center mb-14 max-w-2xl mx-auto">
+        <span class="tagline">Our Capabilities</span>
+        <h2 class="font-heading font-bold text-4xl text-brand-dark mb-4">Powerful HRM Functions</h2>
+        <p class="text-gray-500">Everything you need to manage your most valuable asset: your people.</p>
+      </div>
 
-        // Function to check screen width and toggle popup display
-        function checkScreenWidth() {
-            if (window.innerWidth < 1024) {
-                mainMiddelPopup.style.display = "none"; // Hide on small devices
-            } else if (!localStorage.getItem('popupSeen')) {
-                mainMiddelPopup.style.display = "flex"; // Show on large screens if not seen
+      <div class="modules-grid grid gap-7" style="grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));">
+        <!-- Card Template -->
+        <div class="module-card bg-white p-9 rounded-2xl border border-slate-100 relative overflow-hidden cursor-default">
+          <div class="w-14 h-14 bg-blue-50 rounded-xl flex items-center justify-center text-2xl text-[#2e9ec6] mb-5">
+            <i class="fas fa-money-bill-wave"></i>
+          </div>
+          <h4 class="font-heading font-bold text-lg mb-3">Payroll Management</h4>
+          <p class="text-gray-500 text-sm leading-relaxed">Automated salary calculations, tax compliance, and instant payslip generation.</p>
+        </div>
+        <div class="module-card bg-white p-9 rounded-2xl border border-slate-100 relative overflow-hidden cursor-default">
+          <div class="w-14 h-14 bg-blue-50 rounded-xl flex items-center justify-center text-2xl text-[#2e9ec6] mb-5">
+            <i class="fas fa-user-clock"></i>
+          </div>
+          <h4 class="font-heading font-bold text-lg mb-3">Attendance Tracking</h4>
+          <p class="text-gray-500 text-sm leading-relaxed">Geofenced mobile check-ins and biometric integration for real-time monitoring.</p>
+        </div>
+        <div class="module-card bg-white p-9 rounded-2xl border border-slate-100 relative overflow-hidden cursor-default">
+          <div class="w-14 h-14 bg-blue-50 rounded-xl flex items-center justify-center text-2xl text-[#2e9ec6] mb-5">
+            <i class="fas fa-calendar-minus"></i>
+          </div>
+          <h4 class="font-heading font-bold text-lg mb-3">Leave Management</h4>
+          <p class="text-gray-500 text-sm leading-relaxed">Simplified leave requests and multi-level approval workflows for better planning.</p>
+        </div>
+        <div class="module-card bg-white p-9 rounded-2xl border border-slate-100 relative overflow-hidden cursor-default">
+          <div class="w-14 h-14 bg-blue-50 rounded-xl flex items-center justify-center text-2xl text-[#2e9ec6] mb-5">
+            <i class="fas fa-chart-line"></i>
+          </div>
+          <h4 class="font-heading font-bold text-lg mb-3">Performance Management</h4>
+          <p class="text-gray-500 text-sm leading-relaxed">360-degree feedback, OKRs, and goal tracking to drive employee growth.</p>
+        </div>
+        <div class="module-card bg-white p-9 rounded-2xl border border-slate-100 relative overflow-hidden cursor-default">
+          <div class="w-14 h-14 bg-blue-50 rounded-xl flex items-center justify-center text-2xl text-[#2e9ec6] mb-5">
+            <i class="fas fa-user-plus"></i>
+          </div>
+          <h4 class="font-heading font-bold text-lg mb-3">Recruitment</h4>
+          <p class="text-gray-500 text-sm leading-relaxed">Applicant tracking system (ATS) and talent acquisition tools for hiring the best.</p>
+        </div>
+        <div class="module-card bg-white p-9 rounded-2xl border border-slate-100 relative overflow-hidden cursor-default">
+          <div class="w-14 h-14 bg-blue-50 rounded-xl flex items-center justify-center text-2xl text-[#2e9ec6] mb-5">
+            <i class="fas fa-user-check"></i>
+          </div>
+          <h4 class="font-heading font-bold text-lg mb-3">Onboarding & Offboarding</h4>
+          <p class="text-gray-500 text-sm leading-relaxed">Manage the complete employee lifecycle from digital welcome to smooth exit transitions.</p>
+        </div>
+        <div class="module-card bg-white p-9 rounded-2xl border border-slate-100 relative overflow-hidden cursor-default">
+          <div class="w-14 h-14 bg-blue-50 rounded-xl flex items-center justify-center text-2xl text-[#2e9ec6] mb-5">
+            <i class="fas fa-hand-holding-usd"></i>
+          </div>
+          <h4 class="font-heading font-bold text-lg mb-3">Income & Incentive Management</h4>
+          <p class="text-gray-500 text-sm leading-relaxed">Comprehensive management of bonuses, incentives, and variable pay structures.</p>
+        </div>
+        <div class="module-card bg-white p-9 rounded-2xl border border-slate-100 relative overflow-hidden cursor-default">
+          <div class="w-14 h-14 bg-blue-50 rounded-xl flex items-center justify-center text-2xl text-[#2e9ec6] mb-5">
+            <i class="fas fa-ticket-alt"></i>
+          </div>
+          <h4 class="font-heading font-bold text-lg mb-3">Ticket Management</h4>
+          <p class="text-gray-500 text-sm leading-relaxed">Streamlined internal helpdesk for employee queries, IT support, and issue resolution.</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ===================== MOBILE APP SHOWCASE ===================== -->
+  <section class="py-24 bg-light-premium">
+    <div class="max-w-[1400px] mx-auto px-[5%]">
+      <div class="feature-showcase bg-white/60 backdrop-blur-xl rounded-4xl p-10 md:p-20 border border-white/80 relative overflow-hidden" style="box-shadow: 0 40px 100px -20px rgba(31,38,135,0.08);">
+        <div class="feature-showcase-glow absolute inset-0 pointer-events-none" style="background: radial-gradient(circle at center, rgba(46,158,198,0.05) 0%, transparent 60%);"></div>
+        <div class="grid md:grid-cols-2 gap-20 items-center relative z-10">
+          <!-- Left Content -->
+          <div class="showcase-content">
+            <span class="tagline" style="color:#6cc070;">Our Mobile App</span>
+            <h2 class="font-heading font-bold text-3xl md:text-4xl text-brand-dark mb-4">Empower Your Workforce on the Go</h2>
+            <p class="text-gray-500 mb-8">Our mobile app gives employees the power to manage their professional lives from anywhere.</p>
+            <ul class="showcase-list space-y-6">
+              <li class="flex gap-5">
+                <i class="fas fa-check-circle text-[#6cc070] text-xl mt-1 flex-shrink-0"></i>
+                <div>
+                  <h5 class="font-heading font-bold text-base mb-1">One-Tap Attendance</h5>
+                  <p class="text-gray-500 text-sm">Mark attendance with GPS verification instantly.</p>
+                </div>
+              </li>
+              <li class="flex gap-5">
+                <i class="fas fa-check-circle text-[#6cc070] text-xl mt-1 flex-shrink-0"></i>
+                <div>
+                  <h5 class="font-heading font-bold text-base mb-1">Instant Notifications</h5>
+                  <p class="text-gray-500 text-sm">Get notified about approvals, meetings, and updates.</p>
+                </div>
+              </li>
+              <li class="flex gap-5">
+                <i class="fas fa-check-circle text-[#6cc070] text-xl mt-1 flex-shrink-0"></i>
+                <div>
+                  <h5 class="font-heading font-bold text-base mb-1">Document Access</h5>
+                  <p class="text-gray-500 text-sm">View payslips and policies directly on your phone.</p>
+                </div>
+              </li>
+            </ul>
+          </div>
+          <!-- Right: Phone Mockup -->
+          <div class="showcase-visual relative flex justify-center items-center">
+            <div class="phone-mockup">
+              <div class="phone-screen">
+                <video src="{{ asset('images/mobile.mp4') }}" autoplay loop muted playsinline class="w-full h-full object-cover block"></video>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ===================== WHY US / STATS ===================== -->
+  <section id="about" class="py-24">
+    <div class="max-w-[1400px] mx-auto px-[5%]">
+      <div class="grid md:grid-cols-2 gap-20 items-center">
+        <!-- Visual -->
+        <div class="about-visual">
+          <img src="assets/dashboard-preview.png" alt="Dashboard Preview" class="rounded-3xl" style="box-shadow: 0 40px 80px rgba(0,0,0,0.1);" />
+        </div>
+        <!-- Content -->
+        <div class="about-content">
+          <span class="tagline" style="color:#6cc070;">Why Connect360?</span>
+          <h2 class="font-heading font-semibold text-3xl text-brand-dark mb-5 leading-snug">Redefining Business Operations with 360° Vision</h2>
+          <p class="text-gray-500 mb-8 leading-relaxed">Connect360 is more than just software. It's a holistic ecosystem designed to simplify complex business workflows. Powered by Digitalize The Globe, we bring innovation to your fingertips.</p>
+          <div class="stats-grid grid grid-cols-2 gap-7">
+            <div class="stat-item">
+              <h3 class="font-heading font-bold text-[2rem] text-[#2e9ec6]">250+</h3>
+              <p class="text-gray-500 text-sm">Enterprises Empowered</p>
+            </div>
+            <div class="stat-item">
+              <h3 class="font-heading font-bold text-[2rem] text-[#2e9ec6]">15+</h3>
+              <p class="text-gray-500 text-sm">Key Modules</p>
+            </div>
+            <div class="stat-item">
+              <h3 class="font-heading font-bold text-[2rem] text-[#2e9ec6]">100%</h3>
+              <p class="text-gray-500 text-sm">Compliance Rate</p>
+            </div>
+            <div class="stat-item">
+              <h3 class="font-heading font-bold text-[2rem] text-[#2e9ec6]">24/6</h3>
+              <p class="text-gray-500 text-sm">Expert Support</p>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ===================== PRICING ===================== -->
+  <section id="pricing" class="py-24 bg-light-premium">
+    <div class="max-w-[1400px] mx-auto px-[5%]">
+      <div class="text-center mb-14 max-w-2xl mx-auto">
+        <span class="tagline">Pricing Plans</span>
+        <h2 class="font-heading font-bold text-4xl text-brand-dark mb-4">Choose the Right Plan for Your Team</h2>
+        <p class="text-gray-500">Transparent pricing that grows with your business. No hidden fees, just pure efficiency.</p>
+      </div>
+
+      <div class="pricing-table-container mt-10 bg-white rounded-2xl shadow-pricing border border-slate-100 max-w-5xl mx-auto relative" style="box-shadow:0 15px 40px rgba(0,0,0,0.08);">
+        <table class="pricing-table w-full border-collapse text-center text-sm">
+          <thead>
+            <tr>
+              <th class="sticky-col bg-[#fcfcfc] text-left font-bold text-gray-700 px-6 py-12 border-b border-r-2 border-slate-100 min-w-[220px]">Features</th>
+              <th class="bg-[#fcfcfc] px-4 py-12 border-b border-r border-slate-100 min-w-[140px]">
+                <div class="relative pt-2">
+                  <span class="block text-[0.78rem] text-gray-400 font-bold uppercase tracking-wide mb-1">Starter</span>
+                  <div class="text-2xl font-bold font-heading text-brand-dark">₹3,499<small class="text-xs font-medium text-gray-400">/mo</small></div>
+                  <span class="inline-block mt-1 text-[0.72rem] font-semibold text-[#2e9ec6] bg-blue-50 px-3 py-0.5 rounded-full">70 Employees</span>
+                </div>
+              </th>
+              <th class="bg-slate-100 px-4 py-12 border-b border-r border-slate-200 min-w-[140px]">
+                <div class="relative pt-2">
+                  <div class="popular-tab">Most Popular</div>
+                  <span class="block text-[0.78rem] text-gray-400 font-bold uppercase tracking-wide mb-1">Essential</span>
+                  <div class="text-2xl font-bold font-heading text-brand-dark">₹4,599<small class="text-xs font-medium text-gray-400">/mo</small></div>
+                  <span class="inline-block mt-1 text-[0.72rem] font-semibold text-[#2e9ec6] bg-blue-50 px-3 py-0.5 rounded-full">150 Employees</span>
+                </div>
+              </th>
+              <th class="bg-[#fcfcfc] px-4 py-12 border-b border-r border-slate-100 min-w-[140px]">
+                <div class="relative pt-2">
+                  <span class="block text-[0.78rem] text-gray-400 font-bold uppercase tracking-wide mb-1">Growth</span>
+                  <div class="text-2xl font-bold font-heading text-brand-dark">₹5,999<small class="text-xs font-medium text-gray-400">/mo</small></div>
+                  <span class="inline-block mt-1 text-[0.72rem] font-semibold text-[#2e9ec6] bg-blue-50 px-3 py-0.5 rounded-full">250 Employees</span>
+                </div>
+              </th>
+              <th class="bg-[#fcfcfc] px-4 py-12 border-b border-slate-100 min-w-[140px]">
+                <div class="relative pt-2">
+                  <span class="block text-[0.78rem] text-gray-400 font-bold uppercase tracking-wide mb-1">Enterprise</span>
+                  <div class="text-2xl font-bold font-heading text-brand-dark">₹6,599<small class="text-xs font-medium text-gray-400">/mo</small></div>
+                  <span class="inline-block mt-1 text-[0.72rem] font-semibold text-[#2e9ec6] bg-blue-50 px-3 py-0.5 rounded-full">300 Employees</span>
+                </div>
+              </th>
+            </tr>
+          </thead>
+          <tbody>
+            <!-- Category -->
+            <tr><td colspan="5" class="bg-slate-100 text-left px-6 py-3 font-extrabold text-xs uppercase tracking-widest text-gray-700 border-b border-slate-200">Core HR Features</td></tr>
+            <tr class="border-b border-slate-100">
+              <td class="sticky-col bg-white text-left px-6 py-4 font-semibold text-gray-700 border-r-2 border-slate-100">Monthly Attendance</td>
+              <td class="py-4 border-r border-slate-100"><i class="fas fa-check-circle text-[#6cc070]"></i></td>
+              <td class="py-4 bg-slate-50 border-r border-slate-200"><i class="fas fa-check-circle text-[#6cc070]"></i></td>
+              <td class="py-4 border-r border-slate-100"><i class="fas fa-check-circle text-[#6cc070]"></i></td>
+              <td class="py-4"><i class="fas fa-check-circle text-[#6cc070]"></i></td>
+            </tr>
+            <tr class="border-b border-slate-100">
+              <td class="sticky-col bg-white text-left px-6 py-4 font-semibold text-gray-700 border-r-2 border-slate-100">Account Statement</td>
+              <td class="py-4 border-r border-slate-100"><i class="fas fa-check-circle text-[#6cc070]"></i></td>
+              <td class="py-4 bg-slate-50 border-r border-slate-200"><i class="fas fa-check-circle text-[#6cc070]"></i></td>
+              <td class="py-4 border-r border-slate-100"><i class="fas fa-check-circle text-[#6cc070]"></i></td>
+              <td class="py-4"><i class="fas fa-check-circle text-[#6cc070]"></i></td>
+            </tr>
+            <tr class="border-b border-slate-100">
+              <td class="sticky-col bg-white text-left px-6 py-4 font-semibold text-gray-700 border-r-2 border-slate-100">Meeting Management</td>
+              <td class="py-4 border-r border-slate-100"><i class="fas fa-check-circle text-[#6cc070]"></i></td>
+              <td class="py-4 bg-slate-50 border-r border-slate-200"><i class="fas fa-check-circle text-[#6cc070]"></i></td>
+              <td class="py-4 border-r border-slate-100"><i class="fas fa-check-circle text-[#6cc070]"></i></td>
+              <td class="py-4"><i class="fas fa-check-circle text-[#6cc070]"></i></td>
+            </tr>
+            <tr class="border-b border-slate-100">
+              <td class="sticky-col bg-white text-left px-6 py-4 font-semibold text-gray-700 border-r-2 border-slate-100">Notification Management</td>
+              <td class="py-4 border-r border-slate-100"><i class="fas fa-check-circle text-[#6cc070]"></i></td>
+              <td class="py-4 bg-slate-50 border-r border-slate-200"><i class="fas fa-check-circle text-[#6cc070]"></i></td>
+              <td class="py-4 border-r border-slate-100"><i class="fas fa-check-circle text-[#6cc070]"></i></td>
+              <td class="py-4"><i class="fas fa-check-circle text-[#6cc070]"></i></td>
+            </tr>
+
+            <!-- Category -->
+            <tr><td colspan="5" class="bg-slate-100 text-left px-6 py-3 font-extrabold text-xs uppercase tracking-widest text-gray-700 border-b border-slate-200">Advanced Management</td></tr>
+            <tr class="border-b border-slate-100">
+              <td class="sticky-col bg-white text-left px-6 py-4 font-semibold text-gray-700 border-r-2 border-slate-100">Income & Expense Dashboard</td>
+              <td class="py-4 border-r border-slate-100"><i class="fas fa-times-circle text-slate-200"></i></td>
+              <td class="py-4 bg-slate-50 border-r border-slate-200"><i class="fas fa-check-circle text-[#6cc070]"></i></td>
+              <td class="py-4 border-r border-slate-100"><i class="fas fa-check-circle text-[#6cc070]"></i></td>
+              <td class="py-4"><i class="fas fa-check-circle text-[#6cc070]"></i></td>
+            </tr>
+            <tr class="border-b border-slate-100">
+              <td class="sticky-col bg-white text-left px-6 py-4 font-semibold text-gray-700 border-r-2 border-slate-100">Payroll Management</td>
+              <td class="py-4 border-r border-slate-100"><i class="fas fa-times-circle text-slate-200"></i></td>
+              <td class="py-4 bg-slate-50 border-r border-slate-200"><i class="fas fa-check-circle text-[#6cc070]"></i></td>
+              <td class="py-4 border-r border-slate-100"><i class="fas fa-check-circle text-[#6cc070]"></i></td>
+              <td class="py-4"><i class="fas fa-check-circle text-[#6cc070]"></i></td>
+            </tr>
+            <tr class="border-b border-slate-100">
+              <td class="sticky-col bg-white text-left px-6 py-4 font-semibold text-gray-700 border-r-2 border-slate-100">Performance Management</td>
+              <td class="py-4 border-r border-slate-100"><i class="fas fa-times-circle text-slate-200"></i></td>
+              <td class="py-4 bg-slate-50 border-r border-slate-200"><i class="fas fa-check-circle text-[#6cc070]"></i></td>
+              <td class="py-4 border-r border-slate-100"><i class="fas fa-check-circle text-[#6cc070]"></i></td>
+              <td class="py-4"><i class="fas fa-check-circle text-[#6cc070]"></i></td>
+            </tr>
+            <tr class="border-b border-slate-100">
+              <td class="sticky-col bg-white text-left px-6 py-4 font-semibold text-gray-700 border-r-2 border-slate-100">Job Management</td>
+              <td class="py-4 border-r border-slate-100"><i class="fas fa-times-circle text-slate-200"></i></td>
+              <td class="py-4 bg-slate-50 border-r border-slate-200"><i class="fas fa-times-circle text-slate-200"></i></td>
+              <td class="py-4 border-r border-slate-100"><i class="fas fa-check-circle text-[#6cc070]"></i></td>
+              <td class="py-4"><i class="fas fa-check-circle text-[#6cc070]"></i></td>
+            </tr>
+            <tr class="border-b border-slate-100">
+              <td class="sticky-col bg-white text-left px-6 py-4 font-semibold text-gray-700 border-r-2 border-slate-100">Zoom Meeting Integration</td>
+              <td class="py-4 border-r border-slate-100"><i class="fas fa-times-circle text-slate-200"></i></td>
+              <td class="py-4 bg-slate-50 border-r border-slate-200"><i class="fas fa-times-circle text-slate-200"></i></td>
+              <td class="py-4 border-r border-slate-100"><i class="fas fa-check-circle text-[#6cc070]"></i></td>
+              <td class="py-4"><i class="fas fa-check-circle text-[#6cc070]"></i></td>
+            </tr>
+
+            <!-- Category -->
+            <tr><td colspan="5" class="bg-slate-100 text-left px-6 py-3 font-extrabold text-xs uppercase tracking-widest text-gray-700 border-b border-slate-200">Enterprise Solutions</td></tr>
+            <tr class="border-b border-slate-100">
+              <td class="sticky-col bg-white text-left px-6 py-4 font-semibold text-gray-700 border-r-2 border-slate-100">Asset Management</td>
+              <td class="py-4 border-r border-slate-100"><i class="fas fa-times-circle text-slate-200"></i></td>
+              <td class="py-4 bg-slate-50 border-r border-slate-200"><i class="fas fa-times-circle text-slate-200"></i></td>
+              <td class="py-4 border-r border-slate-100"><i class="fas fa-times-circle text-slate-200"></i></td>
+              <td class="py-4"><i class="fas fa-check-circle text-[#6cc070]"></i></td>
+            </tr>
+            <tr class="border-b border-slate-100">
+              <td class="sticky-col bg-white text-left px-6 py-4 font-semibold text-gray-700 border-r-2 border-slate-100">Chat Messenger</td>
+              <td class="py-4 border-r border-slate-100"><i class="fas fa-times-circle text-slate-200"></i></td>
+              <td class="py-4 bg-slate-50 border-r border-slate-200"><i class="fas fa-times-circle text-slate-200"></i></td>
+              <td class="py-4 border-r border-slate-100"><i class="fas fa-times-circle text-slate-200"></i></td>
+              <td class="py-4"><i class="fas fa-check-circle text-[#6cc070]"></i></td>
+            </tr>
+
+            <!-- Category -->
+            <tr><td colspan="5" class="bg-slate-100 text-left px-6 py-3 font-extrabold text-xs uppercase tracking-widest text-gray-700 border-b border-slate-200">Growth Scaling</td></tr>
+            <tr class="border-b border-slate-100">
+              <td class="sticky-col bg-white text-left px-6 py-4 font-semibold text-gray-700 border-r-2 border-slate-100">Additional Employee Cost</td>
+              <td class="py-4 border-r border-slate-100 text-gray-400 text-xs">NA</td>
+              <td class="py-4 bg-slate-50 border-r border-slate-200 text-xs font-semibold text-gray-600">₹30 / emp</td>
+              <td class="py-4 border-r border-slate-100 text-xs font-semibold text-gray-600">₹50 / emp</td>
+              <td class="py-4 text-xs font-semibold text-gray-600">₹80 / emp</td>
+            </tr>
+          </tbody>
+          <tfoot>
+            <tr>
+              <td class="sticky-col bg-[#fcfcfc] border-r-2 border-slate-100 border-t-2 border-slate-100 px-6 py-7"></td>
+              <td class="bg-[#fcfcfc] border-t-2 border-slate-100 border-r border-slate-100 py-7 px-4">
+                <a href="#hero" class="inline-flex justify-center items-center px-5 py-2.5 rounded-full border-2 border-[#2e9ec6] text-[#2e9ec6] font-semibold text-xs transition-all duration-300 btn-outline min-w-[110px]">Get Started</a>
+              </td>
+              <td class="bg-slate-100 border-t-2 border-slate-200 border-r border-slate-200 py-7 px-4">
+                <a href="#hero" class="inline-flex justify-center items-center px-5 py-2.5 rounded-full font-semibold text-xs text-white transition-all duration-300 min-w-[110px]" style="background:linear-gradient(135deg,#2e9ec6,#2e9ec6);">Start Trial</a>
+              </td>
+              <td class="bg-[#fcfcfc] border-t-2 border-slate-100 border-r border-slate-100 py-7 px-4">
+                <a href="#hero" class="inline-flex justify-center items-center px-5 py-2.5 rounded-full border-2 border-[#2e9ec6] text-[#2e9ec6] font-semibold text-xs transition-all duration-300 btn-outline min-w-[110px]">Scale Up</a>
+              </td>
+              <td class="bg-[#fcfcfc] border-t-2 border-slate-100 py-7 px-4">
+                <a href="#hero" class="inline-flex justify-center items-center px-5 py-2.5 rounded-full border-2 border-[#2e9ec6] text-[#2e9ec6] font-semibold text-xs transition-all duration-300 btn-outline min-w-[110px]">Contact Sales</a>
+              </td>
+            </tr>
+          </tfoot>
+        </table>
+      </div>
+    </div>
+  </section>
+
+  <!-- ===================== TESTIMONIALS ===================== -->
+  <section id="testimonials" class="py-24 bg-slate-50">
+    <div class="max-w-[1400px] mx-auto px-[5%]">
+      <div class="text-center mb-14 max-w-2xl mx-auto">
+        <span class="tagline">Client Success</span>
+        <h2 class="font-heading font-bold text-4xl text-brand-dark">What Leaders are Saying</h2>
+      </div>
+      <div class="testimonial-grid grid gap-7 md:grid-cols-3">
+        <div class="testimonial-card bg-white p-10 rounded-2xl shadow-card">
+          <div class="flex gap-1 text-amber-400 mb-5">
+            <i class="fas fa-star"></i><i class="fas fa-star"></i><i class="fas fa-star"></i><i class="fas fa-star"></i><i class="fas fa-star"></i>
+          </div>
+          <p class="italic text-gray-600 mb-6">"Connect360 reduced our payroll processing time by 70%. The automated compliance checks are a lifesaver."</p>
+          <div class="flex items-center gap-4">
+            <div class="w-12 h-12 rounded-full bg-slate-200"></div>
+            <div>
+              <h5 class="font-heading font-bold text-sm">Anish Sharma</h5>
+              <p class="text-xs text-gray-400">HR Director, TechFlow</p>
+            </div>
+          </div>
+        </div>
+        <div class="testimonial-card bg-white p-10 rounded-2xl shadow-card">
+          <div class="flex gap-1 text-amber-400 mb-5">
+            <i class="fas fa-star"></i><i class="fas fa-star"></i><i class="fas fa-star"></i><i class="fas fa-star"></i><i class="fas fa-star"></i>
+          </div>
+          <p class="italic text-gray-600 mb-6">"The mobile attendance feature solved our field workforce tracking issues once and for all. Brilliant interface!"</p>
+          <div class="flex items-center gap-4">
+            <div class="w-12 h-12 rounded-full bg-slate-200"></div>
+            <div>
+              <h5 class="font-heading font-bold text-sm">Priya Mehta</h5>
+              <p class="text-xs text-gray-400">COO, Rising Spaces</p>
+            </div>
+          </div>
+        </div>
+        <div class="testimonial-card bg-white p-10 rounded-2xl shadow-card">
+          <div class="flex gap-1 text-amber-400 mb-5">
+            <i class="fas fa-star"></i><i class="fas fa-star"></i><i class="fas fa-star"></i><i class="fas fa-star"></i><i class="fas fa-star"></i>
+          </div>
+          <p class="italic text-gray-600 mb-6">"Most comprehensive HRMS we've used. The 360-degree integration truly connects all our departments."</p>
+          <div class="flex items-center gap-4">
+            <div class="w-12 h-12 rounded-full bg-slate-200"></div>
+            <div>
+              <h5 class="font-heading font-bold text-sm">James Wilson</h5>
+              <p class="text-xs text-gray-400">Founder, GlobaLink</p>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ===================== FAQ ===================== -->
+  <section id="faq" class="py-24">
+    <div class="max-w-[1400px] mx-auto px-[5%]">
+      <div class="text-center mb-14 max-w-2xl mx-auto">
+        <span class="tagline">Support</span>
+        <h2 class="font-heading font-bold text-4xl text-brand-dark">Frequently Asked Questions</h2>
+      </div>
+      <div class="faq-container max-w-3xl mx-auto space-y-4">
+        <div class="faq-item border border-slate-200 rounded-2xl overflow-hidden">
+          <button class="faq-question w-full flex justify-between items-center px-6 py-5 bg-white font-heading font-semibold text-base text-left cursor-pointer border-none">
+            Is Connect360 customizable for my industry?
+            <i class="fas fa-chevron-down faq-chevron text-gray-400 ml-4 flex-shrink-0"></i>
+          </button>
+          <div class="faq-answer bg-slate-50">
+            <p class="px-6 pb-5 text-gray-500 text-sm leading-relaxed">Yes, Connect360 is built on a modular architecture that allows us to tailor features specifically for retail, manufacturing, IT, and more.</p>
+          </div>
+        </div>
+        <div class="faq-item border border-slate-200 rounded-2xl overflow-hidden">
+          <button class="faq-question w-full flex justify-between items-center px-6 py-5 bg-white font-heading font-semibold text-base text-left cursor-pointer border-none">
+            How secure is our employee data?
+            <i class="fas fa-chevron-down faq-chevron text-gray-400 ml-4 flex-shrink-0"></i>
+          </button>
+          <div class="faq-answer bg-slate-50">
+            <p class="px-6 pb-5 text-gray-500 text-sm leading-relaxed">We use enterprise-grade AES-256 encryption and are fully SOC2 and GDPR compliant to ensure your data never leaves safe hands.</p>
+          </div>
+        </div>
+        <div class="faq-item border border-slate-200 rounded-2xl overflow-hidden">
+          <button class="faq-question w-full flex justify-between items-center px-6 py-5 bg-white font-heading font-semibold text-base text-left cursor-pointer border-none">
+            Can we integrate our existing biometric systems?
+            <i class="fas fa-chevron-down faq-chevron text-gray-400 ml-4 flex-shrink-0"></i>
+          </button>
+          <div class="faq-answer bg-slate-50">
+            <p class="px-6 pb-5 text-gray-500 text-sm leading-relaxed">Connect360 supports API-level integration with most major biometric hardware manufacturers for seamless attendance syncing.</p>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ===================== FOOTER ===================== -->
+  <footer class="py-7 bg-white border-t border-slate-100">
+    <div class="max-w-[1400px] mx-auto px-[5%]">
+      <div class="flex flex-wrap justify-between items-center gap-5">
+        <div class="flex gap-7 flex-wrap">
+          <a href="#pricing" class="text-gray-700 font-medium text-sm hover:text-[#2e9ec6] transition-colors duration-300">Pricing</a>
+          <a href="#hero" class="text-gray-700 font-medium text-sm hover:text-[#2e9ec6] transition-colors duration-300">Contact</a>
+          <a href="#" class="text-gray-700 font-medium text-sm hover:text-[#2e9ec6] transition-colors duration-300">Privacy Policy</a>
+        </div>
+        <p class="text-gray-400 text-sm">&copy; 2024 Connect360. All rights reserved.</p>
+        <div class="flex gap-3 items-center">
+          <a href="#" aria-label="Facebook" class="social-link w-9 h-9 inline-flex items-center justify-center bg-slate-100 text-brand-dark rounded-full border border-slate-200 text-sm"><i class="fa-brands fa-facebook-f"></i></a>
+          <a href="#" aria-label="X" class="social-link w-9 h-9 inline-flex items-center justify-center bg-slate-100 text-brand-dark rounded-full border border-slate-200 text-sm"><i class="fa-brands fa-x"></i></a>
+          <a href="#" aria-label="LinkedIn" class="social-link w-9 h-9 inline-flex items-center justify-center bg-slate-100 text-brand-dark rounded-full border border-slate-200 text-sm"><i class="fa-brands fa-linkedin-in"></i></a>
+          <a href="#" aria-label="Instagram" class="social-link w-9 h-9 inline-flex items-center justify-center bg-slate-100 text-brand-dark rounded-full border border-slate-200 text-sm"><i class="fa-brands fa-instagram"></i></a>
+        </div>
+      </div>
+    </div>
+  </footer>
+
+  <!-- ===================== VIDEO MODAL ===================== -->
+  <div id="videoModal" class="fixed inset-0 z-[2000] bg-black/90 backdrop-blur-lg items-center justify-center">
+    <div class="video-modal-content relative w-[90%] max-w-4xl rounded-3xl overflow-hidden">
+      <span class="close-modal absolute top-5 right-5 text-white text-4xl font-bold cursor-pointer z-[2001] leading-none hover:text-[#2e9ec6] transition-colors duration-300">&times;</span>
+      <div class="aspect-video w-full bg-black">
+        <video id="modalVideo" controls class="w-full h-full object-contain">
+          <source src="assets/mobile.mp4" type="video/mp4" />
+          Your browser does not support the video tag.
+        </video>
+      </div>
+    </div>
+  </div>
+
+  <!-- ===================== JAVASCRIPT ===================== -->
+  <script>
+    document.addEventListener('DOMContentLoaded', () => {
+
+      // Wait for GSAP to load
+      const waitForGSAP = setInterval(() => {
+        if (typeof gsap !== 'undefined' && typeof ScrollTrigger !== 'undefined') {
+          clearInterval(waitForGSAP);
+          initAnimations();
+        }
+      }, 50);
+
+      function initAnimations() {
+        gsap.registerPlugin(ScrollTrigger);
+
+        // 1. Hero Entrance
+        const heroTL = gsap.timeline();
+        heroTL
+          .from('.hero-content .tagline', { y: 20, opacity: 0, duration: 0.6, ease: 'power2.out' })
+          .from('.hero-content h1', { y: 50, opacity: 0, duration: 0.8, ease: 'power3.out' }, '-=0.4')
+          .from('.hero-content p', { y: 30, opacity: 0, duration: 0.8, ease: 'power3.out' }, '-=0.5')
+          .from('.hero-btns', { y: 20, opacity: 0, duration: 0.6, ease: 'power2.out' }, '-=0.4')
+          .from('.hero-form-card', {
+            x: window.matchMedia('(pointer: fine)').matches ? 50 : 0,
+            y: window.matchMedia('(pointer: fine)').matches ? 0 : 30,
+            opacity: 0, duration: 1, ease: 'power4.out'
+          }, '-=1');
+
+        // 2. Trusted By Logos
+        gsap.from('.logo-slider i', {
+          scrollTrigger: { trigger: '.trusted-by', start: 'top 90%' },
+          y: 20, opacity: 0, stagger: 0.1, duration: 0.8, ease: 'power2.out'
+        });
+
+        // 3. Module Cards
+        gsap.from('.module-card', {
+          scrollTrigger: { trigger: '.modules-grid', start: 'top 85%' },
+          y: 60, opacity: 0, duration: 1, stagger: 0.15, ease: 'power3.out', clearProps: 'all'
+        });
+
+        // 4. Phone Mockup
+        gsap.from('.phone-mockup', {
+          scrollTrigger: { trigger: '.feature-showcase', start: 'top 70%' },
+          y: 100, opacity: 0, duration: 1.2, ease: 'power4.out'
+        });
+        gsap.from('.showcase-list li', {
+          scrollTrigger: { trigger: '.feature-showcase', start: 'top 70%' },
+          x: -50, opacity: 0, duration: 0.8, stagger: 0.2, ease: 'power2.out'
+        });
+
+        // 5. Testimonials
+        gsap.from('.testimonial-card', {
+          scrollTrigger: { trigger: '.testimonial-grid', start: 'top 85%' },
+          scale: 0.9, opacity: 0, duration: 0.8, stagger: 0.2, ease: 'back.out(1.7)'
+        });
+
+        // 6. Pricing Table
+        gsap.from('.pricing-table-container', {
+          scrollTrigger: { trigger: '.pricing-table-container', start: 'top 85%' },
+          y: 60, opacity: 0, duration: 1.2, ease: 'power3.out'
+        });
+
+        // 7. Stats Count-up
+        const stats = document.querySelectorAll('.stat-item h3');
+        stats.forEach(stat => {
+          const valueStr = stat.innerText;
+          if (valueStr.includes('/')) return;
+          const targetValue = parseInt(valueStr.replace(/[^0-9]/g, ''));
+          const suffix = valueStr.replace(/[0-9]/g, '');
+          stat.innerText = '0' + suffix;
+          ScrollTrigger.create({
+            trigger: stat, start: 'top 95%',
+            onEnter: () => {
+              gsap.to(stat, {
+                innerText: targetValue, duration: 2.5, snap: { innerText: 1 }, ease: 'power2.out',
+                onUpdate: function () { stat.innerText = Math.floor(this.targets()[0].innerText) + suffix; }
+              });
             }
+          });
+        });
+
+        // 8. Cursor Follower
+        const cursor = document.querySelector('.cursor-follower');
+        const isMobile = window.matchMedia('(pointer: coarse)').matches;
+        if (!isMobile && cursor) {
+          gsap.set(cursor, { xPercent: -50, yPercent: -50 });
+          window.addEventListener('mousemove', (e) => {
+            gsap.to(cursor, { x: e.clientX, y: e.clientY, duration: 0.3, ease: 'power2.out' });
+          });
+          document.querySelectorAll('a, button, .faq-question, .close-modal').forEach(el => {
+            el.addEventListener('mouseenter', () => gsap.to(cursor, { scale: 2.5, borderWidth: '1px' }));
+            el.addEventListener('mouseleave', () => gsap.to(cursor, { scale: 1, borderWidth: '2px' }));
+          });
         }
 
-        // Show the popup with a delay if screen width is 1024px or more
-        setTimeout(function () {
-            if (window.innerWidth >= 1024 && !localStorage.getItem('popupSeen')) {
-                mainMiddelPopup.style.display = "flex";
-            }
-        }, 5000); // Show popup after 5 seconds
+        ScrollTrigger.refresh();
+      }
 
-        // Close the popup when clicking on the close button
-        closeBtn.onclick = function () {
-            mainMiddelPopup.style.display = "none";
-            localStorage.setItem('popupSeen', 'true'); // Mark popup as seen
-        };
+      // 2. Sticky Header
+      const header = document.getElementById('header');
+      window.addEventListener('scroll', () => {
+        header.classList.toggle('scrolled', window.scrollY > 50);
+      });
 
-        // Close the popup when clicking outside the popup content
-        window.onclick = function (event) {
-            if (event.target == mainMiddelPopup) {
-                mainMiddelPopup.style.display = "none";
-                localStorage.setItem('popupSeen', 'true'); // Mark popup as seen
-            }
-        };
+      // 3. Mobile Menu
+      const mobileToggle = document.getElementById('mobile-toggle');
+      const mobileNav = document.getElementById('mobile-nav');
+      const mobileLinks = document.querySelectorAll('#mobile-nav a');
+      if (mobileToggle && mobileNav) {
+        mobileToggle.addEventListener('click', () => {
+          mobileNav.classList.toggle('active');
+          const icon = mobileToggle.querySelector('i');
+          icon.classList.toggle('fa-bars');
+          icon.classList.toggle('fa-times');
+        });
+        mobileLinks.forEach(link => {
+          link.addEventListener('click', () => {
+            mobileNav.classList.remove('active');
+            const icon = mobileToggle.querySelector('i');
+            icon.classList.add('fa-bars');
+            icon.classList.remove('fa-times');
+          });
+        });
+      }
 
-        // Check on window resize to adjust popup visibility
-        window.addEventListener("resize", checkScreenWidth);
+      // 4. Smooth Scroll
+      document.querySelectorAll('a[href^="#"]').forEach(anchor => {
+        anchor.addEventListener('click', function (e) {
+          const targetId = this.getAttribute('href');
+          if (targetId === '#') return;
+          const targetEl = document.querySelector(targetId);
+          if (targetEl) {
+            e.preventDefault();
+            const offsetPosition = targetEl.getBoundingClientRect().top + window.pageYOffset - 80;
+            window.scrollTo({ top: offsetPosition, behavior: 'smooth' });
+          }
+        });
+      });
 
-        // Initial check when the page loads
-        checkScreenWidth();
+      // 5. FAQ Accordion
+      document.querySelectorAll('.faq-item').forEach(item => {
+        item.querySelector('.faq-question').addEventListener('click', () => {
+          const isActive = item.classList.contains('active');
+          document.querySelectorAll('.faq-item').forEach(i => i.classList.remove('active'));
+          if (!isActive) item.classList.add('active');
+        });
+      });
+
+      // 6. Video Modal
+      const videoModal = document.getElementById('videoModal');
+      const watchDemoBtn = document.querySelector('.hero-btns .btn-outline');
+      const closeModal = document.querySelector('.close-modal');
+      const modalVideo = document.getElementById('modalVideo');
+
+      const openModal = () => {
+        videoModal.classList.add('open');
+        modalVideo.currentTime = 0;
+        modalVideo.play();
+        document.body.style.overflow = 'hidden';
+        if (typeof gsap !== 'undefined') {
+          gsap.fromTo('.video-modal-content', { scale: 0.8, opacity: 0 }, { scale: 1, opacity: 1, duration: 0.5, ease: 'back.out(1.7)' });
+        }
+      };
+      const closeModalFn = () => {
+        videoModal.classList.remove('open');
+        modalVideo.pause();
+        document.body.style.overflow = '';
+      };
+      if (watchDemoBtn) watchDemoBtn.addEventListener('click', (e) => { e.preventDefault(); openModal(); });
+      if (closeModal) closeModal.addEventListener('click', closeModalFn);
+      videoModal.addEventListener('click', (e) => { if (e.target === videoModal) closeModalFn(); });
+      window.addEventListener('keydown', (e) => { if (e.key === 'Escape' && videoModal.classList.contains('open')) closeModalFn(); });
+
+      // 7. Math Captcha
+      const captchaQuestion = document.getElementById('captcha-question');
+      const captchaInput = document.getElementById('captcha-input');
+      const refreshBtn = document.getElementById('refresh-captcha');
+      const demoForm = document.getElementById('demo-form');
+      let captchaResult;
+
+      function generateCaptcha() {
+        const n1 = Math.floor(Math.random() * 10) + 1;
+        const n2 = Math.floor(Math.random() * 10) + 1;
+        captchaResult = n1 + n2;
+        if (captchaQuestion) {
+          captchaQuestion.textContent = `${n1} + ${n2}`;
+          captchaQuestion.style.opacity = '0';
+          if (typeof gsap !== 'undefined') gsap.to(captchaQuestion, { opacity: 1, duration: 0.5 });
+          else captchaQuestion.style.opacity = '1';
+        }
+      }
+      if (captchaQuestion) generateCaptcha();
+      if (refreshBtn) {
+        refreshBtn.addEventListener('click', () => {
+          if (typeof gsap !== 'undefined') gsap.to(refreshBtn, { rotation: '+=180', duration: 0.3 });
+          generateCaptcha();
+        });
+      }
+      if (demoForm) {
+        demoForm.addEventListener('submit', (e) => {
+          e.preventDefault();
+          const userAnswer = parseInt(captchaInput.value);
+          if (userAnswer !== captchaResult) {
+            if (typeof gsap !== 'undefined') gsap.to('.captcha-box', { x: 10, repeat: 3, yoyo: true, duration: 0.1 });
+            alert('Verification failed. Please try again.');
+            generateCaptcha();
+            captchaInput.value = '';
+            return;
+          }
+          const btn = demoForm.querySelector('button[type="submit"]');
+          btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Processing...';
+          btn.style.pointerEvents = 'none';
+          setTimeout(() => {
+            alert('Thank you! Your request has been sent successfully.');
+            demoForm.reset();
+            generateCaptcha();
+            btn.innerHTML = 'Send Request';
+            btn.style.pointerEvents = 'all';
+          }, 1500);
+        });
+      }
     });
-</script>
-
-
-     <!-- end main popup -->
-
-
-     <footer class="footer-container">
-        <div class="footer-content">
-            <div class="footer-links">
-            <a href="{{ route('pricing') }}">Pricing</a>
-            <a href="{{ route('contact') }}">Contact</a>
-            <a href="{{ route('privacy') }}">Privacy Policy</a>
-                
-            </div>
-
-            <div class="footer-copyright">
-                <p>© 2024 Connect360. All rights reserved.</p>
-            </div>
-
-            <div class="footer-icons">
-                <div class="icon">
-                    <i class="fa fa-phone"></i>
-                    <div class="icon-info">Call: +91 98349 69704</div>
-                </div>
-                <div class="icon">
-                    <i class="fa fa-envelope"></i>
-                    <div class="icon-info">Email: info@connect360.in</div>
-                </div>
-                <div class="icon">
-                    <i class="fa fa-map-marker"></i>
-                    <div class="icon-info">Address: Office U2, First Floor, Runwal Platinum,
-                    Bavdhan</div>
-                </div>
-            </div>
-        </div>
-    </footer>
-    
-
-
-
-   
-
-     <!-- Sticky Button -->
-     <!-- Sticky Button -->
-            <div class="sticky-demo-btn" onclick="openPopup()">
-                <span>Book A Demo</span>
-            </div>
-
-            <!-- Popup -->
-            <div id="demo-popup" class="demo-popup-overlay">
-                <div class="demo-popup-container">
-                    <div class="demo-popup-image">
-                        <img src="{{ asset('Modules/LandingPage/Resources/views/layouts/images/popup1.png') }}" alt="Demo Image">
-                    </div>
-                    <div class="demo-popup-form">
-                        <span class="close-popup-btn" onclick="closePopup()">&times;</span> <!-- Close Button -->
-                        <form id="demo-form-1">
-                            <div class="demo-input-group">
-                                <input type="text" id="name1" name="name" placeholder="Full Name" required>
-                            </div>
-                            <div class="demo-input-group">
-                                <input type="tel" id="phone1" name="phone" placeholder="Phone Number" required>
-                            </div>
-                            <div class="demo-input-group">
-                                <input type="email" id="email1" name="email" placeholder="Email Address" required>
-                            </div>
-                            <div class="demo-input-group">
-                                <textarea id="requirement1" name="requirement" rows="4" placeholder="Message" required></textarea>
-                            </div>
-                            <div id="captcha-section" class="captcha-container">
-                                <div class="captcha-box1">
-                                    <span id="captcha-equation1"></span>
-                                </div>
-                                <input type="number" id="captcha-answer1" placeholder="Answer" required class="captcha-input">
-                            </div>
-                            <button type="submit" class="submit-demo-btn">Submit</button>
-                            <p id="error-message1" style="color: red;"></p>
-                        </form>
-
-                    </div>
-
-                </div>
-            </div>
-
-            <script>
-                function openPopup() {
-                    document.getElementById('demo-popup').style.display = 'flex';
-                }
-
-                function closePopup() {
-                    document.getElementById('demo-popup').style.display = 'none';
-                }
-
-                window.onclick = function(event) {
-                    var popup = document.getElementById('demo-popup');
-                    if (event.target === popup) {
-                        closePopup();
-                    }
-                };
-            </script>
-            <script>
-                (function () {
-                    // Initialize EmailJS
-                    emailjs.init("0256Hqry936XqMD-e");
-
-                    // Initialize intl-tel-input for phone fields
-                    function initializeIntlTelInput(phoneInputField) {
-                        return window.intlTelInput(phoneInputField, {
-                            initialCountry: "auto",
-                            geoIpLookup: function (callback) {
-                                fetch("https://ipinfo.io/json", { headers: { Accept: "application/json" } })
-                                    .then((resp) => resp.json())
-                                    .then((resp) => {
-                                        callback(resp.country);
-                                    })
-                                    .catch(() => {
-                                        callback("US");
-                                    });
-                            },
-                            utilsScript: "https://cdnjs.cloudflare.com/ajax/libs/intl-tel-input/17.0.8/js/utils.js", // Formatting utils
-                            separateDialCode: true, // Display the country code separately
-                        });
-                    }
-
-                    const phoneInputField1 = document.querySelector("#phone1");
-                    const iti1 = initializeIntlTelInput(phoneInputField1);
-
-                    // CAPTCHA Logic
-                    function generateCaptcha() {
-                        const num1 = Math.floor(Math.random() * 10) + 1;
-                        const num2 = Math.floor(Math.random() * 10) + 1;
-                        const operators = ["+", "-", "*"];
-                        const operator = operators[Math.floor(Math.random() * operators.length)];
-
-                        let answer;
-                        if (operator === "+") {
-                            answer = num1 + num2;
-                        } else if (operator === "-") {
-                            answer = num1 - num2;
-                        } else if (operator === "*") {
-                            answer = num1 * num2;
-                        }
-
-                        // Update CAPTCHA equation text
-                        document.getElementById("captcha-equation1").innerText = ` ${num1} ${operator} ${num2}`;
-                        return answer;
-                    }
-
-                    let correctCaptchaAnswer = generateCaptcha();
-
-                    // Form validation and submission
-                    document.getElementById("demo-form-1").addEventListener("submit", function (e) {
-                        e.preventDefault(); // Prevent default form submission
-
-                        const name = document.getElementById("name1").value;
-                        const email = document.getElementById("email1").value;
-                        const requirement = document.getElementById("requirement1").value;
-                        const captchaInput = parseInt(document.getElementById("captcha-answer1").value, 10);
-                        const errorMessage = document.getElementById("error-message1");
-
-                        // Validate phone number
-                        if (!iti1.isValidNumber()) {
-                            errorMessage.innerText = "Please enter a valid phone number.";
-                            return;
-                        }
-
-                        // Validate email
-                        const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-                        if (!emailRegex.test(email)) {
-                            errorMessage.innerText = "Please enter a valid email address.";
-                            return;
-                        }
-
-                        // Validate CAPTCHA
-                        if (captchaInput !== correctCaptchaAnswer) {
-                            errorMessage.innerText = "Incorrect CAPTCHA. Please try again.";
-                            correctCaptchaAnswer = generateCaptcha(); // Regenerate CAPTCHA
-                            document.getElementById("captcha-answer1").value = ""; // Clear CAPTCHA input
-                            return;
-                        }
-
-                        // Clear error message
-                        errorMessage.innerText = "";
-
-                        // Prepare data for EmailJS
-                        const templateParams = {
-                            to_name: name,
-                            from_name: name,
-                            email: email,
-                            phone: iti1.getNumber(), // Full international phone number
-                            message: requirement,
-                        };
-
-                        // Send email using EmailJS
-                        emailjs.send("service_qtjhqpi", "template_0bb4t27", templateParams)
-                            .then(function () {
-                                alert("Email sent successfully!");
-                                correctCaptchaAnswer = generateCaptcha(); // Reset CAPTCHA
-                                document.getElementById("demo-form-1").reset(); // Reset form fields
-                            })
-                            .catch(function (error) {
-                                alert("Failed to send email. Please try again.");
-                                console.error("EmailJS error:", error);
-                            });
-                    });
-                })();
-            </script>
-
-
-    <!-- End popup -->
-
+  </script>
 </body>
 </html>
