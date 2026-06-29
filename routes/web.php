@@ -17,6 +17,7 @@ use App\Http\Controllers\IncomeTypeController;
 use App\Http\Controllers\ExpenseController;
 use App\Http\Controllers\ExpenseTypeController;
 use App\Http\Controllers\AttendanceEmployeeController;
+use App\Http\Controllers\MonthlyWorkingHoursController;
 use App\Http\Controllers\LeaveController;
 use App\Http\Controllers\LeaveTypeController;
 use App\Http\Controllers\AccountListController;
@@ -1284,6 +1285,10 @@ Route::group(['middleware' => ['verified']], function () {
 
     Route::get('attendance/export', [AttendanceEmployeeController::class, 'export'])->name('attendance.export');
     Route::get('attendance/export/{employeeId}', [AttendanceEmployeeController::class, 'exportEmployee'])->name('attendance.export.employee');
+    
+    // Monthly Working Hours Summary Routes
+    Route::get('monthly-working-hours', [MonthlyWorkingHoursController::class, 'index'])->name('monthly.working.hours.index')->middleware(['auth', 'XSS']);
+    Route::get('monthly-working-hours/export', [MonthlyWorkingHoursController::class, 'export'])->name('monthly.working.hours.export')->middleware(['auth', 'XSS']);
     
     // Attendance Regularisation Routes
     Route::post('attendance-regularisation/bulk-approve', [\App\Http\Controllers\AttendanceRegularisationController::class, 'bulkApprove'])->name('attendance-regularisation.bulk-approve')->middleware(

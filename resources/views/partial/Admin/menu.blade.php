@@ -275,6 +275,14 @@
                                 href="{{ route('attendanceemployee.index') }}">{{ __('Marked Attendance') }}</a>
                             </li>
                         @endcan
+                        
+                        @if(\Auth::user()->type == 'company' || \Auth::user()->type == 'hr')
+                            <li class="dash-item">
+                                <a class="dash-link text-white hover:text-white hover:bg-[#001a3b] text-lg"
+                                href="{{ route('monthly.working.hours.index') }}">{{ __('Monthly Working Hours Summary') }}</a>
+                            </li>
+                        @endif
+
 
                         <li class="dash-item">
                             <a class="dash-link text-white hover:text-white hover:bg-[#001a3b] text-lg"

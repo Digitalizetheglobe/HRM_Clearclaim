@@ -1,5 +1,5 @@
 Step 1 :
-    cd /home/hrm.clearclaim.in/HRM_Clearclaim
+        cd /home/hrm.clearclaim.in/HRM_Clearclaim
 
 
 Step 2 :
