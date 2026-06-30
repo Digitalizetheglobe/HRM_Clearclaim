@@ -110,17 +110,11 @@ class MonthlyWorkingHoursController extends Controller
                 $currentDate = Carbon::createFromDate($year, $month, $i);
                 $dateStr = $currentDate->format('Y-m-d');
 
-                if ($currentDate->isWeekend()) {
-                    $weeklyOffsCount++;
-                    continue;
-                }
+                $isWeekend = $currentDate->isWeekend();
+                $isHoliday = in_array($dateStr, $holidays);
+                $isLeave = in_array($dateStr, $leaveDates);
 
-                if (in_array($dateStr, $holidays)) {
-                    $holidayCount++;
-                    continue;
-                }
-
-                if (in_array($dateStr, $leaveDates)) {
+                if ($isLeave) {
                     $approvedLeaveDays++;
                     $actualHours += 9; 
                     $workingDays += 1;
@@ -137,16 +131,20 @@ class MonthlyWorkingHoursController extends Controller
                     $isHalfDay = (strpos($status, 'Half Day') !== false);
                     $isAbsent = ($status == 'Absent');
 
-                    if ($isHalfDay) {
-                        $workingDays += 0.5;
-                        $expectedHours += 4.5;
-                        $dayExpectedSeconds = 4.5 * 3600;
-                    } elseif (!$isAbsent) {
-                        $workingDays += 1;
-                        $expectedHours += 9;
-                        $dayExpectedSeconds = 9 * 3600;
-                    } else {
-                        $dayExpectedSeconds = 0;
+                    if ($isWeekend) {
+                        $weeklyOffsCount++;
+                    } elseif ($isHoliday) {
+                        $holidayCount++;
+                    }
+
+                    if (!$isWeekend && !$isHoliday) {
+                        if ($isHalfDay) {
+                            $workingDays += 0.5;
+                            $expectedHours += 4.5;
+                        } elseif (!$isAbsent) {
+                            $workingDays += 1;
+                            $expectedHours += 9;
+                        }
                     }
 
                     if ($clockIn != '00:00:00' && $clockOut != '00:00:00') {
@@ -154,18 +152,27 @@ class MonthlyWorkingHoursController extends Controller
                         $out = Carbon::parse($clockOut);
                         $workedSeconds = $in->diffInSeconds($out);
                         $actualHours += ($workedSeconds / 3600);
-
-                        if ($dayExpectedSeconds > 0) {
-                            if ($workedSeconds > $dayExpectedSeconds) {
-                                $overtimeHours += ($workedSeconds - $dayExpectedSeconds);
-                            } elseif ($workedSeconds < $dayExpectedSeconds) {
-                                $shortfallHours += ($dayExpectedSeconds - $workedSeconds);
-                            }
-                        }
-                    } else {
-                        $shortfallHours += $dayExpectedSeconds;
+                    }
+                } else {
+                    if ($isWeekend) {
+                        $weeklyOffsCount++;
+                    } elseif ($isHoliday) {
+                        $holidayCount++;
                     }
                 }
+            }
+            
+            $totalExpectedSeconds = $expectedHours * 3600;
+            $totalActualSeconds = $actualHours * 3600;
+            
+            $netHoursSeconds = $totalActualSeconds - $totalExpectedSeconds;
+            
+            if ($netHoursSeconds > 0) {
+                $overtimeHours = $netHoursSeconds;
+                $shortfallHours = 0;
+            } else {
+                $overtimeHours = 0;
+                $shortfallHours = abs($netHoursSeconds);
             }
             
             $formatTime = function($seconds) {
@@ -174,7 +181,6 @@ class MonthlyWorkingHoursController extends Controller
                 return sprintf('%02d:%02d', $h, $m);
             };
 
-            $netHoursSeconds = $overtimeHours - $shortfallHours;
             $netHoursPrefix = $netHoursSeconds >= 0 ? '+' : '-';
             $netHoursFormatted = $netHoursPrefix . $formatTime(abs($netHoursSeconds));
 
