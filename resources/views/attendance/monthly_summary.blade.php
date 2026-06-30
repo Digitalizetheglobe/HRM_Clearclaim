@@ -112,7 +112,7 @@
     
     <div class="info-alert">
         <i class="ti ti-info-circle"></i>
-        <span><b>Expected Hours = Working Days in Month × 9 Hours</b> (Holidays & Weekly Offs are excluded. Approved Leave Days are considered as completed working days.)</span>
+        <span><b>Expected Hours = Total Attendance Days × 9 Hours</b> (Holidays & Weekly Offs are excluded. Approved Leave Days are considered as completed working days.)</span>
     </div>
 
     <div class="row">
@@ -127,7 +127,7 @@
                                     <th>Employee ID</th>
                                     <th>Employee Name</th>
                                     <th>Department</th>
-                                    <th>Working Days (Month)</th>
+                                    <th>Total Attendance Days</th>
                                     <th>Expected Hours (9 Hrs/Day)</th>
                                     <th>Actual Hours Worked</th>
                                     <th>Overtime (+)</th>

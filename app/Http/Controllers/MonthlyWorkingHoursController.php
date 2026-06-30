@@ -120,12 +120,11 @@ class MonthlyWorkingHoursController extends Controller
                     continue;
                 }
 
-                $workingDays++;
-                $expectedHours += 9;
-
                 if (in_array($dateStr, $leaveDates)) {
                     $approvedLeaveDays++;
                     $actualHours += 9; 
+                    $workingDays += 1;
+                    $expectedHours += 9;
                     continue; 
                 }
 
@@ -133,6 +132,22 @@ class MonthlyWorkingHoursController extends Controller
                     $attendance = $attendances[$dateStr];
                     $clockIn = $attendance->clock_in;
                     $clockOut = $attendance->clock_out;
+                    $status = $attendance->status;
+
+                    $isHalfDay = (strpos($status, 'Half Day') !== false);
+                    $isAbsent = ($status == 'Absent');
+
+                    if ($isHalfDay) {
+                        $workingDays += 0.5;
+                        $expectedHours += 4.5;
+                        $dayExpectedSeconds = 4.5 * 3600;
+                    } elseif (!$isAbsent) {
+                        $workingDays += 1;
+                        $expectedHours += 9;
+                        $dayExpectedSeconds = 9 * 3600;
+                    } else {
+                        $dayExpectedSeconds = 0;
+                    }
 
                     if ($clockIn != '00:00:00' && $clockOut != '00:00:00') {
                         $in = Carbon::parse($clockIn);
@@ -140,17 +155,16 @@ class MonthlyWorkingHoursController extends Controller
                         $workedSeconds = $in->diffInSeconds($out);
                         $actualHours += ($workedSeconds / 3600);
 
-                        $expectedSeconds = 9 * 3600;
-                        if ($workedSeconds > $expectedSeconds) {
-                            $overtimeHours += ($workedSeconds - $expectedSeconds);
-                        } elseif ($workedSeconds < $expectedSeconds) {
-                            $shortfallHours += ($expectedSeconds - $workedSeconds);
+                        if ($dayExpectedSeconds > 0) {
+                            if ($workedSeconds > $dayExpectedSeconds) {
+                                $overtimeHours += ($workedSeconds - $dayExpectedSeconds);
+                            } elseif ($workedSeconds < $dayExpectedSeconds) {
+                                $shortfallHours += ($dayExpectedSeconds - $workedSeconds);
+                            }
                         }
                     } else {
-                        $shortfallHours += (9 * 3600);
+                        $shortfallHours += $dayExpectedSeconds;
                     }
-                } else {
-                    $shortfallHours += (9 * 3600);
                 }
             }
             
