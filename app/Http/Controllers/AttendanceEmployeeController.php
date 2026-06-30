@@ -2255,9 +2255,27 @@ class AttendanceEmployeeController extends Controller
         // Count late marks for this employee in the month (excluding current day)
         $lateMarksCount = $this->countLateMarksInMonthExcludingCurrent($employeeId, $date);
         
-        // Rule 2: If clocked in but no clock out, return Half Day (Punch Miss)
+        // Rule 2: If clocked in but no clock out, check if it's a past date
         if (empty($clockOut) || $clockOut == '00:00:00') {
-            return AttendanceEmployee::STATUS_HALF_DAY_PUNCH_MISS;
+            $isToday = Carbon::parse($date)->isToday();
+            if (!$isToday) {
+                return AttendanceEmployee::STATUS_HALF_DAY_PUNCH_MISS;
+            } else {
+                // If it's today and they haven't punched out yet, they are currently working
+                // We determine if they are late
+                if ($isLateMark) {
+                    if ($lateMarksCount >= AttendanceEmployee::MAX_LATE_MARKS_PER_MONTH) {
+                        // Actually, if it's today and they are late for the 4th time, it will become Half Day (Late)
+                        // But since they haven't punched out, we shouldn't auto-calculate their punch-out right now.
+                        // Wait, if we return Half Day (Late) here, it auto-punches them out immediately!
+                        // So for today, we just return Present (Late) until they punch out?
+                        // Or we can return Present or Present (Late).
+                        return AttendanceEmployee::STATUS_PRESENT_LATE;
+                    }
+                    return AttendanceEmployee::STATUS_PRESENT_LATE;
+                }
+                return AttendanceEmployee::STATUS_PRESENT;
+            }
         }
         
         // Calculate total worked hours

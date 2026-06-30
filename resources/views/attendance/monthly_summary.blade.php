@@ -112,7 +112,7 @@
     
     <div class="info-alert">
         <i class="ti ti-info-circle"></i>
-        <span><b>Expected Hours = Total Attendance Days × 9 Hours</b> (Holidays & Weekly Offs are excluded. Approved Leave Days are considered as completed working days.)</span>
+        <span><b>Expected Hours = Total Attendance Days × 9 Hours</b> (Holidays, Weekly Offs & Approved Leaves are excluded.)</span>
     </div>
 
     <div class="row">

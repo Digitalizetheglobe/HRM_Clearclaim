@@ -116,9 +116,6 @@ class MonthlyWorkingHoursController extends Controller
 
                 if ($isLeave) {
                     $approvedLeaveDays++;
-                    $actualHours += 9; 
-                    $workingDays += 1;
-                    $expectedHours += 9;
                     continue; 
                 }
 
@@ -130,6 +127,21 @@ class MonthlyWorkingHoursController extends Controller
 
                     $isHalfDay = (strpos($status, 'Half Day') !== false);
                     $isAbsent = ($status == 'Absent');
+
+                    $workedSeconds = 0;
+                    if ($clockIn != '00:00:00' && $clockOut != '00:00:00') {
+                        $in = Carbon::parse($clockIn);
+                        $out = Carbon::parse($clockOut);
+                        $workedSeconds = $in->diffInSeconds($out);
+                    }
+
+                    if (($workedSeconds / 3600) > 5) {
+                        // Do not override if it's a penalty for being late
+                        if (strpos($status, 'Half Day (Late)') === false) {
+                            $isHalfDay = false;
+                            $isAbsent = false;
+                        }
+                    }
 
                     if ($isWeekend) {
                         $weeklyOffsCount++;
@@ -147,10 +159,7 @@ class MonthlyWorkingHoursController extends Controller
                         }
                     }
 
-                    if ($clockIn != '00:00:00' && $clockOut != '00:00:00') {
-                        $in = Carbon::parse($clockIn);
-                        $out = Carbon::parse($clockOut);
-                        $workedSeconds = $in->diffInSeconds($out);
+                    if ($workedSeconds > 0) {
                         $actualHours += ($workedSeconds / 3600);
                     }
                 } else {
