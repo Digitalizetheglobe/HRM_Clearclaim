@@ -78,7 +78,7 @@ class SalaryProcessingController extends Controller
         }
     }
     
-    private function calculateEmployeeSalaryData($employee, $month, $year, $totalMonthlyDays)
+    public function calculateEmployeeSalaryData($employee, $month, $year, $totalMonthlyDays)
     {
         $formate_month_year = $year . '-' . $month;
         $startDate = Carbon::create($year, $month, 1)->startOfMonth();

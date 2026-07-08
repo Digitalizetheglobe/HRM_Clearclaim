@@ -56,133 +56,43 @@ try {
         $totalDays = 30; // Fallback value
     }
 
-    // Initialize counters
-    $presentDays = 0;
-    $absentDays = 0;
-    $leaveDays = 0;
-    $casualLeaveDays = 0;
-    $unlimitedLeaveDays = 0;
-
-    // Date period setup
+    // Get accurate salary data using SalaryProcessingController
     try {
-        $startDate = new DateTime($payslip->salary_month . '-01');
-        $endDate = clone $startDate;
-        $endDate->modify('last day of this month');
-        $interval = new DateInterval('P1D');
-        $period = new DatePeriod($startDate, $interval, $endDate->modify('+1 day'));
-        \Log::debug('Date period created successfully');
-    } catch (\Exception $e) {
-        \Log::error('Date Period Creation Error', [
-            'error' => $e->getMessage(),
-            'trace' => $e->getTraceAsString()
-        ]);
-        abort(500, 'Failed to process date range');
-    }
-
-    // Get attendance records with error handling
-    try {
-        $attendanceRecords = DB::table('attendance_employees')
-            ->where('employee_id', $employee->id)
-            ->whereBetween('date', [$startDate->format('Y-m-d'), $endDate->format('Y-m-d')])
-            ->get();
-        \Log::debug('Attendance records retrieved', ['count' => count($attendanceRecords)]);
-    } catch (\Exception $e) {
-        \Log::error('Attendance Records Query Error', [
-            'error' => $e->getMessage(),
-            'query' => 'attendance_employees for employee '.$employee->id,
-            'trace' => $e->getTraceAsString()
-        ]);
-        $attendanceRecords = collect();
-    }
-
-    // Get approved leaves with error handling
-    try {
-        $leaves = DB::table('leaves')
-            ->join('leave_types', 'leaves.leave_type_id', '=', 'leave_types.id')
-            ->where('leaves.employee_id', $employee->id)
-            ->where('leaves.status', 'Approved')
-            ->whereBetween('leaves.start_date', [$startDate->format('Y-m-d'), $endDate->format('Y-m-d')])
-            ->orWhereBetween('leaves.end_date', [$startDate->format('Y-m-d'), $endDate->format('Y-m-d')])
-            ->select('leaves.*', 'leave_types.title as leave_type')
-            ->get();
-        \Log::debug('Leave records retrieved', ['count' => count($leaves)]);
-    } catch (\Exception $e) {
-        \Log::error('Leave Records Query Error', [
-            'error' => $e->getMessage(),
-            'query' => 'leaves for employee '.$employee->id,
-            'trace' => $e->getTraceAsString()
-        ]);
-        $leaves = collect();
-    }
-
-    // Calculate attendance, leaves, and deductions
-    try {
-        $presentDays = count($attendanceRecords);
+        $salaryController = app(\App\Http\Controllers\SalaryProcessingController::class);
+        $monthParts = explode('-', $payslip->salary_month);
+        $year = $monthParts[0] ?? date('Y');
+        $month = $monthParts[1] ?? date('m');
         
-        foreach ($period as $date) {
-            $dateStr = $date->format('Y-m-d');
+        $salaryData = $salaryController->calculateEmployeeSalaryData($employee, $month, $year, $totalDays);
+        
+        if ($salaryData) {
+            $presentDays = $salaryData['present_days'];
+            // LOP days + Late Mark Deduction = Total Absent Days for deduction purposes
+            $absentDays = $salaryData['lop_days'] + $salaryData['late_mark_deduction_amount'];
+            $leaveDays = $salaryData['approved_leave_days'];
+            $casualLeaveDays = 0; 
+            $unlimitedLeaveDays = 0;
             
-            // Check if employee clocked in
-            $attended = $attendanceRecords->contains('date', $dateStr);
-            
-            if (!$attended) {
-                $onLeave = false;
-                $leaveType = '';
-                
-                // Check if employee was on leave
-                foreach ($leaves as $leave) {
-                    try {
-                        $leaveStart = new DateTime($leave->start_date);
-                        $leaveEnd = new DateTime($leave->end_date);
-                        $leavePeriod = new DatePeriod($leaveStart, $interval, $leaveEnd->modify('+1 day'));
-                        
-                        foreach ($leavePeriod as $leaveDay) {
-                            if ($leaveDay->format('Y-m-d') == $dateStr) {
-                                $onLeave = true;
-                                $leaveType = strtolower($leave->leave_type ?? '');
-                                break 2;
-                            }
-                        }
-                    } catch (\Exception $e) {
-                        \Log::error('Leave Date Processing Error', [
-                            'leave_id' => $leave->id ?? 'N/A',
-                            'error' => $e->getMessage()
-                        ]);
-                        continue;
-                    }
-                }
-                
-                if ($onLeave) {
-                    if ($leaveType == 'unlimited leave') {
-                        $unlimitedLeaveDays++;
-                        $absentDays++; // Count unlimited leave as absent
-                    } elseif ($leaveType == 'casual leave') {
-                        $casualLeaveDays++;
-                        $leaveDays++;
-                    } elseif (!empty($leaveType)) {
-                        $leaveDays++; // Other approved leaves
-                    } else {
-                        $absentDays++; // No leave, no attendance - pure absent
-                    }
-                } else {
-                    $absentDays++; // No leave, no attendance - pure absent
-                }
-            }
+            $payableDaysValue = $salaryData['actual_payable_days'];
+        } else {
+            // Fallback if joined after month ended
+            $absentDays = $totalDays;
+            $payableDaysValue = 0;
         }
         
-        \Log::info('Attendance calculations completed', [
-            'present_days' => $presentDays,
-            'absent_days' => $absentDays,
-            'leave_days' => $leaveDays,
-            'casual_leave_days' => $casualLeaveDays,
-            'unlimited_leave_days' => $unlimitedLeaveDays
+        \Log::info('SalaryData retrieved', [
+            'salaryData' => $salaryData,
+            'absentDays' => $absentDays,
+            'payableDaysValue' => $payableDaysValue
         ]);
     } catch (\Exception $e) {
-        \Log::error('Attendance Calculation Error', [
+        \Log::error('Salary Data Calculation Error', [
             'error' => $e->getMessage(),
             'trace' => $e->getTraceAsString()
         ]);
-        abort(500, 'Failed to calculate attendance');
+        // Fallback
+        $absentDays = 0;
+        $payableDaysValue = $totalDays;
     }
 
     // Calculate salary components with error handling
@@ -201,10 +111,10 @@ try {
             'loan_type' => isset($payslip->loan) ? gettype($payslip->loan) : 'N/A'
         ]);
         
-        $basicComponent = ($grossSalary / $totalDays) * ($totalDays - $absentDays - $casualLeaveDays) * (float)0.45;
+        $basicComponent = ($grossSalary / $totalDays) * ($payableDaysValue) * (float)0.45;
         $hraComponent = $basicComponent * (float)0.40;
         $medicalComponent = 0;
-        $specialComponent = (($grossSalary / $totalDays) * ($totalDays - $absentDays - $casualLeaveDays) - ($basicComponent + $hraComponent + $medicalComponent)) + 200;
+        $specialComponent = (($grossSalary / $totalDays) * ($payableDaysValue) - ($basicComponent + $hraComponent + $medicalComponent)) + 200;
         
         \Log::debug('Salary components calculated', [
             'gross_salary' => $grossSalary,
@@ -552,7 +462,7 @@ try {
                                     </tr>
                                     <tr style="border-bottom: 1px solid #000;">
                                         <td style="padding: 8px; font-weight: bold;">Payable Days :</td>
-                                        <td style="padding: 8px; border-left: 1px solid #000;">{{ $totalDays - $absentDays - $casualLeaveDays }}</td>
+                                        <td style="padding: 8px; border-left: 1px solid #000;">{{ $payableDaysValue }}</td>
                                     </tr>
        
                                 </table>
