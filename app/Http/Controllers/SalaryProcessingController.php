@@ -114,6 +114,18 @@ class SalaryProcessingController extends Controller
             ->whereBetween('date', [$startDate->format('Y-m-d'), $lopEndDate->format('Y-m-d')])
             ->get();
         
+        // Track daily credits to prevent double counting
+        $dailyCredits = [];
+        $currentDate = $startDate->copy();
+        while ($currentDate->lte($endDate)) {
+            $dailyCredits[$currentDate->format('Y-m-d')] = [
+                'present' => 0,
+                'leave' => 0,
+                'weekoff_holiday' => 0,
+            ];
+            $currentDate->addDay();
+        }
+
         // Calculate present days (full present days)
         $presentDays = 0;
         $halfDayCount = 0;
@@ -136,8 +148,14 @@ class SalaryProcessingController extends Controller
             
             if (in_array($trueStatus, ['Present', 'Present (Late)', 'Half Day (Late)'])) {
                 $presentDays++;
+                if (isset($dailyCredits[$dateString])) {
+                    $dailyCredits[$dateString]['present'] += 1;
+                }
             } elseif (in_array($trueStatus, ['Half Day', 'Half Day (Punch Miss)'])) {
                 $halfDayCount++;
+                if (isset($dailyCredits[$dateString])) {
+                    $dailyCredits[$dateString]['present'] += 0.5;
+                }
             }
         }
         
@@ -192,13 +210,26 @@ class SalaryProcessingController extends Controller
             if ($leave->leave_duration == 'Half Day') {
                 // Check if the half day is within the month
                 if ($actualStart->lte($actualEnd)) {
+                    $dateString = $actualStart->format('Y-m-d');
                     $approvedLeaveDays += 0.5;
+                    if (isset($dailyCredits[$dateString])) {
+                        $dailyCredits[$dateString]['leave'] += 0.5;
+                    }
                 }
             } else {
                 // Full day leave - count all days within the month
                 if ($actualStart->lte($actualEnd)) {
                     $days = $actualStart->diffInDays($actualEnd) + 1;
                     $approvedLeaveDays += $days;
+                    
+                    $currentDay = $actualStart->copy();
+                    while ($currentDay->lte($actualEnd)) {
+                        $dateString = $currentDay->format('Y-m-d');
+                        if (isset($dailyCredits[$dateString])) {
+                            $dailyCredits[$dateString]['leave'] += 1;
+                        }
+                        $currentDay->addDay();
+                    }
                 }
             }
         }
@@ -214,16 +245,16 @@ class SalaryProcessingController extends Controller
             $actualEnd = $leaveEnd->gt($lopEndDate) ? $lopEndDate : $leaveEnd;
             
             if ($leave->leave_duration == 'Half Day') {
-                if ($actualStart->lte($actualEnd) && $actualStart->dayOfWeek != Carbon::SUNDAY) {
+                if ($actualStart->lte($actualEnd) && !\App\Models\Utility::isWeekOff($actualStart)) {
                     $lopLeaveDays += 0.5;
                 }
             } else {
                 if ($actualStart->lte($actualEnd)) {
-                    // Count days excluding Sundays
+                    // Count days excluding week offs
                     $currentDay = $actualStart->copy();
                     $days = 0;
                     while ($currentDay->lte($actualEnd)) {
-                        if ($currentDay->dayOfWeek != Carbon::SUNDAY) {
+                        if (!\App\Models\Utility::isWeekOff($currentDay)) {
                             $days++;
                         }
                         $currentDay->addDay();
@@ -236,7 +267,7 @@ class SalaryProcessingController extends Controller
         $holidaysList = \App\Models\Holiday::whereBetween('date', [$startDate->format('Y-m-d'), $endDate->format('Y-m-d')])
             ->pluck('date')->toArray();
 
-        // Calculate week offs (Sundays) and holidays up to lopEndDate
+        // Calculate week offs and holidays up to lopEndDate
         $weekOffDays = 0;
         $holidayDays = 0;
         $allDates = [];
@@ -245,29 +276,42 @@ class SalaryProcessingController extends Controller
             $dateStr = $currentDate->format('Y-m-d');
             $allDates[] = $dateStr;
             
-            if ($currentDate->dayOfWeek == Carbon::SUNDAY) {
+            if (\App\Models\Utility::isWeekOff($currentDate)) {
                 $weekOffDays++;
+                if (isset($dailyCredits[$dateStr])) {
+                    $dailyCredits[$dateStr]['weekoff_holiday'] += 1;
+                }
             } elseif (in_array($dateStr, $holidaysList)) {
                 $holidayDays++;
+                if (isset($dailyCredits[$dateStr])) {
+                    $dailyCredits[$dateStr]['weekoff_holiday'] += 1;
+                }
             }
             
             $currentDate->addDay();
+        }
+
+        // Calculate capped payable days based on daily credits
+        $cappedPayableDays = 0;
+        foreach ($dailyCredits as $dateStr => $credits) {
+            $dayTotal = $credits['present'] + $credits['leave'] + $credits['weekoff_holiday'];
+            if ($dayTotal > 1) {
+                $dayTotal = 1;
+            }
+            $cappedPayableDays += $dayTotal;
         }
 
         // Calculate total days in the employee's active period this month
         $totalDaysInPeriod = $startDate->diffInDays($endDate) + 1;
         
         // Calculate payable days first
-        $payableDays = $presentDays + $approvedLeaveDays + $weekOffDays + $holidayDays;
+        $payableDays = $cappedPayableDays;
         
         // LOP days is simply the difference between the days they should have worked and the days they are getting paid for
         $lopDays = $totalDaysInPeriod - $payableDays;
         if ($lopDays < 0) {
             $lopDays = 0;
         }
-
-        // Calculate payable days
-        $payableDays = $presentDays + $approvedLeaveDays + $weekOffDays + $holidayDays;
         
         // Get Late Mark Deduction (in days) for this month
         $lateMarkDeduction = LateMarkDeduction::where('employee_id', $employee->id)

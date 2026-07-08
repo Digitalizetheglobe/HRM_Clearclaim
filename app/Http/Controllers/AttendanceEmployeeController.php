@@ -1381,11 +1381,8 @@ class AttendanceEmployeeController extends Controller
                     
                     for ($date = $processStart->copy(); $date->lte($monthEnd); $date->addDay()) {
                         $dateFormatted = $date->format('Y-m-d');
-                        $dayOfWeek = $date->dayOfWeek; // 0 = Sunday, 6 = Saturday
-
                         if (!isset($employeeData[$dateFormatted])) {
-                            // Skip Sunday (0) — it is a Week Off
-                            if ($date->lte($today) && $dayOfWeek != 0) {
+                            if ($date->lte($today) && !\App\Models\Utility::isWeekOff($date)) {
                                 $employeeData[$dateFormatted] = ['type' => 'absent'];
                             }
                             // Future dates and Week Off days remain unmarked

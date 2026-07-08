@@ -110,7 +110,7 @@ class MonthlyWorkingHoursController extends Controller
                 $currentDate = Carbon::createFromDate($year, $month, $i);
                 $dateStr = $currentDate->format('Y-m-d');
 
-                $isWeekend = $currentDate->isWeekend();
+                $isWeekend = \App\Models\Utility::isWeekOff($currentDate);
                 $isHoliday = in_array($dateStr, $holidays);
                 $isLeave = in_array($dateStr, $leaveDates);
 

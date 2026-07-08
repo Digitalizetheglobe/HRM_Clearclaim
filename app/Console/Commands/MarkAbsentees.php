@@ -17,9 +17,9 @@ class MarkAbsentees extends Command
         $todayCarbon = Carbon::today();
         $today = $todayCarbon->toDateString();
 
-        // 1. Skip weekends (Saturday and Sunday)
-        if ($todayCarbon->isWeekend()) {
-            $this->info('Today is a weekend. Skipping.');
+        // 1. Skip weekends (Sunday only)
+        if (\App\Models\Utility::isWeekOff($todayCarbon)) {
+            $this->info('Today is a week off. Skipping.');
             return;
         }
 

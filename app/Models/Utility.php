@@ -38,6 +38,14 @@ class Utility extends Model
         }
     }
 
+    public static function isWeekOff($date)
+    {
+        if (is_string($date)) {
+            $date = \Carbon\Carbon::parse($date);
+        }
+        return $date->dayOfWeek === \Carbon\Carbon::SUNDAY;
+    }
+
     public static function fetchSettings($user_id = null)
     {
         $data = DB::table('settings');

@@ -298,9 +298,8 @@ class HomeController extends Controller
                             $today = Carbon::today();
                             for ($date = $startRange->copy(); $date->lte($endRange); $date->addDay()) {
                                 $dateFormatted = $date->format('Y-m-d');
-                                $dayOfWeek = $date->dayOfWeek; // 0 = Sunday, 6 = Saturday
                                 if (!isset($employeeData[$dateFormatted]) && $date->lte($today)
-                                    && $dayOfWeek != 0) {
+                                    && !\App\Models\Utility::isWeekOff($date)) {
                                     $employeeData[$dateFormatted] = ['type' => 'absent'];
                                 }
                             }
