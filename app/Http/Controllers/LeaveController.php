@@ -266,11 +266,48 @@ class LeaveController extends Controller
             });
         }
 
+        // Single Leave Entry Per Day Validation
+        $validator->after(function ($validator) use ($request) {
+            $existingLeavesQuery = \App\Models\Leave::where('employee_id', $request->employee_id)
+                ->where('status', '!=', 'Rejected');
+
+            if ($request->leave_duration == 'Full Day') {
+                $hasOverlap = (clone $existingLeavesQuery)->where(function ($query) use ($request) {
+                    $query->whereBetween('start_date', [$request->start_date, $request->end_date])
+                          ->orWhereBetween('end_date', [$request->start_date, $request->end_date])
+                          ->orWhere(function ($q) use ($request) {
+                              $q->where('start_date', '<=', $request->start_date)
+                                ->where('end_date', '>=', $request->end_date);
+                          });
+                })->exists();
+
+                if ($hasOverlap) {
+                    $validator->errors()->add('start_date', __('Leave already applied for the selected date(s).'));
+                }
+            } else if ($request->leave_duration == 'Half Day') {
+                $existingLeaves = (clone $existingLeavesQuery)->where(function ($query) use ($request) {
+                    $query->where('start_date', '<=', $request->start_date)
+                          ->where('end_date', '>=', $request->start_date);
+                })->get();
+
+                foreach ($existingLeaves as $existingLeave) {
+                    if ($existingLeave->leave_duration == 'Full Day') {
+                        $validator->errors()->add('start_date', __('A full day leave is already applied for this date.'));
+                        break;
+                    } else if ($existingLeave->leave_duration == 'Half Day') {
+                        if ($existingLeave->leave_session == $request->leave_session) {
+                            $validator->errors()->add('leave_session', __('Leave for ' . $request->leave_session . ' is already applied on this date.'));
+                            break;
+                        }
+                    }
+                }
+            }
+        });
+
         // Validate leave_type_selection is provided
         if (empty($request->leave_type_selection)) {
             return redirect()->back()->with('error', __('Please select a leave type (Paid or LOP).'));
         }
-
 
         if ($validator->fails()) {
             return redirect()->back()->with('error', $validator->errors()->first());
@@ -530,6 +567,50 @@ class LeaveController extends Controller
                     });
                 }
 
+                $employeeId = \Auth::user()->type == 'employee' 
+                    ? Employee::where('user_id', '=', \Auth::user()->id)->first()->id 
+                    : $request->employee_id;
+
+                // Single Leave Entry Per Day Validation
+                $validator->after(function ($validator) use ($request, $employeeId, $leave) {
+                    $existingLeavesQuery = \App\Models\Leave::where('employee_id', $employeeId)
+                        ->where('id', '!=', $leave->id)
+                        ->where('status', '!=', 'Rejected');
+
+                    if ($request->leave_duration == 'Full Day') {
+                        $hasOverlap = (clone $existingLeavesQuery)->where(function ($query) use ($request) {
+                            $query->whereBetween('start_date', [$request->start_date, $request->end_date])
+                                  ->orWhereBetween('end_date', [$request->start_date, $request->end_date])
+                                  ->orWhere(function ($q) use ($request) {
+                                      $q->where('start_date', '<=', $request->start_date)
+                                        ->where('end_date', '>=', $request->end_date);
+                                  });
+                        })->exists();
+
+                        if ($hasOverlap) {
+                            $validator->errors()->add('start_date', __('Leave already applied for the selected date(s).'));
+                        }
+                    } else if ($request->leave_duration == 'Half Day') {
+                        $existingLeaves = (clone $existingLeavesQuery)->where(function ($query) use ($request) {
+                            $query->where('start_date', '<=', $request->start_date)
+                                  ->where('end_date', '>=', $request->start_date);
+                        })->get();
+
+                        foreach ($existingLeaves as $existingLeave) {
+                            if ($existingLeave->leave_duration == 'Full Day') {
+                                $validator->errors()->add('start_date', __('A full day leave is already applied for this date.'));
+                                break;
+                            } else if ($existingLeave->leave_duration == 'Half Day') {
+                                if ($existingLeave->leave_session == $request->leave_session) {
+                                    $validator->errors()->add('leave_session', __('Leave for ' . $request->leave_session . ' is already applied on this date.'));
+                                    break;
+                                }
+                            }
+                        }
+                    }
+                });
+
+
                 if ($validator->fails()) {
                     $messages = $validator->getMessageBag();
                     return redirect()->back()->with('error', $messages->first());
@@ -537,9 +618,6 @@ class LeaveController extends Controller
 
                 // Get default leave type
                 $leave_type = $this->getDefaultLeaveType();
-                $employeeId = \Auth::user()->type == 'employee' 
-                    ? Employee::where('user_id', '=', \Auth::user()->id)->first()->id 
-                    : $request->employee_id;
 
                 // Calculate total leave days based on duration
                 $leaveDuration = $request->leave_duration;

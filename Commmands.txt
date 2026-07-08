@@ -16,9 +16,6 @@ git pull origin clean-main --rebase
 
 Step 5 :
 php artisan optimize:clear
-
-
-Step 6 :
 chown -R hrmcl4411:hrmcl4411 storage bootstrap/cache
 chmod -R 775 storage bootstrap/cache
 
