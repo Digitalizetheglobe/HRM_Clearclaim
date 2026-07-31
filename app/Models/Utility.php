@@ -1322,7 +1322,10 @@ class Utility extends Model
             }
         } else {
             $user = User::where('type', 'super admin')->first();
-            $settings = DB::table('settings')->where('created_by', $user->id)->pluck('value', 'name')->toArray();
+            $settings = [];
+            if ($user) {
+                $settings = DB::table('settings')->where('created_by', $user->id)->pluck('value', 'name')->toArray();
+            }
         }
         
         // Merge with defaults if needed

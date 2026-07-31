@@ -283,13 +283,14 @@ class AuthenticatedSessionController extends Controller
     {
         $ip = $_SERVER['REMOTE_ADDR'] ?? 'UNKNOWN';
         $query = @unserialize(file_get_contents('http://ip-api.com/php/' . $ip));
-        $whichbrowser = new Parser($_SERVER['HTTP_USER_AGENT']);
+        $userAgent = $_SERVER['HTTP_USER_AGENT'] ?? 'Testing/1.0';
+        $whichbrowser = new Parser($userAgent);
         $referrer = isset($_SERVER['HTTP_REFERER']) ? parse_url($_SERVER['HTTP_REFERER']) : [];
 
         $query['browser_name'] = $whichbrowser->browser->name ?? null;
         $query['os_name'] = $whichbrowser->os->name ?? null;
         $query['browser_language'] = $_SERVER['HTTP_ACCEPT_LANGUAGE'] ?? null;
-        $query['device_type'] = Utility::get_device_type($_SERVER['HTTP_USER_AGENT']);
+        $query['device_type'] = Utility::get_device_type($userAgent);
         $query['referrer_host'] = $referrer['host'] ?? null;
         $query['referrer_path'] = $referrer['path'] ?? null;
 

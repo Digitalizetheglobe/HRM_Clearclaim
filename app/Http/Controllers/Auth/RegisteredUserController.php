@@ -95,7 +95,7 @@ class RegisteredUserController extends Controller
             'lang' => !empty($default_language) ? $default_language->value : '',
             'plan' => 1,
             'referral_code' => $code,
-            'used_referral_code' => $request->ref_code,
+            'used_referral_code' => $request->ref_code ?? 0,
             'created_by' => 1,
         ]);
 
@@ -104,51 +104,31 @@ class RegisteredUserController extends Controller
 
         Auth::login($user);
 
-        if ($settings['email_verification'] == 'off') {
-            try {
-                $uArr = [
-                    'email' => $request->email,
-                    'password' => $request->password,
-                ];
-                Utility::sendEmailTemplate('new_user', [$user->email], $uArr);
-            } catch (\Throwable $th) {
-            }
+        try {
+            $uArr = [
+                'email' => $request->email,
+                'password' => $request->password,
+            ];
+            Utility::sendEmailTemplate('new_user', [$user->email], $uArr);
+        } catch (\Throwable $th) {
         }
 
-        if ($settings['email_verification'] == 'on') {
+        $user->email_verified_at = now();
+        $user->save();
 
-            try {
-                Utility::getSMTPDetails(1);
-                event(new Registered($user));
-                $role_r = Role::findByName('company');
-                $user->assignRole($role_r);
-                $user->userDefaultData($user->id);
-                $user->userDefaultDataRegister($user->id);
-                GenerateOfferLetter::defaultOfferLetterRegister($user->id);
-                ExperienceCertificate::defaultExpCertificatRegister($user->id);
-                JoiningLetter::defaultJoiningLetterRegister($user->id);
-                NOC::defaultNocCertificateRegister($user->id);
-            } catch (\Exception $e) {
-                $user->delete();
-                return redirect('/register')->with('status', __('Email SMTP settings does not configured so please contact to your site admin.'));
-            }
-
-            return view('auth.verify-email');
-        } else {
-
-            $user->email_verified_at = date('h:i:s');
-            $user->save();
-            $role_r = Role::findByName('company');
-
-            $user->assignRole($role_r);
-            $user->userDefaultData($user->id);
-            $user->userDefaultDataRegister($user->id);
-            GenerateOfferLetter::defaultOfferLetterRegister($user->id);
-            ExperienceCertificate::defaultExpCertificatRegister($user->id);
-            JoiningLetter::defaultJoiningLetterRegister($user->id);
-            NOC::defaultNocCertificateRegister($user->id);
-            return redirect(RouteServiceProvider::HOME);
+        $role_r = Role::where('name', 'company')->first();
+        if (!$role_r) {
+            $role_r = Role::create(['name' => 'company', 'guard_name' => 'web']);
         }
+        $user->assignRole($role_r);
+        $user->userDefaultData($user->id);
+        $user->userDefaultDataRegister($user->id);
+        GenerateOfferLetter::defaultOfferLetterRegister($user->id);
+        ExperienceCertificate::defaultExpCertificatRegister($user->id);
+        JoiningLetter::defaultJoiningLetterRegister($user->id);
+        NOC::defaultNocCertificateRegister($user->id);
+
+        return redirect(RouteServiceProvider::HOME);
     }
 
     public function showRegistrationForm($ref = '', $lang = '')

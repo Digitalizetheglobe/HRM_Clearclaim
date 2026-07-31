@@ -2633,59 +2633,10 @@ class AttendanceEmployeeController extends Controller
     
                 \Log::info('Attendance Overview - Weekly: Querying from ' . $startOfWeek->format('Y-m-d') . ' to ' . $endOfWeek->format('Y-m-d') . ', Employee ID: ' . $employeeId);
     
-                // Query all attendance records for the entire week
-                $attendances = AttendanceEmployee::where('employee_id', $employeeId)
-                    ->whereBetween('date', [$startOfWeek->format('Y-m-d'), $endOfWeek->format('Y-m-d')])
-                    ->orderBy('date', 'asc')
-                    ->get();
-    
-                $hoursCompleted = 0;
-                $daysWorked = 0;
-    
-                // Calculate total hours by adding all clock_in and clock_out entries
-                foreach ($attendances as $attendance) {
-                    if ($attendance->clock_in && $attendance->clock_in != '00:00:00') {
-                        if ($attendance->clock_out && $attendance->clock_out != '00:00:00') {
-                            // Both clock_in and clock_out exist
-                            $clockInTime = Carbon::parse($attendance->date . ' ' . $attendance->clock_in);
-                            $clockOutTime = Carbon::parse($attendance->date . ' ' . $attendance->clock_out);
-                            
-                            // Handle overnight shifts
-                            if ($clockOutTime->lt($clockInTime)) {
-                                $clockOutTime->addDay();
-                            }
-                            
-                            $minutes = $clockInTime->diffInMinutes($clockOutTime);
-                            $hours = $minutes / 60;
-                            $hoursCompleted += $hours;
-                            $daysWorked++;
-                        } else {
-                            // Only clock_in exists - if today, calculate to now
-                            $attendanceDate = Carbon::parse($attendance->date);
-                            if ($attendanceDate->isToday()) {
-                                $clockInTime = Carbon::parse($attendance->date . ' ' . $attendance->clock_in);
-                                $now = Carbon::now();
-                                $minutes = $clockInTime->diffInMinutes($now);
-                                $hours = $minutes / 60;
-                                $hoursCompleted += $hours;
-                                $daysWorked++;
-                            }
-                        }
-                    }
-                }
-    
-                // Count working days in week (exclude Sundays)
-                $workingDays = 0;
-                $current = $startOfWeek->copy();
-                while ($current <= $endOfWeek) {
-                    if ($current->dayOfWeek !== Carbon::SUNDAY) {
-                        $workingDays++;
-                    }
-                    $current->addDay();
-                }
-    
-                // Expected total hours for the week (working days * 9 hours per day)
-                $totalHours = $workingDays * 9;
+                $summary = $this->calculateRangeSummary($employeeId, $startOfWeek, $endOfWeek);
+                $hoursCompleted = $summary['actual_hours'];
+                $totalHours = $summary['expected_hours'];
+                $daysWorked = $summary['days_worked'];
     
                 // Get today's attendance for real-time calculation
                 $todayAttendance = AttendanceEmployee::where('employee_id', $employeeId)
@@ -2718,7 +2669,10 @@ class AttendanceEmployeeController extends Controller
                     'week_end' => $endOfWeek->format('M d, Y'),
                     'clock_in' => $todayClockIn,
                     'clock_out' => $todayClockOut,
-                    'today_hours' => round($todayHours, 2)
+                    'today_hours' => round($todayHours, 2),
+                    'overtime' => $summary['overtime'],
+                    'shortfall' => $summary['shortfall'],
+                    'net_hours' => $summary['net_hours'],
                 ];
             } elseif ($filterType === 'monthly') {
                 // Get month from request (format: YYYY-MM)
@@ -2736,67 +2690,17 @@ class AttendanceEmployeeController extends Controller
                         $month = Carbon::now()->startOfMonth();
                     }
                 }
-    
+     
                 $startOfMonth = $month->copy()->startOfMonth();
                 $endOfMonth = $month->copy()->endOfMonth();
-    
+     
                 \Log::info('Attendance Overview - Monthly: Querying from ' . $startOfMonth->format('Y-m-d') . ' to ' . $endOfMonth->format('Y-m-d'));
-    
-                // Query all attendance records for the entire month
-                $attendances = AttendanceEmployee::where('employee_id', $employeeId)
-                    ->whereBetween('date', [$startOfMonth->format('Y-m-d'), $endOfMonth->format('Y-m-d')])
-                    ->orderBy('date', 'asc')
-                    ->get();
-    
-                $hoursCompleted = 0;
-                $daysWorked = 0;
-    
-                // Calculate total working hours for the month by adding all clock_in and clock_out entries
-                foreach ($attendances as $attendance) {
-                    if ($attendance->clock_in && $attendance->clock_in != '00:00:00') {
-                        if ($attendance->clock_out && $attendance->clock_out != '00:00:00') {
-                            // Both clock_in and clock_out exist
-                            $clockInTime = Carbon::parse($attendance->date . ' ' . $attendance->clock_in);
-                            $clockOutTime = Carbon::parse($attendance->date . ' ' . $attendance->clock_out);
-                            
-                            // Handle overnight shifts
-                            if ($clockOutTime->lt($clockInTime)) {
-                                $clockOutTime->addDay();
-                            }
-                            
-                            $minutes = $clockInTime->diffInMinutes($clockOutTime);
-                            $hours = $minutes / 60;
-                            $hoursCompleted += $hours;
-                            $daysWorked++;
-                        } else {
-                            // Only clock_in exists - if today, calculate to now
-                            $attendanceDate = Carbon::parse($attendance->date);
-                            if ($attendanceDate->isToday()) {
-                                $clockInTime = Carbon::parse($attendance->date . ' ' . $attendance->clock_in);
-                                $now = Carbon::now();
-                                $minutes = $clockInTime->diffInMinutes($now);
-                                $hours = $minutes / 60;
-                                $hoursCompleted += $hours;
-                                $daysWorked++;
-                            }
-                        }
-                    }
-                }
-    
-                // Calculate total expected hours (working days in month * 9 hours)
-                // Exclude Sundays
-                $workingDays = 0;
-                $current = $startOfMonth->copy();
-                while ($current <= $endOfMonth) {
-                    if ($current->dayOfWeek !== Carbon::SUNDAY) {
-                        $workingDays++;
-                    }
-                    $current->addDay();
-                }
-    
-                // Expected total hours for the month (working days * 9 hours per day)
-                $totalHours = $workingDays * 9;
-    
+     
+                $summary = $this->calculateRangeSummary($employeeId, $startOfMonth, $endOfMonth);
+                $hoursCompleted = $summary['actual_hours'];
+                $totalHours = $summary['expected_hours'];
+                $daysWorked = $summary['days_worked'];
+     
                 // Get today's attendance for real-time calculation
                 $todayAttendance = AttendanceEmployee::where('employee_id', $employeeId)
                     ->where('date', Carbon::today()->format('Y-m-d'))
@@ -2827,7 +2731,10 @@ class AttendanceEmployeeController extends Controller
                     'month_name' => $month->format('F Y'),
                     'clock_in' => $todayClockIn,
                     'clock_out' => $todayClockOut,
-                    'today_hours' => round($todayHours, 2)
+                    'today_hours' => round($todayHours, 2),
+                    'overtime' => $summary['overtime'],
+                    'shortfall' => $summary['shortfall'],
+                    'net_hours' => $summary['net_hours'],
                 ];
             }
     
@@ -2843,6 +2750,140 @@ class AttendanceEmployeeController extends Controller
                 'message' => 'Error fetching attendance data: ' . $e->getMessage()
             ]);
         }
+    }
+
+    /**
+     * Helper to calculate expected/actual hours and days worked for a given date range
+     * using the exact same logic as MonthlyWorkingHoursController::calculateSummary.
+     */
+    private function calculateRangeSummary($employeeId, $startDate, $endDate)
+    {
+        $employee = Employee::find($employeeId);
+        if (!$employee) {
+            return [
+                'expected_hours' => 0,
+                'actual_hours' => 0,
+                'days_worked' => 0,
+            ];
+        }
+
+        $monthNum = (int)$startDate->format('m');
+        $yearNum = (int)$startDate->format('Y');
+        
+        $holidays = \App\Models\Holiday::where('created_by', $employee->created_by)
+            ->whereBetween('date', [$startDate->format('Y-m-d'), $endDate->format('Y-m-d')])
+            ->pluck('date')->toArray();
+
+        $attendances = AttendanceEmployee::where('employee_id', $employee->id)
+            ->whereBetween('date', [$startDate->format('Y-m-d'), $endDate->format('Y-m-d')])
+            ->get()->keyBy('date');
+
+        $leaves = \App\Models\Leave::where('employee_id', $employee->id)
+            ->where('status', 'Approved')
+            ->where(function($q) use ($startDate, $endDate) {
+                $q->whereBetween('start_date', [$startDate->format('Y-m-d'), $endDate->format('Y-m-d')])
+                  ->orWhereBetween('end_date', [$startDate->format('Y-m-d'), $endDate->format('Y-m-d')]);
+            })->get();
+
+        $leaveDates = [];
+        foreach ($leaves as $leave) {
+            $start = Carbon::parse($leave->start_date);
+            $end = Carbon::parse($leave->end_date);
+            for ($d = $start; $d->lte($end); $d->addDay()) {
+                if ($d->between($startDate, $endDate)) {
+                    $leaveDates[] = $d->format('Y-m-d');
+                }
+            }
+        }
+
+        $expectedHours = 0;
+        $actualHours = 0;
+        $workingDays = 0;
+
+        $current = $startDate->copy();
+        while ($current <= $endDate) {
+            $dateStr = $current->format('Y-m-d');
+
+            $isWeekend = \App\Models\Utility::isWeekOff($current);
+            $isHoliday = in_array($dateStr, $holidays);
+            $isLeave = in_array($dateStr, $leaveDates);
+
+            if ($isLeave) {
+                $current->addDay();
+                continue; 
+            }
+
+            if ($attendances->has($dateStr)) {
+                $attendance = $attendances[$dateStr];
+                $clockIn = $attendance->clock_in;
+                $clockOut = $attendance->clock_out;
+                $status = $attendance->status;
+
+                $isHalfDay = (strpos($status, 'Half Day') !== false);
+                $isAbsent = ($status == 'Absent');
+
+                $workedSeconds = 0;
+                if ($clockIn != '00:00:00' && $clockOut != '00:00:00') {
+                    $in = Carbon::parse($clockIn);
+                    $out = Carbon::parse($clockOut);
+                    $workedSeconds = $in->diffInSeconds($out);
+                }
+
+                if (($workedSeconds / 3600) > 5) {
+                    if (strpos($status, 'Half Day (Late)') === false) {
+                        $isHalfDay = false;
+                        $isAbsent = false;
+                    }
+                }
+
+                if (!$isWeekend && !$isHoliday) {
+                    if ($isHalfDay) {
+                        $workingDays += 0.5;
+                        $expectedHours += 4.5;
+                    } elseif (!$isAbsent) {
+                        $workingDays += 1;
+                        $expectedHours += 9;
+                    }
+                }
+
+                if ($workedSeconds > 0) {
+                    $actualHours += ($workedSeconds / 3600);
+                }
+            }
+            $current->addDay();
+        }
+
+        $expectedSeconds = $expectedHours * 3600;
+        $actualSeconds = $actualHours * 3600;
+        $netSeconds = $actualSeconds - $expectedSeconds;
+        
+        if ($netSeconds > 0) {
+            $overtimeSeconds = $netSeconds;
+            $shortfallSeconds = 0;
+        } else {
+            $overtimeSeconds = 0;
+            $shortfallSeconds = abs($netSeconds);
+        }
+
+        $formatTime = function($seconds) {
+            $h = floor($seconds / 3600);
+            $m = floor(($seconds % 3600) / 60);
+            return sprintf('%02d:%02d', $h, $m);
+        };
+
+        $netPrefix = $netSeconds >= 0 ? '+' : '-';
+        $netHoursFormatted = $netPrefix . $formatTime(abs($netSeconds));
+        $overtimeFormatted = $formatTime($overtimeSeconds);
+        $shortfallFormatted = $formatTime($shortfallSeconds);
+
+        return [
+            'expected_hours' => $expectedHours,
+            'actual_hours' => $actualHours,
+            'days_worked' => $workingDays,
+            'overtime' => $overtimeFormatted,
+            'shortfall' => $shortfallFormatted,
+            'net_hours' => $netHoursFormatted,
+        ];
     }
     
     /**

@@ -13,11 +13,17 @@ class AddStatusToResignationsTable extends Migration
      */
     public function up()
     {
-        if (!Schema::hasColumn('resignations', 'status')) {
-            Schema::table('resignations', function (Blueprint $table) {
+        Schema::table('resignations', function (Blueprint $table) {
+            if (!Schema::hasColumn('resignations', 'status')) {
                 $table->string('status')->default('pending')->after('description');
-            });
-        }
+            }
+            if (!Schema::hasColumn('resignations', 'approved_by')) {
+                $table->integer('approved_by')->nullable()->after('status');
+            }
+            if (!Schema::hasColumn('resignations', 'approved_at')) {
+                $table->timestamp('approved_at')->nullable()->after('approved_by');
+            }
+        });
     }
 
     /**
@@ -28,7 +34,7 @@ class AddStatusToResignationsTable extends Migration
     public function down()
     {
         Schema::table('resignations', function (Blueprint $table) {
-            $table->dropColumn(['status']);
+            $table->dropColumn(['status', 'approved_by', 'approved_at']);
         });
     }
 }

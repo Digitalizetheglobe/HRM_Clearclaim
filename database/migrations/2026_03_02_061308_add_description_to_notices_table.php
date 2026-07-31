@@ -11,9 +11,11 @@ return new class extends Migration
      */
     public function up(): void
     {
-        Schema::table('notices', function (Blueprint $table) {
-            $table->text('description')->nullable();
-        });
+        if (!Schema::hasColumn('notices', 'description')) {
+            Schema::table('notices', function (Blueprint $table) {
+                $table->text('description')->nullable();
+            });
+        }
     }
 
     /**
@@ -21,8 +23,7 @@ return new class extends Migration
      */
     public function down(): void
     {
-        Schema::table('notices', function (Blueprint $table) {
-            $table->dropColumn('description');
-        });
+        // description was originally created in the base table migration,
+        // so we don't drop it on rolling back this redundant migration.
     }
 };

@@ -572,7 +572,7 @@
                                                     </div>
                                                 </div>
 
-                                                <div class="col-sm-3">
+{{--                                                 <div class="col-sm-3">
                                                     <div class="col switch-width">
                                                         <div class="form-group ml-2 mr-3 ">
                                                             {{ Form::label('email_verification', __('Email Verification'), ['class' => 'col-form-label']) }}
@@ -586,7 +586,7 @@
                                                             </div>
                                                         </div>
                                                     </div>
-                                                </div>
+                                                </div> --}}
                                             </div>
 
                                             <h5 class="mt-3 mb-3">{{ __('Theme Customizer') }}</h5>

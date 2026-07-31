@@ -1438,6 +1438,20 @@ function updateProgressBarRealTime() {
                                 <p class="small mb-0" style="font-size: 0.875rem;">${data.week_start || ''} - ${data.week_end || ''}</p>
                             </div>
                         </div>
+                        <div class="row mt-2 pt-2 border-top text-center">
+                            <div class="col-4">
+                                <small class="text-muted d-block" style="font-size: 0.75rem;">Overtime</small>
+                                <span class="${data.overtime && data.overtime !== '00:00' ? 'text-success' : 'text-muted'}" style="font-size: 0.875rem; font-weight: 600;">${data.overtime || '00:00'}</span>
+                            </div>
+                            <div class="col-4">
+                                <small class="text-muted d-block" style="font-size: 0.75rem;">Shortfall</small>
+                                <span class="${data.shortfall && data.shortfall !== '00:00' ? 'text-danger' : 'text-muted'}" style="font-size: 0.875rem; font-weight: 600;">${data.shortfall || '00:00'}</span>
+                            </div>
+                            <div class="col-4">
+                                <small class="text-muted d-block" style="font-size: 0.75rem;">Net Hours</small>
+                                <span class="${data.net_hours && data.net_hours.startsWith('+') && data.net_hours !== '+00:00' ? 'text-success' : (data.net_hours && data.net_hours.startsWith('-') && data.net_hours !== '-00:00' ? 'text-danger' : 'text-muted')}" style="font-size: 0.875rem; font-weight: 600;">${data.net_hours || '00:00'}</span>
+                            </div>
+                        </div>
                         <!-- Week Navigation -->
                         <div class="d-flex justify-content-center gap-2 mt-3">
                             <button type="button" class="btn btn-sm btn-outline-primary" id="prevWeekBtn">
@@ -1498,6 +1512,20 @@ function updateProgressBarRealTime() {
                             <div class="col-6 mb-3">
                                 <small class="text-muted d-block">Month Name</small>
                                 <p class="small mb-0" style="font-size: 0.875rem;">${data.month_name || ''}</p>
+                            </div>
+                        </div>
+                        <div class="row mt-2 pt-2 border-top text-center">
+                            <div class="col-4">
+                                <small class="text-muted d-block" style="font-size: 0.75rem;">Overtime</small>
+                                <span class="${data.overtime && data.overtime !== '00:00' ? 'text-success' : 'text-muted'}" style="font-size: 0.875rem; font-weight: 600;">${data.overtime || '00:00'}</span>
+                            </div>
+                            <div class="col-4">
+                                <small class="text-muted d-block" style="font-size: 0.75rem;">Shortfall</small>
+                                <span class="${data.shortfall && data.shortfall !== '00:00' ? 'text-danger' : 'text-muted'}" style="font-size: 0.875rem; font-weight: 600;">${data.shortfall || '00:00'}</span>
+                            </div>
+                            <div class="col-4">
+                                <small class="text-muted d-block" style="font-size: 0.75rem;">Net Hours</small>
+                                <span class="${data.net_hours && data.net_hours.startsWith('+') && data.net_hours !== '+00:00' ? 'text-success' : (data.net_hours && data.net_hours.startsWith('-') && data.net_hours !== '-00:00' ? 'text-danger' : 'text-muted')}" style="font-size: 0.875rem; font-weight: 600;">${data.net_hours || '00:00'}</span>
                             </div>
                         </div>
                     </div>

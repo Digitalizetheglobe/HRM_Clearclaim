@@ -202,7 +202,7 @@ Route::middleware(['auth'])->group(function () {
 });
 
 
-Route::group(['middleware' => ['auth', 'verified']], function() {
+Route::group(['middleware' => ['auth']], function() {
     // Loan Management Routes
     Route::group(['prefix' => 'loan', 'as' => 'loan.'], function() {
         Route::get('/', [LoanController::class, 'index'])->name('index');
@@ -424,7 +424,7 @@ Route::get('terms_and_condition/{id}', [JobController::class, 'TermsAndCondition
 // cookie consent
 Route::any('/cookie-consent', [SettingsController::class, 'CookieConsent'])->name('cookie-consent');
 
-Route::group(['middleware' => ['verified']], function () {
+Route::group(['middleware' => ['auth']], function () {
 
 
 
