@@ -30,6 +30,7 @@ class AttendanceRegularisationController extends Controller
                 ->where('status', $status)
                 ->orderBy('date', 'desc')
                 ->orderBy('created_at', 'desc')
+                ->with(['employee', 'approver'])
                 ->get();
         } else {
             // Company/HR users can see all regularisations
@@ -42,7 +43,7 @@ class AttendanceRegularisationController extends Controller
                 ->where('status', $status)
                 ->orderBy('date', 'desc')
                 ->orderBy('created_at', 'desc')
-                ->with('employee')
+                ->with(['employee', 'approver'])
                 ->get();
         }
 
@@ -109,11 +110,14 @@ class AttendanceRegularisationController extends Controller
         // Check if a regularisation request already exists for this date
         $existingRegularisation = AttendanceRegularisation::where('employee_id', $employee->id)
             ->where('date', $request->date)
-            ->where('status', 'Pending')
+            ->whereIn('status', [AttendanceRegularisation::STATUS_PENDING, AttendanceRegularisation::STATUS_APPROVED])
             ->first();
 
         if ($existingRegularisation) {
-            return redirect()->back()->with('error', __('A pending regularisation request already exists for this date.'));
+            $statusMsg = $existingRegularisation->status == AttendanceRegularisation::STATUS_APPROVED
+                ? __('An attendance regularisation request has already been approved for this date.')
+                : __('A pending regularisation request already exists for this date.');
+            return redirect()->back()->with('error', $statusMsg);
         }
 
         // Format times
@@ -250,12 +254,14 @@ class AttendanceRegularisationController extends Controller
         // Check if another regularisation request already exists for this date (excluding current one)
         $existingRegularisation = AttendanceRegularisation::where('employee_id', $employee->id)
             ->where('date', $request->date)
-            ->where('status', 'Pending')
+            ->whereIn('status', [AttendanceRegularisation::STATUS_PENDING, AttendanceRegularisation::STATUS_APPROVED])
             ->where('id', '!=', $id)
             ->first();
 
         if ($existingRegularisation) {
-            $errorMsg = __('A pending regularisation request already exists for this date.');
+            $errorMsg = $existingRegularisation->status == AttendanceRegularisation::STATUS_APPROVED
+                ? __('An attendance regularisation request has already been approved for this date.')
+                : __('A pending regularisation request already exists for this date.');
             if ($request->ajax() || $request->wantsJson()) {
                 return response()->json(['success' => false, 'message' => $errorMsg], 400);
             }
@@ -887,6 +893,24 @@ class AttendanceRegularisationController extends Controller
             return response()->json(['success' => false, 'message' => __('Employee not found.')], 404);
         }
 
+        // Check if a regularisation request already exists for this date
+        $existingRegularisation = AttendanceRegularisation::where('employee_id', $employee->id)
+            ->where('date', $request->date)
+            ->whereIn('status', [AttendanceRegularisation::STATUS_PENDING, AttendanceRegularisation::STATUS_APPROVED])
+            ->first();
+
+        if ($existingRegularisation) {
+            $statusMsg = $existingRegularisation->status == AttendanceRegularisation::STATUS_APPROVED
+                ? __('An attendance regularisation has already been approved for this date. You cannot submit another request.')
+                : __('A pending regularisation request already exists for this date. You cannot submit another request.');
+            return response()->json([
+                'success' => true,
+                'has_regularisation' => true,
+                'regularisation_status' => $existingRegularisation->status,
+                'message' => $statusMsg
+            ]);
+        }
+
         // Check if attendance already exists for this date
         $existingAttendance = AttendanceEmployee::where('employee_id', $employee->id)
             ->where('date', $request->date)
@@ -951,7 +975,7 @@ class AttendanceRegularisationController extends Controller
                 
             $regularisations = AttendanceRegularisation::whereIn('employee_id', $departmentEmployeeIds)
                 ->where('status', $status)
-                ->with('employee')
+                ->with(['employee', 'approver'])
                 ->orderBy('date', 'desc')
                 ->orderBy('created_at', 'desc')
                 ->get();

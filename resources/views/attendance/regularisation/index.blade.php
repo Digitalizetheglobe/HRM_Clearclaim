@@ -53,6 +53,7 @@
                                     <th>{{ __('Punch Out') }}</th>
                                     <th>{{ __('Reason') }}</th>
                                     <th>{{ __('Status') }}</th>
+                                    <th>{{ __('Approved By') }}</th>
                                     <th>{{ __('Remarks') }}</th>
                                     <th width="200px">{{ __('Action') }}</th>
                                 </tr>
@@ -83,6 +84,7 @@
                                                 <span class="badge bg-danger">{{ __('Rejected') }}</span>
                                             @endif
                                         </td>
+                                        <td>{{ $regularisation->approver->name ?? '-' }}</td>
                                         <td>{{ Str::limit($regularisation->remarks, 30) }}</td>
                                         <td>
                                             <div class="action-btn bg-info ms-2">
@@ -139,7 +141,7 @@
                                     </tr>
                                 @empty
                                     <tr>
-                                        <td colspan="{{ (\Auth::user()->type == 'company' || \Auth::user()->type == 'hr') ? ($status == 'Pending' ? '9' : '8') : (\Auth::user()->type != 'employee' ? '8' : '7') }}" class="text-center">
+                                         <td colspan="{{ (\Auth::user()->type == 'company' || \Auth::user()->type == 'hr') ? ($status == 'Pending' ? '10' : '9') : (\Auth::user()->type != 'employee' ? '9' : '8') }}" class="text-center">
                                             {{ __('No regularisation requests found.') }}
                                         </td>
                                     </tr>
@@ -486,15 +488,24 @@
                         _token: '{{ csrf_token() }}'
                     },
                     success: function(response) {
-                        if (response.success && response.has_attendance) {
+                        $('.date-regularisation-alert').remove();
+                        if (response.has_regularisation) {
+                            // Clear fields and disable submit button if regularisation already exists for date
+                            $('#punch_in_time').val('');
+                            $('#punch_out_time').val('');
+                            $('#createRegularisationModal button[type="submit"]').prop('disabled', true);
+                            showInfoMessage(response.message, 'danger');
+                        } else if (response.success && response.has_attendance) {
+                            $('#createRegularisationModal button[type="submit"]').prop('disabled', false);
                             // Populate fields with existing attendance data
                             $('#punch_in_time').val(response.data.punch_in_time);
                             $('#punch_out_time').val(response.data.punch_out_time);
                             
                             // Show info message about existing attendance
                             var infoMsg = '{{ __("Existing attendance found for this date. Times have been auto-populated. You can edit them if needed.") }}';
-                            showInfoMessage(infoMsg);
+                            showInfoMessage(infoMsg, 'info');
                         } else {
+                            $('#createRegularisationModal button[type="submit"]').prop('disabled', false);
                             // Clear fields for new attendance
                             $('#punch_in_time').val('');
                             $('#punch_out_time').val('');
@@ -508,7 +519,7 @@
                         console.error(errorMsg);
                     },
                     complete: function() {
-                        // Re-enable fields
+                        // Re-enable time input fields
                         $('#punch_in_time').prop('disabled', false);
                         $('#punch_out_time').prop('disabled', false);
                     }
@@ -516,20 +527,18 @@
             });
 
             // Function to show info message (similar to alert but styled)
-            function showInfoMessage(message) {
-                // Create a temporary info alert
-                var alertHtml = '<div class="alert alert-info alert-dismissible fade show" role="alert">' +
-                               '<i class="ti ti-info-circle"></i> ' + message +
+            function showInfoMessage(message, type) {
+                type = type || 'info';
+                $('.date-regularisation-alert').remove();
+                var alertClass = type === 'danger' ? 'alert-danger' : 'alert-info';
+                var iconClass = type === 'danger' ? 'ti-alert-circle' : 'ti-info-circle';
+                var alertHtml = '<div class="alert ' + alertClass + ' alert-dismissible fade show date-regularisation-alert" role="alert">' +
+                               '<i class="ti ' + iconClass + '"></i> ' + message +
                                '<button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>' +
                                '</div>';
                 
-                // Insert after the modal header
-                $('.modal-header').after(alertHtml);
-                
-                // Auto-remove after 5 seconds
-                setTimeout(function() {
-                    $('.alert-info').alert('close');
-                }, 5000);
+                // Insert into modal body
+                $('#createRegularisationModal .modal-body').prepend(alertHtml);
             }
 
             // Approve regularisation - Show confirmation modal

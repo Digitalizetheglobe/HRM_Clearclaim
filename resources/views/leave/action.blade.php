@@ -1,3 +1,7 @@
+@php
+    $appliedUser = \App\Models\User::find($leave->created_by);
+    $appliedByName = $appliedUser ? $appliedUser->name : (!empty($employee->name) ? $employee->name : '-');
+@endphp
 {{ Form::open(['url' => 'leave/changeaction', 'method' => 'post']) }}
 <div class="modal-body">
     <div class="row">
@@ -8,7 +12,11 @@
                     <td>{{ !empty($employee->name) ? $employee->name : '' }}</td>
                 </tr>
                 <tr>
-                    <th>{{ __('Appplied On') }}</th>
+                    <th>{{ __('Applied By') }}</th>
+                    <td>{{ $appliedByName }}</td>
+                </tr>
+                <tr>
+                    <th>{{ __('Applied On') }}</th>
                     <td>{{ \Auth::user()->dateFormat($leave->applied_on) }}</td>
                 </tr>
                 <tr>
@@ -60,8 +68,14 @@
 
 @if (Auth::user()->type == 'company' || Auth::user()->type == 'hr' || (isset($isDepartmentManager) && $isDepartmentManager))
     <div class="modal-footer">
-        <input type="submit" value="{{ __('Approved') }}" class="btn btn-success rounded" name="status">
-        <input type="submit" value="{{ __('Reject') }}" class="btn btn-danger rounded" name="status">
+        @if ($leave->status == 'Pending')
+            <input type="submit" value="{{ __('Approved') }}" class="btn btn-success rounded" name="status">
+            <input type="submit" value="{{ __('Reject') }}" class="btn btn-danger rounded" name="status">
+        @elseif ($leave->status == 'Approved')
+            <input type="submit" value="{{ __('Reject') }}" class="btn btn-danger rounded" name="status">
+        @elseif ($leave->status == 'Reject')
+            <input type="submit" value="{{ __('Approved') }}" class="btn btn-success rounded" name="status">
+        @endif
     </div>
 @endif
 

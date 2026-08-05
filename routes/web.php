@@ -2203,7 +2203,7 @@ Route::group(['middleware' => ['auth']], function () {
     Route::get('/organization/hierarchy', [HomeController::class, 'getOrganizationHierarchy'])->name('organization.hierarchy')->middleware(['auth', 'XSS']);
 
 Route::get('/offline', function () {
-    return view('offline');
+    return view('vendor.laravelpwa.offline');
 });
 
 

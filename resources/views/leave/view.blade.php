@@ -1,3 +1,7 @@
+@php
+    $appliedUser = \App\Models\User::find($leave->created_by);
+    $appliedByName = $appliedUser ? $appliedUser->name : (!empty($employee->name) ? $employee->name : '-');
+@endphp
 <div class="modal-body">
     <div class="row">
         <div class="col-12">
@@ -7,7 +11,11 @@
                     <td>{{ !empty($employee->name) ? $employee->name : '' }}</td>
                 </tr>
                 <tr>
-                    <th>{{ __('Appplied On') }}</th>
+                    <th>{{ __('Applied By') }}</th>
+                    <td>{{ $appliedByName }}</td>
+                </tr>
+                <tr>
+                    <th>{{ __('Applied On') }}</th>
                     <td>{{ \Auth::user()->dateFormat($leave->applied_on) }}</td>
                 </tr>
                 <tr>

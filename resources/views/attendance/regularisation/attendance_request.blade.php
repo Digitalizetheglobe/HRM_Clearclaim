@@ -43,6 +43,7 @@
                                     <th>{{ __('Punch Out') }}</th>
                                     <th>{{ __('Reason') }}</th>
                                     <th>{{ __('Status') }}</th>
+                                    <th>{{ __('Approved By') }}</th>
                                     <th>{{ __('Remarks') }}</th>
                                     <th width="200px">{{ __('Action') }}</th>
                                 </tr>
@@ -71,6 +72,7 @@
                                                 <span class="badge bg-danger">{{ __('Rejected') }}</span>
                                             @endif
                                         </td>
+                                        <td>{{ $regularisation->approver->name ?? '-' }}</td>
                                         <td>{{ Str::limit($regularisation->remarks, 30) }}</td>
                                         <td>
                                             <div class="action-btn bg-info ms-2">

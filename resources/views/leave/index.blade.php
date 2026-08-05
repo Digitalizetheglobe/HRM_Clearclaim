@@ -130,6 +130,7 @@
                                     @if (\Auth::user()->type != 'employee' || (isset($isManager) && $isManager))
                                         <th>{{ __('Employee') }}</th>
                                     @endif
+                                    <th>{{ __('Applied By') }}</th>
                                     <th>{{ __('Applied On') }}</th>
                                     <th>{{ __('Start Date') }}</th>
                                     <th>{{ __('End Date') }}</th>
@@ -156,6 +157,11 @@
                                             <td>{{ !empty($leave->employee_id) ? $leave->employees->name : '' }}
                                             </td>
                                         @endif
+                                        @php
+                                            $appliedUser = \App\Models\User::find($leave->created_by);
+                                            $appliedByName = $appliedUser ? $appliedUser->name : (!empty($leave->employees->name) ? $leave->employees->name : '-');
+                                        @endphp
+                                        <td>{{ $appliedByName }}</td>
                                         <td>{{ \Auth::user()->dateFormat($leave->applied_on) }}</td>
                                         <td>{{ \Auth::user()->dateFormat($leave->start_date) }}</td>
                                         <td>{{ \Auth::user()->dateFormat($leave->end_date) }}</td>
