@@ -23,6 +23,7 @@ class LeaveController extends Controller
     public function index(Request $request)
     {
         $status = $request->get('status', 'Approved');
+        $month = $request->get('month');
         $user = \Auth::user();
         $employee = Employee::where('user_id', '=', $user->id)->first();
         $isManager = false;
@@ -34,10 +35,10 @@ class LeaveController extends Controller
         if ($user->can('Manage Leave') || $isManager) {
             $leaveBalance = null;
             
+            $leavesQuery = LocalLeave::query();
+
             if ($user->type == 'employee') {
-                $leaves = LocalLeave::where('employee_id', '=', $employee->id)
-                    ->where('status', $status)
-                    ->orderBy('id', 'desc')->get();
+                $leavesQuery->where('employee_id', '=', $employee->id);
                 
                 // Calculate leave balance for employee
                 if ($employee) {
@@ -91,19 +92,40 @@ class LeaveController extends Controller
                     ];
                 }
             } else {
-                $leaves = LocalLeave::where('created_by', '=', $user->creatorId())
-                    ->where('status', $status)
-                    ->with(['employees', 'leaveType'])->orderBy('id', 'desc')->get();
+                $leavesQuery->where('created_by', '=', $user->creatorId())
+                    ->with(['employees', 'leaveType']);
             }
 
-            return view('leave.index', compact('leaves', 'leaveBalance', 'isManager', 'employee', 'status'));
+            if ($status == 'Reject' || $status == 'Rejected') {
+                $leavesQuery->whereIn('status', ['Reject', 'Rejected']);
+            } else {
+                $leavesQuery->where('status', $status);
+            }
+
+            if (!empty($month)) {
+                $year = date('Y', strtotime($month));
+                $m = date('m', strtotime($month));
+                $leavesQuery->where(function ($q) use ($year, $m) {
+                    $q->where(function ($q2) use ($year, $m) {
+                        $q2->whereYear('start_date', $year)->whereMonth('start_date', $m);
+                    })->orWhere(function ($q2) use ($year, $m) {
+                        $q2->whereYear('end_date', $year)->whereMonth('end_date', $m);
+                    });
+                });
+            }
+
+            $leaves = $leavesQuery->orderBy('id', 'desc')->get();
+
+            return view('leave.index', compact('leaves', 'leaveBalance', 'isManager', 'employee', 'status', 'month'));
         } else {
             return redirect()->back()->with('error', __('Permission denied.'));
         }
     }
 
-    public function leaveRequest()
+    public function leaveRequest(Request $request)
     {
+        $status = $request->get('status', 'Approved');
+        $month = $request->get('month');
         $user = \Auth::user();
         $employee = Employee::where('user_id', '=', $user->id)->first();
         $isManager = false;
@@ -119,12 +141,30 @@ class LeaveController extends Controller
                 ->pluck('id')
                 ->toArray();
                 
-            $leaves = LocalLeave::whereIn('employee_id', $departmentEmployeeIds)
-                ->with(['employees', 'leaveType'])
-                ->orderBy('id', 'desc')
-                ->get();
+            $leavesQuery = LocalLeave::whereIn('employee_id', $departmentEmployeeIds)
+                ->with(['employees', 'leaveType']);
 
-            return view('leave.leave_request', compact('leaves', 'isManager', 'employee'));
+            if ($status == 'Reject' || $status == 'Rejected') {
+                $leavesQuery->whereIn('status', ['Reject', 'Rejected']);
+            } else {
+                $leavesQuery->where('status', $status);
+            }
+
+            if (!empty($month)) {
+                $year = date('Y', strtotime($month));
+                $m = date('m', strtotime($month));
+                $leavesQuery->where(function ($q) use ($year, $m) {
+                    $q->where(function ($q2) use ($year, $m) {
+                        $q2->whereYear('start_date', $year)->whereMonth('start_date', $m);
+                    })->orWhere(function ($q2) use ($year, $m) {
+                        $q2->whereYear('end_date', $year)->whereMonth('end_date', $m);
+                    });
+                });
+            }
+
+            $leaves = $leavesQuery->orderBy('id', 'desc')->get();
+
+            return view('leave.leave_request', compact('leaves', 'isManager', 'employee', 'status', 'month'));
         } else {
             return redirect()->back()->with('error', __('Permission denied.'));
         }

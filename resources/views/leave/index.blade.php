@@ -110,12 +110,42 @@
             <div class="card">
                 <div class="card-header card-body table-border-style">
                     {{-- <h5> </h5> --}}
-                    <!-- Status Tabs -->
+                    <!-- Status Tabs & Monthly Filter -->
                     @php $currentStatus = $status ?? 'Approved'; @endphp
-                    <ul class="nav nav-tabs mb-3" id="statusTabs">
-                        <li class="nav-item"><a class="nav-link {{ $currentStatus == 'Approved' ? 'active' : '' }}" href="{{ route('leave.index', ['status' => 'Approved']) }}">{{ __('Approved') }}</a></li>
-                        <li class="nav-item"><a class="nav-link {{ $currentStatus == 'Pending' ? 'active' : '' }}" href="{{ route('leave.index', ['status' => 'Pending']) }}">{{ __('Pending') }}</a></li>
-                    </ul>
+                    <div class="d-flex justify-content-between align-items-center flex-wrap mb-3 gap-2">
+                        <ul class="nav nav-tabs mb-0" id="statusTabs">
+                            <li class="nav-item">
+                                <a class="nav-link {{ $currentStatus == 'Approved' ? 'active' : '' }}" 
+                                   href="{{ route('leave.index', ['status' => 'Approved', 'month' => request('month')]) }}">
+                                    {{ __('Approved') }}
+                                </a>
+                            </li>
+                            <li class="nav-item">
+                                <a class="nav-link {{ $currentStatus == 'Pending' ? 'active' : '' }}" 
+                                   href="{{ route('leave.index', ['status' => 'Pending', 'month' => request('month')]) }}">
+                                    {{ __('Pending') }}
+                                </a>
+                            </li>
+                            <li class="nav-item">
+                                <a class="nav-link {{ ($currentStatus == 'Reject' || $currentStatus == 'Rejected') ? 'active' : '' }}" 
+                                   href="{{ route('leave.index', ['status' => 'Reject', 'month' => request('month')]) }}">
+                                    {{ __('Rejected') }}
+                                </a>
+                            </li>
+                        </ul>
+
+                        <form method="GET" action="{{ route('leave.index') }}" class="d-flex align-items-center gap-2" id="leaveMonthFilterForm">
+                            <input type="hidden" name="status" value="{{ $currentStatus }}">
+                            <label for="month_filter" class="form-label mb-0 fw-bold text-nowrap">{{ __('Select Month:') }}</label>
+                            <input type="month" name="month" id="month_filter" class="form-control form-control-sm" 
+                                   value="{{ request('month') }}" onchange="this.form.submit()">
+                            @if(request('month'))
+                                <a href="{{ route('leave.index', ['status' => $currentStatus]) }}" class="btn btn-sm btn-danger text-nowrap" title="{{ __('Reset Filter') }}">
+                                    <i class="ti ti-refresh"></i> {{ __('Reset') }}
+                                </a>
+                            @endif
+                        </form>
+                    </div>
                     <div class="table-responsive">
                         <table class="table" id="pc-dt-simple">
                             <thead>
@@ -130,7 +160,7 @@
                                     @if (\Auth::user()->type != 'employee' || (isset($isManager) && $isManager))
                                         <th>{{ __('Employee') }}</th>
                                     @endif
-                                    <th>{{ __('Applied By') }}</th>
+                                    <th>{{ ($currentStatus == 'Reject' || $currentStatus == 'Rejected') ? __('Rejected By') : (($currentStatus == 'Approved') ? __('Approved By') : __('Applied By')) }}</th>
                                     <th>{{ __('Applied On') }}</th>
                                     <th>{{ __('Start Date') }}</th>
                                     <th>{{ __('End Date') }}</th>

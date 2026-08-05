@@ -19,6 +19,9 @@ class AttendanceRegularisationController extends Controller
     public function index(Request $request)
     {
         $status = $request->get('status', 'Approved');
+        $month = $request->get('month');
+
+        $query = AttendanceRegularisation::query();
 
         if (\Auth::user()->type == 'employee') {
             $employee = Employee::where('user_id', \Auth::user()->id)->first();
@@ -26,28 +29,35 @@ class AttendanceRegularisationController extends Controller
                 return redirect()->back()->with('error', __('Employee not found.'));
             }
             
-            $regularisations = AttendanceRegularisation::where('employee_id', $employee->id)
-                ->where('status', $status)
-                ->orderBy('date', 'desc')
-                ->orderBy('created_at', 'desc')
-                ->with(['employee', 'approver'])
-                ->get();
+            $query->where('employee_id', $employee->id);
         } else {
             // Company/HR users can see all regularisations
-            $regularisations = AttendanceRegularisation::where(function($q) {
-                    $q->where('created_by', \Auth::user()->creatorId())
-                      ->orWhereHas('employee', function($query) {
-                          $query->where('created_by', \Auth::user()->creatorId());
-                      });
-                })
-                ->where('status', $status)
-                ->orderBy('date', 'desc')
-                ->orderBy('created_at', 'desc')
-                ->with(['employee', 'approver'])
-                ->get();
+            $query->where(function($q) {
+                $q->where('created_by', \Auth::user()->creatorId())
+                  ->orWhereHas('employee', function($query) {
+                      $query->where('created_by', \Auth::user()->creatorId());
+                  });
+            });
         }
 
-        return view('attendance.regularisation.index', compact('regularisations', 'status'));
+        if ($status == 'Rejected' || $status == 'Reject') {
+            $query->whereIn('status', [AttendanceRegularisation::STATUS_REJECTED, 'Reject']);
+        } else {
+            $query->where('status', $status);
+        }
+
+        if (!empty($month)) {
+            $year = date('Y', strtotime($month));
+            $m = date('m', strtotime($month));
+            $query->whereYear('date', $year)->whereMonth('date', $m);
+        }
+
+        $regularisations = $query->orderBy('date', 'desc')
+            ->orderBy('created_at', 'desc')
+            ->with(['employee', 'approver'])
+            ->get();
+
+        return view('attendance.regularisation.index', compact('regularisations', 'status', 'month'));
     }
 
     /**
@@ -957,6 +967,7 @@ class AttendanceRegularisationController extends Controller
     public function attendanceRequest(Request $request)
     {
         $status = $request->get('status', 'Approved');
+        $month = $request->get('month');
 
         $user = \Auth::user();
         $employee = Employee::where('user_id', '=', $user->id)->first();
@@ -973,14 +984,26 @@ class AttendanceRegularisationController extends Controller
                 ->pluck('id')
                 ->toArray();
                 
-            $regularisations = AttendanceRegularisation::whereIn('employee_id', $departmentEmployeeIds)
-                ->where('status', $status)
-                ->with(['employee', 'approver'])
+            $query = AttendanceRegularisation::whereIn('employee_id', $departmentEmployeeIds);
+
+            if ($status == 'Rejected' || $status == 'Reject') {
+                $query->whereIn('status', [AttendanceRegularisation::STATUS_REJECTED, 'Reject']);
+            } else {
+                $query->where('status', $status);
+            }
+
+            if (!empty($month)) {
+                $year = date('Y', strtotime($month));
+                $m = date('m', strtotime($month));
+                $query->whereYear('date', $year)->whereMonth('date', $m);
+            }
+
+            $regularisations = $query->with(['employee', 'approver'])
                 ->orderBy('date', 'desc')
                 ->orderBy('created_at', 'desc')
                 ->get();
 
-            return view('attendance.regularisation.attendance_request', compact('regularisations', 'isManager', 'employee', 'status'));
+            return view('attendance.regularisation.attendance_request', compact('regularisations', 'isManager', 'employee', 'status', 'month'));
         } else {
             return redirect()->back()->with('error', __('Permission denied.'));
         }

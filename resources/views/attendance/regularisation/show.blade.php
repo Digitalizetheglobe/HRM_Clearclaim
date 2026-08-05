@@ -76,16 +76,16 @@
                                 </div>
                             </div>
                         @endif
-                        @if ($regularisation->status == 'Approved' && $regularisation->approver)
+                        @if ($regularisation->approver && ($regularisation->status == 'Approved' || $regularisation->status == 'Rejected'))
                             <div class="col-md-6">
                                 <div class="form-group">
-                                    <label class="form-label">{{ __('Approved By') }}</label>
+                                    <label class="form-label">{{ $regularisation->status == 'Rejected' ? __('Rejected By') : __('Approved By') }}</label>
                                     <p class="form-control-static">{{ $regularisation->approver->name ?? '-' }}</p>
                                 </div>
                             </div>
                             <div class="col-md-6">
                                 <div class="form-group">
-                                    <label class="form-label">{{ __('Approved At') }}</label>
+                                    <label class="form-label">{{ $regularisation->status == 'Rejected' ? __('Rejected At') : __('Approved At') }}</label>
                                     <p class="form-control-static">{{ $regularisation->approved_at ? \Auth::user()->dateFormat($regularisation->approved_at) . ' ' . date('h:i A', strtotime($regularisation->approved_at)) : '-' }}</p>
                                 </div>
                             </div>

@@ -29,11 +29,41 @@
         <div class="col-xl-12">
             <div class="card">
                 <div class="card-header card-body table-border-style">
-    <!-- Status Tabs -->
-    <ul class="nav nav-tabs mb-3" id="statusTabs">
-        <li class="nav-item"><a class="nav-link {{ $status == 'Approved' ? 'active' : '' }}" href="{{ route('attendance-regularisation.index', ['status' => 'Approved']) }}">{{ __('Approved') }}</a></li>
-        <li class="nav-item"><a class="nav-link {{ $status == 'Pending' ? 'active' : '' }}" href="{{ route('attendance-regularisation.index', ['status' => 'Pending']) }}">{{ __('Pending') }}</a></li>
-    </ul>
+                    <!-- Status Tabs & Monthly Filter -->
+                    <div class="d-flex justify-content-between align-items-center flex-wrap mb-3 gap-2">
+                        <ul class="nav nav-tabs mb-0" id="statusTabs">
+                            <li class="nav-item">
+                                <a class="nav-link {{ $status == 'Approved' ? 'active' : '' }}" 
+                                   href="{{ route('attendance-regularisation.index', ['status' => 'Approved', 'month' => request('month')]) }}">
+                                    {{ __('Approved') }}
+                                </a>
+                            </li>
+                            <li class="nav-item">
+                                <a class="nav-link {{ $status == 'Pending' ? 'active' : '' }}" 
+                                   href="{{ route('attendance-regularisation.index', ['status' => 'Pending', 'month' => request('month')]) }}">
+                                    {{ __('Pending') }}
+                                </a>
+                            </li>
+                            <li class="nav-item">
+                                <a class="nav-link {{ ($status == 'Rejected' || $status == 'Reject') ? 'active' : '' }}" 
+                                   href="{{ route('attendance-regularisation.index', ['status' => 'Rejected', 'month' => request('month')]) }}">
+                                    {{ __('Rejected') }}
+                                </a>
+                            </li>
+                        </ul>
+
+                        <form method="GET" action="{{ route('attendance-regularisation.index') }}" class="d-flex align-items-center gap-2" id="regularisationMonthFilterForm">
+                            <input type="hidden" name="status" value="{{ $status }}">
+                            <label for="month_filter" class="form-label mb-0 fw-bold text-nowrap">{{ __('Select Month:') }}</label>
+                            <input type="month" name="month" id="month_filter" class="form-control form-control-sm" 
+                                   value="{{ request('month') }}" onchange="this.form.submit()">
+                            @if(request('month'))
+                                <a href="{{ route('attendance-regularisation.index', ['status' => $status]) }}" class="btn btn-sm btn-danger text-nowrap" title="{{ __('Reset Filter') }}">
+                                    <i class="ti ti-refresh"></i> {{ __('Reset') }}
+                                </a>
+                            @endif
+                        </form>
+                    </div>
                     <div class="table-responsive">
                         <table class="table" id="pc-dt-simple">
                             <thead>
@@ -53,7 +83,7 @@
                                     <th>{{ __('Punch Out') }}</th>
                                     <th>{{ __('Reason') }}</th>
                                     <th>{{ __('Status') }}</th>
-                                    <th>{{ __('Approved By') }}</th>
+                                    <th>{{ ($status == 'Rejected' || $status == 'Reject') ? __('Rejected By') : __('Approved By') }}</th>
                                     <th>{{ __('Remarks') }}</th>
                                     <th width="200px">{{ __('Action') }}</th>
                                 </tr>
