@@ -62,7 +62,9 @@
                             <thead>
                                 <tr>
                                     <th>{{ __('Employee') }}</th>
-                                    <th>{{ ($currentStatus == 'Reject' || $currentStatus == 'Rejected') ? __('Rejected By') : (($currentStatus == 'Approved') ? __('Approved By') : __('Applied By')) }}</th>
+                                    @if ($currentStatus != 'Pending')
+                                        <th>{{ ($currentStatus == 'Reject' || $currentStatus == 'Rejected') ? __('Rejected By') : __('Approved By') }}</th>
+                                    @endif
                                     <th>{{ __('Applied On') }}</th>
                                     <th>{{ __('Start Date') }}</th>
                                     <th>{{ __('End Date') }}</th>
@@ -77,15 +79,17 @@
                                 @foreach ($leaves as $leave)
                                     <tr>
                                         <td>{{ !empty($leave->employee_id) ? $leave->employees->name : '' }}</td>
-                                        @php
-                                            if (($leave->status == 'Approved' || $leave->status == 'Reject' || $leave->status == 'Rejected') && $leave->approver) {
-                                                $displayUser = $leave->approver->name;
-                                            } else {
-                                                $appliedUser = \App\Models\User::find($leave->created_by);
-                                                $displayUser = $appliedUser ? $appliedUser->name : (!empty($leave->employees->name) ? $leave->employees->name : '-');
-                                            }
-                                        @endphp
-                                        <td>{{ $displayUser }}</td>
+                                        @if ($currentStatus != 'Pending')
+                                            @php
+                                                if (($leave->status == 'Approved' || $leave->status == 'Reject' || $leave->status == 'Rejected') && $leave->approver) {
+                                                    $displayUser = $leave->approver->name;
+                                                } else {
+                                                    $appliedUser = \App\Models\User::find($leave->created_by);
+                                                    $displayUser = $appliedUser ? $appliedUser->name : (!empty($leave->employees->name) ? $leave->employees->name : '-');
+                                                }
+                                            @endphp
+                                            <td>{{ $displayUser }}</td>
+                                        @endif
                                         <td>{{ \Auth::user()->dateFormat($leave->applied_on) }}</td>
                                         <td>{{ \Auth::user()->dateFormat($leave->start_date) }}</td>
                                         <td>{{ \Auth::user()->dateFormat($leave->end_date) }}</td>

@@ -83,7 +83,9 @@
                                     <th>{{ __('Punch Out') }}</th>
                                     <th>{{ __('Reason') }}</th>
                                     <th>{{ __('Status') }}</th>
-                                    <th>{{ ($status == 'Rejected' || $status == 'Reject') ? __('Rejected By') : __('Approved By') }}</th>
+                                    @if ($status != 'Pending')
+                                        <th>{{ ($status == 'Rejected' || $status == 'Reject') ? __('Rejected By') : __('Approved By') }}</th>
+                                    @endif
                                     <th>{{ __('Remarks') }}</th>
                                     <th width="200px">{{ __('Action') }}</th>
                                 </tr>
@@ -114,7 +116,9 @@
                                                 <span class="badge bg-danger">{{ __('Rejected') }}</span>
                                             @endif
                                         </td>
-                                        <td>{{ $regularisation->approver->name ?? '-' }}</td>
+                                        @if ($status != 'Pending')
+                                            <td>{{ $regularisation->approver->name ?? '-' }}</td>
+                                        @endif
                                         <td>{{ Str::limit($regularisation->remarks, 30) }}</td>
                                         <td>
                                             <div class="action-btn bg-info ms-2">
@@ -171,7 +175,7 @@
                                     </tr>
                                 @empty
                                     <tr>
-                                         <td colspan="{{ (\Auth::user()->type == 'company' || \Auth::user()->type == 'hr') ? ($status == 'Pending' ? '10' : '9') : (\Auth::user()->type != 'employee' ? '9' : '8') }}" class="text-center">
+                                         <td colspan="15" class="text-center">
                                             {{ __('No regularisation requests found.') }}
                                         </td>
                                     </tr>
