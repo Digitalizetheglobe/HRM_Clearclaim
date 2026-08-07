@@ -188,10 +188,14 @@
                                             </td>
                                         @endif
                                         @php
-                                            $appliedUser = \App\Models\User::find($leave->created_by);
-                                            $appliedByName = $appliedUser ? $appliedUser->name : (!empty($leave->employees->name) ? $leave->employees->name : '-');
+                                            if (($leave->status == 'Approved' || $leave->status == 'Reject' || $leave->status == 'Rejected') && $leave->approver) {
+                                                $displayUser = $leave->approver->name;
+                                            } else {
+                                                $appliedUser = \App\Models\User::find($leave->created_by);
+                                                $displayUser = $appliedUser ? $appliedUser->name : (!empty($leave->employees->name) ? $leave->employees->name : '-');
+                                            }
                                         @endphp
-                                        <td>{{ $appliedByName }}</td>
+                                        <td>{{ $displayUser }}</td>
                                         <td>{{ \Auth::user()->dateFormat($leave->applied_on) }}</td>
                                         <td>{{ \Auth::user()->dateFormat($leave->start_date) }}</td>
                                         <td>{{ \Auth::user()->dateFormat($leave->end_date) }}</td>

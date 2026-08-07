@@ -92,9 +92,10 @@ class LeaveController extends Controller
                     ];
                 }
             } else {
-                $leavesQuery->where('created_by', '=', $user->creatorId())
-                    ->with(['employees', 'leaveType']);
+                $leavesQuery->where('created_by', '=', $user->creatorId());
             }
+
+            $leavesQuery->with(['employees', 'leaveType', 'approver']);
 
             if ($status == 'Reject' || $status == 'Rejected') {
                 $leavesQuery->whereIn('status', ['Reject', 'Rejected']);
@@ -142,7 +143,7 @@ class LeaveController extends Controller
                 ->toArray();
                 
             $leavesQuery = LocalLeave::whereIn('employee_id', $departmentEmployeeIds)
-                ->with(['employees', 'leaveType']);
+                ->with(['employees', 'leaveType', 'approver']);
 
             if ($status == 'Reject' || $status == 'Rejected') {
                 $leavesQuery->whereIn('status', ['Reject', 'Rejected']);
@@ -834,6 +835,10 @@ class LeaveController extends Controller
         }
 
         $leave->status = $request->status;
+        if (in_array($request->status, ['Approved', 'Reject', 'Rejected'])) {
+            $leave->approved_by = \Auth::user()->id;
+            $leave->approved_at = now();
+        }
         
         if ($leave->status == 'Approved') {
             $total_leave_days = $leave->total_leave_days;
@@ -984,6 +989,8 @@ class LeaveController extends Controller
             }
 
             $leave->status = 'Approved';
+            $leave->approved_by = \Auth::user()->id;
+            $leave->approved_at = now();
             
             // Re-apply the logic from changeaction for 'Approved' status
             $total_leave_days = $leave->total_leave_days;

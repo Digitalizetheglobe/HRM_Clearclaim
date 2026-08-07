@@ -21,6 +21,8 @@ class Leave extends Model
         'remark',
         'status',
         'created_by',
+        'approved_by',
+        'approved_at',
     ];
 
     public function leaveType()
@@ -33,6 +35,10 @@ class Leave extends Model
         return $this->hasOne('App\Models\Employee', 'id', 'employee_id');
     }
 
+    public function approver()
+    {
+        return $this->belongsTo(User::class, 'approved_by');
+    }
    
     public function user()
     {
