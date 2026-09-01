@@ -429,6 +429,9 @@ Route::group(['middleware' => ['auth']], function () {
 
 
     Route::get('/dashboard', [HomeController::class, 'index'])->middleware(['auth', 'XSS'])->name('dashboard');
+    Route::get('/session-ping', function () {
+        return response()->json(['ok' => true, 'token' => csrf_token()]);
+    })->name('session.ping');
     Route::get('/hierarchy/chart', [HierarchyChartController::class, 'index'])->middleware(['auth', 'XSS'])->name('hierarchy.chart');
     // Route::get('/home', [HomeController::class, 'index'])->name('home')->middleware(
     //     [

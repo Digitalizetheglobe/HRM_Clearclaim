@@ -1309,43 +1309,21 @@ class Utility extends Model
 
     public static function GetLogo()
     {
-        // Force fresh fetch by clearing cache first
-        self::$settings = null;
-        
-        // Get fresh settings directly from database
-        if (\Auth::user()) {
-            if (\Auth::user()->type == 'super admin') {
-                $user = \Auth::user();
-                $settings = DB::table('settings')->where('created_by', $user->id)->pluck('value', 'name')->toArray();
-            } else {
-                $settings = DB::table('settings')->where('created_by', \Auth::user()->creatorId())->pluck('value', 'name')->toArray();
-            }
-        } else {
-            $user = User::where('type', 'super admin')->first();
-            $settings = [];
-            if ($user) {
-                $settings = DB::table('settings')->where('created_by', $user->id)->pluck('value', 'name')->toArray();
-            }
-        }
-        
-        // Merge with defaults if needed
-        if (empty($settings)) {
-            $settings = self::fetchSettings();
-        }
-        
+        $settings = self::settings();
+
         if (\Auth::user() && \Auth::user()->type != 'super admin') {
             if (isset($settings['cust_darklayout']) && $settings['cust_darklayout'] == 'on') {
-                return isset($settings['company_logo_light']) && !empty($settings['company_logo_light']) ? $settings['company_logo_light'] : 'logo-light.png';
-            } else {
-                return isset($settings['company_logo']) && !empty($settings['company_logo']) ? $settings['company_logo'] : 'logo-dark.png';
+                return !empty($settings['company_logo_light']) ? $settings['company_logo_light'] : 'logo-light.png';
             }
-        } else {
-            if (isset($settings['cust_darklayout']) && $settings['cust_darklayout'] == 'on') {
-                return isset($settings['light_logo']) && !empty($settings['light_logo']) ? $settings['light_logo'] : 'logo-light.png';
-            } else {
-                return isset($settings['dark_logo']) && !empty($settings['dark_logo']) ? $settings['dark_logo'] : 'logo-dark.png';
-            }
+
+            return !empty($settings['company_logo']) ? $settings['company_logo'] : 'logo-dark.png';
         }
+
+        if (isset($settings['cust_darklayout']) && $settings['cust_darklayout'] == 'on') {
+            return !empty($settings['light_logo']) ? $settings['light_logo'] : 'logo-light.png';
+        }
+
+        return !empty($settings['dark_logo']) ? $settings['dark_logo'] : 'logo-dark.png';
     }
 
 
@@ -2430,18 +2408,15 @@ class Utility extends Model
         }
     }
 
+    private static $pusherDetails = null;
+
     public static function getPusherDetails()
     {
-        $data = DB::table('settings');
-        if (\Auth::check()) {
-            $data = $data->where('created_by', '=', 1)->get();
-            if (count($data) == 0) {
-                $data = DB::table('settings')->where('created_by', '=', 1)->get();
-            }
-        } else {
-            $data->where('created_by', '=', 1);
-            $data = $data->get();
+        if (self::$pusherDetails !== null) {
+            return self::$pusherDetails;
         }
+
+        $data = DB::table('settings')->where('created_by', '=', 1)->get();
 
         $settings = [
             'pusher_app_id' => '',
@@ -2454,7 +2429,9 @@ class Utility extends Model
             $settings[$row->name] = $row->value;
         }
 
-        return $settings;
+        self::$pusherDetails = $settings;
+
+        return self::$pusherDetails;
     }
 
     public static function getPusherSetting()

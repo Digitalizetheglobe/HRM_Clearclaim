@@ -3,6 +3,7 @@
 namespace App\Exceptions;
 
 use Illuminate\Foundation\Exceptions\Handler as ExceptionHandler;
+use Illuminate\Session\TokenMismatchException;
 use Throwable;
 
 class Handler extends ExceptionHandler
@@ -46,5 +47,26 @@ class Handler extends ExceptionHandler
         $this->reportable(function (Throwable $e) {
             //
         });
+    }
+
+    /**
+     * Convert CSRF token mismatches into a friendly redirect instead of the 419 page.
+     */
+    public function render($request, Throwable $e)
+    {
+        if ($e instanceof TokenMismatchException) {
+            if ($request->expectsJson() || $request->ajax()) {
+                return response()->json([
+                    'message' => __('Your session has expired. Please refresh the page and try again.'),
+                    'reload' => true,
+                ], 419);
+            }
+
+            return redirect()->back(302, [], route('dashboard'))
+                ->withInput($request->except('_token', 'password', 'password_confirmation', 'current_password'))
+                ->with('error', __('Your session has expired. Please try again.'));
+        }
+
+        return parent::render($request, $e);
     }
 }

@@ -28,9 +28,9 @@ class AppServiceProvider extends ServiceProvider
      */
     public function boot()
     {
-        View::composer('partial.Admin.menu', function ($view) {
+        View::composer(['partial.Admin.menu', 'partial.Admin.header'], function ($view) {
             if (auth()->check() && auth()->user()->type == 'employee') {
-                $employee = Employee::where('user_id', auth()->id())->first();
+                $view->with('currentEmployee', Employee::where('user_id', auth()->id())->first());
             }
         });
     }

@@ -52,7 +52,9 @@ class XSS
                 $messengerMigration     = Utility::get_messenger_packages_migration();
                 $dbMigrations           = $this->getExecutedMigrations();
                 $Modulemigrations = glob(base_path() . '/Modules/LandingPage/Database' . DIRECTORY_SEPARATOR . 'Migrations' . DIRECTORY_SEPARATOR . '*.php');
-                $numberOfUpdatesPending = (count($migrations) + count($Modulemigrations) + $messengerMigration) - count($dbMigrations);
+                $numberOfUpdatesPending = \Illuminate\Support\Facades\Cache::remember('pending_migration_count', 3600, function () use ($migrations, $messengerMigration, $dbMigrations, $Modulemigrations) {
+                    return (count($migrations) + count($Modulemigrations) + $messengerMigration) - count($dbMigrations);
+                });
 
                 if ($numberOfUpdatesPending > 0) {
                     // run code like seeder only when new migration

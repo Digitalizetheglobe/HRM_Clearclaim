@@ -7,11 +7,6 @@
     $users = Auth::user();
     $currantLang = $users->currentLanguage();
     $profile = asset('storage/uploads/avatar/'); // Updated path to public storage
-    $unseenCounter = App\Models\ChMessage::where('to_id', Auth::user()->id)
-        ->where('seen', 0)
-        ->count();
-    $unseen_count = DB::select('SELECT from_id, COUNT(*) AS totalmasseges FROM ch_messages WHERE seen = 0 GROUP BY from_id');
-
     $unseenCounter = App\Models\ChMessage::where('to_id', Auth::id())
         ->where('seen', 0)
         ->count();

@@ -39,8 +39,8 @@ class MonthlyWorkingHoursController extends Controller
                 });
             }
 
-            $employees = $employeesQuery->get();
-            $employeeFilter = Employee::where('created_by', \Auth::user()->creatorId())->get()->pluck('name', 'id');
+            $employees = $employeesQuery->with('department')->get();
+            $employeeFilter = $employees->pluck('name', 'id');
             $employeeFilter->prepend('All', '');
 
             $summaryData = $this->calculateSummary($employees, $month, $year);
@@ -71,6 +71,28 @@ class MonthlyWorkingHoursController extends Controller
             ->whereBetween('date', [$startDate->format('Y-m-d'), $endDate->format('Y-m-d')])
             ->pluck('date')->toArray();
 
+        $employeeIds = $employees->pluck('id');
+        $startDateStr = $startDate->format('Y-m-d');
+        $endDateStr = $endDate->format('Y-m-d');
+
+        $allAttendances = AttendanceEmployee::whereIn('employee_id', $employeeIds)
+            ->whereBetween('date', [$startDateStr, $endDateStr])
+            ->get()
+            ->groupBy('employee_id');
+
+        $allLeaves = Leave::whereIn('employee_id', $employeeIds)
+            ->where('status', 'Approved')
+            ->where(function ($q) use ($startDateStr, $endDateStr) {
+                $q->whereBetween('start_date', [$startDateStr, $endDateStr])
+                    ->orWhereBetween('end_date', [$startDateStr, $endDateStr])
+                    ->orWhere(function ($q2) use ($startDateStr, $endDateStr) {
+                        $q2->where('start_date', '<=', $startDateStr)
+                            ->where('end_date', '>=', $endDateStr);
+                    });
+            })
+            ->get()
+            ->groupBy('employee_id');
+
         $summaryData = [];
         $departmentSummary = [];
 
@@ -84,19 +106,10 @@ class MonthlyWorkingHoursController extends Controller
             $weeklyOffsCount = 0;
             $approvedLeaveDays = 0;
             
-            $attendances = AttendanceEmployee::where('employee_id', $employee->id)
-                ->whereBetween('date', [$startDate->format('Y-m-d'), $endDate->format('Y-m-d')])
-                ->get()->keyBy('date');
-
-            $leaves = Leave::where('employee_id', $employee->id)
-                ->where('status', 'Approved')
-                ->where(function($q) use ($startDate, $endDate) {
-                    $q->whereBetween('start_date', [$startDate->format('Y-m-d'), $endDate->format('Y-m-d')])
-                      ->orWhereBetween('end_date', [$startDate->format('Y-m-d'), $endDate->format('Y-m-d')]);
-                })->get();
+            $attendances = ($allAttendances->get($employee->id) ?? collect())->keyBy('date');
 
             $leaveDates = [];
-            foreach ($leaves as $leave) {
+            foreach ($allLeaves->get($employee->id, collect()) as $leave) {
                 $start = Carbon::parse($leave->start_date);
                 $end = Carbon::parse($leave->end_date);
                 for ($d = $start; $d->lte($end); $d->addDay()) {
@@ -124,6 +137,11 @@ class MonthlyWorkingHoursController extends Controller
                     $clockIn = $attendance->clock_in;
                     $clockOut = $attendance->clock_out;
                     $status = $attendance->status;
+
+                    // Exclude today until the employee has punched out
+                    if ($dateStr === Carbon::today()->format('Y-m-d') && $clockOut == '00:00:00') {
+                        continue;
+                    }
 
                     $isHalfDay = (strpos($status, 'Half Day') !== false);
                     $isAbsent = ($status == 'Absent');

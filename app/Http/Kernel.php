@@ -42,6 +42,7 @@ class Kernel extends HttpKernel
             \App\Http\Middleware\VerifyCsrfToken::class,
             \Illuminate\Routing\Middleware\SubstituteBindings::class,
             \App\Http\Middleware\CheckSessionVersion::class,
+            \App\Http\Middleware\ExtendEmployeeSession::class,
             \App\Http\Middleware\getPusherSettings::class,
         ],
 

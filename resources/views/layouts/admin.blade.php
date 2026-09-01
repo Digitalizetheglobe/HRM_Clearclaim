@@ -330,7 +330,56 @@
     </script> --}}
 
     <script>
-        const dataTable = new simpleDatatables.DataTable("#pc-dt-simple");
+        if (document.querySelector('#pc-dt-simple')) {
+            const dataTable = new simpleDatatables.DataTable("#pc-dt-simple");
+        }
+    </script>
+
+    <script>
+        // Gracefully recover from expired CSRF/session instead of showing the 419 page
+        (function () {
+            function refreshCsrfToken(token) {
+                if (!token) return;
+                var meta = document.querySelector('meta[name="csrf-token"]');
+                if (meta) meta.setAttribute('content', token);
+            }
+
+            if (window.jQuery) {
+                jQuery(document).ajaxError(function (_event, xhr) {
+                    if (xhr.status === 419) {
+                        var data = xhr.responseJSON || {};
+                        if (data.reload) {
+                            window.location.reload();
+                        }
+                    }
+                });
+            }
+
+            var originalFetch = window.fetch;
+            if (originalFetch) {
+                window.fetch = function () {
+                    return originalFetch.apply(this, arguments).then(function (response) {
+                        if (response.status === 419) {
+                            window.location.reload();
+                        }
+                        return response;
+                    });
+                };
+            }
+
+            @auth
+            setInterval(function () {
+                if (document.visibilityState !== 'visible') return;
+                fetch('{{ route('session.ping') }}', {
+                    headers: { 'X-Requested-With': 'XMLHttpRequest' },
+                    credentials: 'same-origin'
+                })
+                .then(function (r) { return r.json(); })
+                .then(function (data) { refreshCsrfToken(data.token); })
+                .catch(function () {});
+            }, 20 * 60 * 1000);
+            @endauth
+        })();
     </script>
 
     <script>

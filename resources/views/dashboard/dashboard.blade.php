@@ -1591,7 +1591,7 @@ function updateProgressBarRealTime() {
                         .catch(err => {
                             console.error('Background refresh error:', err);
                         });
-                    }, 120000); // Refresh every 2 minutes in background
+                    }, 300000); // Refresh every 5 minutes in background
                 }
             }
         }

@@ -146,80 +146,17 @@ class AttendanceEmployeeController extends Controller
                     );
                 }
 
-                $attendanceEmployee = $attendanceEmployee->get();
+                $attendanceEmployee = $attendanceEmployee->with(['employee.department'])->get();
             }
 
-            // Process records with missing clock-out based on date
+            // Display-only adjustments for missing punch-outs (DB updates run via processMissingPunchOuts)
             $today = Carbon::today()->format('Y-m-d');
             foreach ($attendanceEmployee as $attendance) {
                 if ($attendance->clock_out == '00:00:00' && $attendance->clock_in != '00:00:00') {
                     $attendanceDate = Carbon::parse($attendance->date)->format('Y-m-d');
-                    
-                    if ($attendanceDate < $today) {
-                        // Past date: Apply missing punch-out logic (Half Day with calculated clock out)
-                        try {
-                            // Parse clock_in time
-                            $clockInTime = Carbon::parse($attendance->date . ' ' . $attendance->clock_in);
-                            
-                            // Add 4.5 hours (4 hours 30 minutes) to clock_in
-                            $calculatedClockOut = $clockInTime->copy()->addHours(4)->addMinutes(30);
-                            
-                            // If calculated time goes past midnight (next day), cap it at end of day (23:59:59)
-                            $endOfDay = Carbon::parse($attendance->date . ' 23:59:59');
-                            if ($calculatedClockOut->gt($endOfDay)) {
-                                $calculatedClockOut = $endOfDay;
-                            }
-                            
-                            // Format as H:i:s
-                            $clockOutTime = $calculatedClockOut->format('H:i:s');
-                            
-                            // Check if this was a late mark
-                            $isLateMark = AttendanceEmployee::isLateMarkForEmployee($attendance->employee_id, $attendance->clock_in);
-                            $lateMarksCount = $this->countLateMarksInMonth($attendance->employee_id, $attendance->date);
-                            
-                            // Update attendance record
-                            $attendance->clock_out = $clockOutTime;
-                            
-                            // Set status based on late mark count
-                            if ($isLateMark && $lateMarksCount > AttendanceEmployee::MAX_LATE_MARKS_PER_MONTH) {
-                                $attendance->status = AttendanceEmployee::STATUS_HALF_DAY_LATE;
-                            } else {
-                                $attendance->status = AttendanceEmployee::STATUS_HALF_DAY_PUNCH_MISS;
-                            }
-                            
-                            // Calculate early leaving (if applicable)
-                            $endTime = Utility::getValByName('company_end_time');
-                            if ($endTime) {
-                                $expectedEndTime = Carbon::parse($attendance->date . ' ' . $endTime);
-                                if ($calculatedClockOut->lt($expectedEndTime)) {
-                                    $totalEarlyLeavingSeconds = $expectedEndTime->diffInSeconds($calculatedClockOut);
-                                    $hours = floor($totalEarlyLeavingSeconds / 3600);
-                                    $mins = floor(($totalEarlyLeavingSeconds % 3600) / 60);
-                                    $secs = $totalEarlyLeavingSeconds % 60;
-                                    $attendance->early_leaving = sprintf('%02d:%02d:%02d', $hours, $mins, $secs);
-                                } else {
-                                    $attendance->early_leaving = '00:00:00';
-                                }
-                            }
-                            
-                            // Set overtime to 00:00:00 (no overtime for half day)
-                            $attendance->overtime = '00:00:00';
-                            
-                            $attendance->save();
-                        } catch (\Exception $e) {
-                            \Log::error('Error processing missing punch-out for attendance ID ' . $attendance->id . ': ' . $e->getMessage());
-                            // If error occurs, at least set status to Single Punch In
-                            if ($attendance->status != AttendanceEmployee::STATUS_SINGLE_PUNCH) {
-                                $attendance->status = AttendanceEmployee::STATUS_SINGLE_PUNCH;
-                                $attendance->save();
-                            }
-                        }
-                    } else {
-                        // Current date: Keep as "Single Punch In"
-                        if ($attendance->status != AttendanceEmployee::STATUS_SINGLE_PUNCH) {
-                            $attendance->status = AttendanceEmployee::STATUS_SINGLE_PUNCH;
-                            $attendance->save();
-                        }
+
+                    if ($attendanceDate === $today) {
+                        $attendance->status = AttendanceEmployee::STATUS_SINGLE_PUNCH;
                     }
                 }
             }
@@ -2527,7 +2464,6 @@ class AttendanceEmployeeController extends Controller
                     }
                     try {
                         $date = Carbon::parse($requestDate)->format('Y-m-d');
-                        \Log::info('Attendance Overview - Date selected: ' . $date . ', Employee ID: ' . $employeeId . ', Request date: ' . $requestDate);
                     } catch (\Exception $e) {
                         return response()->json([
                             'success' => false,
@@ -2537,14 +2473,10 @@ class AttendanceEmployeeController extends Controller
                     }
                 }
     
-                \Log::info('Attendance Overview - Querying for date: ' . $date . ', Employee ID: ' . $employeeId);
-                
                 // Query attendance table for the specific date
                 $attendance = AttendanceEmployee::where('employee_id', $employeeId)
                     ->where('date', $date)
                     ->first();
-    
-                \Log::info('Attendance Overview - Found attendance: ' . ($attendance ? 'Yes' : 'No') . ' for date: ' . $date);
     
                 if ($attendance) {
                     // Format clock_in and clock_out times
@@ -2818,6 +2750,12 @@ class AttendanceEmployeeController extends Controller
                 $clockIn = $attendance->clock_in;
                 $clockOut = $attendance->clock_out;
                 $status = $attendance->status;
+
+                // Exclude today until the employee has punched out
+                if ($dateStr === Carbon::today()->format('Y-m-d') && $clockOut == '00:00:00') {
+                    $current->addDay();
+                    continue;
+                }
 
                 $isHalfDay = (strpos($status, 'Half Day') !== false);
                 $isAbsent = ($status == 'Absent');
