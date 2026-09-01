@@ -1,4 +1,5 @@
 @extends('layouts.admin')
+
 @section('page-title')
     {{ __('Attendance Regularisation') }}
 @endsection
@@ -65,7 +66,7 @@
                         </form>
                     </div>
                     <div class="table-responsive">
-                        <table class="table" id="pc-dt-simple">
+                        <table class="table" id="regularisation-dt">
                             <thead>
                                 <tr>
                                     @if ((\Auth::user()->type == 'company' || \Auth::user()->type == 'hr') && $status == 'Pending')
@@ -94,20 +95,20 @@
                                 @forelse ($regularisations as $regularisation)
                                     <tr>
                                         @if ((\Auth::user()->type == 'company' || \Auth::user()->type == 'hr') && $status == 'Pending')
-                                            <td>
+                                            <td data-content="">
                                                 <div class="form-check">
                                                     <input class="form-check-input request-checkbox" type="checkbox" value="{{ $regularisation->id }}">
                                                 </div>
                                             </td>
                                         @endif
                                         @if (\Auth::user()->type != 'employee')
-                                            <td>{{ $regularisation->employee->name ?? '-' }}</td>
+                                            <td data-content="{{ $regularisation->employee->name ?? '-' }}">{{ $regularisation->employee->name ?? '-' }}</td>
                                         @endif
-                                        <td>{{ \Auth::user()->dateFormat($regularisation->date) }}</td>
-                                        <td>{{ date('h:i A', strtotime($regularisation->punch_in_time)) }}</td>
-                                        <td>{{ date('h:i A', strtotime($regularisation->punch_out_time)) }}</td>
-                                        <td>{{ $regularisation->reason }}</td>
-                                        <td>
+                                        <td data-content="">{{ \Auth::user()->dateFormat($regularisation->date) }}</td>
+                                        <td data-content="">{{ date('h:i A', strtotime($regularisation->punch_in_time)) }}</td>
+                                        <td data-content="">{{ date('h:i A', strtotime($regularisation->punch_out_time)) }}</td>
+                                        <td data-content="">{{ $regularisation->reason }}</td>
+                                        <td data-content="">
                                             @if ($regularisation->status == 'Pending')
                                                 <span class="badge bg-warning">{{ __('Pending') }}</span>
                                             @elseif ($regularisation->status == 'Approved')
@@ -117,10 +118,10 @@
                                             @endif
                                         </td>
                                         @if ($status != 'Pending')
-                                            <td>{{ $regularisation->approver->name ?? '-' }}</td>
+                                            <td data-content="">{{ $regularisation->approver->name ?? '-' }}</td>
                                         @endif
-                                        <td>{{ Str::limit($regularisation->remarks, 30) }}</td>
-                                        <td>
+                                        <td data-content="">{{ Str::limit($regularisation->remarks, 30) }}</td>
+                                        <td data-content="">
                                             <div class="action-btn bg-info ms-2">
                                                 <a href="{{ route('attendance-regularisation.show', $regularisation->id) }}" 
                                                    class="mx-3 btn btn-sm align-items-center" 
@@ -373,6 +374,8 @@
 @push('script-page')
     <script>
         $(document).ready(function() {
+            const dataTable = new simpleDatatables.DataTable("#regularisation-dt");
+
             var currentRegularisationId = null;
             var selectedIds = new Set();
 
