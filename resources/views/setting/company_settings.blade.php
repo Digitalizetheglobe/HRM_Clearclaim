@@ -236,7 +236,7 @@
                                 <div class="float-end"><i class="ti ti-chevron-right"></i></div>
                             </a>
 
-                            @if (Auth::user()->type == 'company')
+                            @if (Auth::user()->hasCompanyAccess())
                                 <a href="#zoom-meeting-settings" id="zoom-meeting-tab"
                                     class="list-group-item list-group-item-action border-0">{{ __('Zoom Meeting Settings') }}
                                     <div class="float-end"><i class="ti ti-chevron-right"></i></div>
@@ -1163,7 +1163,7 @@
                     </div>
 
 
-                    @if (Auth::user()->type == 'company')
+                    @if (Auth::user()->hasCompanyAccess())
                         <div class="" id="zoom-meeting-settings">
                             <div class="card">
                                 <div class="card-header">

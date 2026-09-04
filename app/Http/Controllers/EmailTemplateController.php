@@ -15,7 +15,7 @@ class EmailTemplateController extends Controller
     {
         $usr = \Auth::user();
 
-        if ($usr->type == 'super admin' || $usr->type == 'company') {
+        if ($usr->type == 'super admin' || $usr->hasCompanyAccess()) {
             $EmailTemplates = EmailTemplate::all();
 
             return view('email_templates.index', compact('EmailTemplates'));
@@ -217,7 +217,7 @@ class EmailTemplateController extends Controller
 
         $usr = \Auth::user();
 
-        if($usr->type == 'super admin' || $usr->type == 'company')
+        if($usr->type == 'super admin' || $usr->hasCompanyAccess())
         {
             UserEmailTemplate::where('user_id', $usr->id)->update([ 'is_active' => 0]);
             foreach ($post as $key => $value) {

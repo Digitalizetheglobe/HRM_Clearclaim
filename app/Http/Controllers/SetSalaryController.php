@@ -18,6 +18,7 @@ use App\Models\IncrementLetter;
 use App\Models\SalaryIncrement;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Crypt;
+use App\Support\HrmActionLogger;
 use Barryvdh\DomPDF\Facade\Pdf;
 
 class SetSalaryController extends Controller
@@ -213,6 +214,17 @@ class SetSalaryController extends Controller
         }
         $employee->fill($input)->save();
 
+        HrmActionLogger::record(
+            'set_salary',
+            'updated',
+            (\Auth::user()->name) . ' updated salary for ' . $employee->name . ' to ' . $employee->salary,
+            [
+                'employee_id' => $employee->id,
+                'employee_name' => $employee->name,
+                'properties' => ['salary' => $employee->salary],
+            ]
+        );
+
         return redirect()->back()->with('success', 'Employee Salary Updated.');
     }
 
@@ -268,6 +280,23 @@ class SetSalaryController extends Controller
         // Update employee salary
         $employee->salary = $new_salary;
         $employee->save();
+
+        HrmActionLogger::record(
+            'set_salary',
+            'incremented',
+            (\Auth::user()->name) . ' incremented salary for ' . $employee->name . ' from ' . $old_salary . ' to ' . $new_salary,
+            [
+                'employee_id' => $employee->id,
+                'employee_name' => $employee->name,
+                'subject_id' => $increment->id,
+                'properties' => [
+                    'old_salary' => $old_salary,
+                    'new_salary' => $new_salary,
+                    'increment_amount' => $increment_amount,
+                    'effective_date' => $request->month_of_effective_date,
+                ],
+            ]
+        );
 
         return redirect()->back()->with('success', 'Salary incremented successfully.');
     }

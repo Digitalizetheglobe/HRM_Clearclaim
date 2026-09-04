@@ -16,7 +16,7 @@ class TicketController extends Controller
 {
     public function index()
     {
-        if (\Auth::user()->type == 'company' || \Auth::user()->type == 'em') {
+        if (\Auth::user()->hasCompanyAccess() || \Auth::user()->type == 'em') {
             $countTicket      = Ticket::where('created_by', '=', \Auth::user()->creatorId())->count();
             $countOpenTicket  = Ticket::where('status', '=', 'open')->where('created_by', '=', \Auth::user()->creatorId())->count();
             $countonholdTicket  = Ticket::where('status', '=', 'onhold')->where('created_by', '=', \Auth::user()->creatorId())->count();

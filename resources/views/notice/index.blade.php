@@ -34,7 +34,7 @@
                             <tr>
                                 <th>{{ __('Title') }}</th>
                                 <th>{{ __('Description') }}</th>
-                                @if(Auth::user()->type == 'company')
+                                @if(Auth::user()->hasCompanyAccess())
                                     <th>{{ __('Start Date') }}</th>
                                     <th>{{ __('End Date') }}</th>
                                 @endif
@@ -46,7 +46,7 @@
                                 <tr>
                                     <td>{{ $notice->title }}</td>
                                     <td>{{ Str::limit($notice->description, 50) }}</td>
-                                    @if(Auth::user()->type == 'company')
+                                    @if(Auth::user()->hasCompanyAccess())
                                         <td>{{ $notice->notice_startdate ? \Carbon\Carbon::parse($notice->notice_startdate)->format('d M Y') : '-' }}</td>
                                         <td>{{ $notice->notice_enddate ? \Carbon\Carbon::parse($notice->notice_enddate)->format('d M Y') : '-' }}</td>
                                     @endif
@@ -124,7 +124,7 @@
                         <p>{{ $notice->description }}</p>
                     </div>
                 </div>
-                @if(Auth::user()->type == 'company')
+                @if(Auth::user()->hasCompanyAccess())
                     <div class="row">
                         <div class="col-md-6">
                             <h6 class="fw-bold">{{ __('Start Date') }}</h6>

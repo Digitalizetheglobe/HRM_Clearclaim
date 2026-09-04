@@ -16,7 +16,7 @@
                 <i class="ti ti-plus"></i> {{ __('Create') }}
             </a>
         </div>
-    @elseif (\Auth::user()->type == 'company' || \Auth::user()->type == 'hr')
+    @elseif (\Auth::user()->hasCompanyAccess() || \Auth::user()->type == 'hr')
         <div class="float-end">
             <button type="button" class="btn btn-sm btn-success d-none" id="bulkApproveBtn">
                 <i class="ti ti-check"></i> {{ __('Bulk Approve') }}
@@ -69,7 +69,7 @@
                         <table class="table" id="regularisation-dt">
                             <thead>
                                 <tr>
-                                    @if ((\Auth::user()->type == 'company' || \Auth::user()->type == 'hr') && $status == 'Pending')
+                                    @if ((\Auth::user()->hasCompanyAccess() || \Auth::user()->type == 'hr') && $status == 'Pending')
                                         <th width="50px" data-sortable="false">
                                             <div class="form-check">
                                                 <input class="form-check-input" type="checkbox" id="selectAll">
@@ -94,7 +94,7 @@
                             <tbody>
                                 @forelse ($regularisations as $regularisation)
                                     <tr>
-                                        @if ((\Auth::user()->type == 'company' || \Auth::user()->type == 'hr') && $status == 'Pending')
+                                        @if ((\Auth::user()->hasCompanyAccess() || \Auth::user()->type == 'hr') && $status == 'Pending')
                                             <td data-content="">
                                                 <div class="form-check">
                                                     <input class="form-check-input request-checkbox" type="checkbox" value="{{ $regularisation->id }}">
@@ -131,7 +131,7 @@
                                                 </a>
                                             </div>
                                             
-                                            @if (\Auth::user()->type == 'company' || \Auth::user()->type == 'hr')
+                                            @if (\Auth::user()->hasCompanyAccess() || \Auth::user()->type == 'hr')
                                                 @if ($regularisation->status == 'Pending')
                                                     <div class="action-btn bg-success ms-2">
                                                         <a href="#" 

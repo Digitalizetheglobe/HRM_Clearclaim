@@ -33,7 +33,7 @@
             <i class="ti ti-plus"></i>
         </a>
     @endcan
-    @if (\Auth::user()->type == 'company' || \Auth::user()->type == 'hr' || (isset($isManager) && $isManager))
+    @if (\Auth::user()->hasCompanyAccess() || \Auth::user()->type == 'hr' || (isset($isManager) && $isManager))
         <button type="button" class="btn btn-sm btn-success d-none ms-1" id="bulkApproveBtn">
             <i class="ti ti-check"></i> {{ __('Bulk Approve') }}
         </button>
@@ -150,7 +150,7 @@
                         <table class="table" id="pc-dt-simple">
                             <thead>
                                 <tr>
-                                    @if ((\Auth::user()->type == 'company' || \Auth::user()->type == 'hr' || (isset($isManager) && $isManager)) && $currentStatus == 'Pending')
+                                    @if ((\Auth::user()->hasCompanyAccess() || \Auth::user()->type == 'hr' || (isset($isManager) && $isManager)) && $currentStatus == 'Pending')
                                         <th width="50px" data-sortable="false">
                                             <div class="form-check">
                                                 <input class="form-check-input" type="checkbox" id="selectAll">
@@ -178,7 +178,7 @@
                             <tbody>
                                 @foreach ($leaves as $leave)
                                     <tr>
-                                        @if ((\Auth::user()->type == 'company' || \Auth::user()->type == 'hr' || (isset($isManager) && $isManager)) && $currentStatus == 'Pending')
+                                        @if ((\Auth::user()->hasCompanyAccess() || \Auth::user()->type == 'hr' || (isset($isManager) && $isManager)) && $currentStatus == 'Pending')
                                             <td>
                                                 <div class="form-check">
                                                     <input class="form-check-input request-checkbox" type="checkbox" value="{{ $leave->id }}">

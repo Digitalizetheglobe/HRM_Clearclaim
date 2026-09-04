@@ -17,7 +17,7 @@ class EmployeeExpenseController extends Controller
     public function index()
     {
         // Redirect HR/Company users to their approval page
-        if (Auth::user()->type == 'company' || Auth::user()->type == 'hr') {
+        if (Auth::user()->hasCompanyAccess() || Auth::user()->type == 'hr') {
             return redirect()->route('hr.expenses.index');
         }
 

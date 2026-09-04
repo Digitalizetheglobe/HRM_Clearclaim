@@ -17,6 +17,7 @@ use Spatie\GoogleCalendar\Event as GoogleEvent;
 use App\Models\EmployeeLeaveBalance;
 use App\Models\User;
 use App\Notifications\LeaveActionNotification;
+use App\Support\HrmActionLogger;
 
 class LeaveController extends Controller
 {
@@ -46,17 +47,16 @@ class LeaveController extends Controller
                     $proRataLeaves = $this->calculateProRataLeaves($employee->id);
                     $now = now();
                     
-                    // Monthly limit: 2 paid leaves per month
+                    // Monthly limit: 2 paid leaves per month (pending counts toward the cap)
                     $monthlyLimit = 2;
                     
-                    // This month paid leaves used (approved)
-                    $thisMonthPaidLeaves = LocalLeave::where('employee_id', $employee->id)
-                        ->where('leave_type_id', $leave_type->id)
-                        ->where('is_paid', true)
-                        ->where('status', 'Approved')
-                        ->whereYear('start_date', $now->year)
-                        ->whereMonth('start_date', $now->month)
-                        ->sum('total_leave_days');
+                    $thisMonthPaidLeaves = $this->paidLeaveDaysInMonth(
+                        $employee->id,
+                        $leave_type->id,
+                        $now->year,
+                        $now->month,
+                        ['Approved', 'Pending']
+                    );
                     
                     // This month total leaves used (paid + LWP, approved)
                     $thisMonthTotalLeaves = LocalLeave::where('employee_id', $employee->id)
@@ -185,13 +185,13 @@ class LeaveController extends Controller
             if (Auth::user()->type == 'employee' && $employees) {
                 $leave_type = $this->getDefaultLeaveType();
                 $now = now();
-                $monthlyPaidLeavesUsed = LocalLeave::where('employee_id', $employees->id)
-                    ->where('leave_type_id', $leave_type->id)
-                    ->where('is_paid', true)
-                    ->where('status', 'Approved')
-                    ->whereYear('start_date', $now->year)
-                    ->whereMonth('start_date', $now->month)
-                    ->sum('total_leave_days');
+                $monthlyPaidLeavesUsed = $this->paidLeaveDaysInMonth(
+                    $employees->id,
+                    $leave_type->id,
+                    $now->year,
+                    $now->month,
+                    ['Approved', 'Pending']
+                );
                 
                 $monthlyLimit = 2;
                 $monthlyLeaveInfo = [
@@ -227,6 +227,26 @@ class LeaveController extends Controller
         }
         
         return $defaultLeaveType;
+    }
+
+    /**
+     * Paid leave days already taken/requested in a given month.
+     * Apply/edit should pass Approved + Pending; approval should pass Approved only.
+     */
+    private function paidLeaveDaysInMonth($employeeId, $leaveTypeId, $year, $month, array $statuses = ['Approved', 'Pending'], $excludeId = null)
+    {
+        $query = LocalLeave::where('employee_id', $employeeId)
+            ->where('leave_type_id', $leaveTypeId)
+            ->where('is_paid', true)
+            ->whereIn('status', $statuses)
+            ->whereYear('start_date', $year)
+            ->whereMonth('start_date', $month);
+
+        if ($excludeId) {
+            $query->where('id', '!=', $excludeId);
+        }
+
+        return (float) $query->sum('total_leave_days');
     }
 
     /**
@@ -377,19 +397,19 @@ class LeaveController extends Controller
         // ────────────────────────────────────────────────────────────────────
 
         // ── Monthly Paid Leave Limit Check ──────────────────────────────────
-        // Count both Approved AND Pending paid leaves this month so a second
-        // pending request cannot bypass the limit.
+        // Cap is 2 paid days per leave month (start_date), counting Approved
+        // AND Pending so a 3rd paid request cannot be submitted.
         $now        = now();
         $leave_type = $this->getDefaultLeaveType();
-        // $monthlyLimit already set above = 2
+        $leaveStart = \Carbon\Carbon::parse($request->start_date);
 
-        $monthlyPaidLeavesUsed = LocalLeave::where('employee_id', $request->employee_id)
-            ->where('leave_type_id', $leave_type->id)
-            ->where('is_paid', true)
-            ->whereIn('status', ['Approved', 'Pending'])   // include pending too
-            ->whereYear('start_date', $now->year)
-            ->whereMonth('start_date', $now->month)
-            ->sum('total_leave_days');
+        $monthlyPaidLeavesUsed = $this->paidLeaveDaysInMonth(
+            $request->employee_id,
+            $leave_type->id,
+            $leaveStart->year,
+            $leaveStart->month,
+            ['Approved', 'Pending']
+        );
 
         $remainingMonthlyPaid = max(0, $monthlyLimit - $monthlyPaidLeavesUsed);
 
@@ -484,6 +504,24 @@ class LeaveController extends Controller
         $leave->created_by = \Auth::user()->creatorId();
         $leave->save();
 
+        HrmActionLogger::record(
+            'leave',
+            'applied',
+            (\Auth::user()->name) . ' applied leave from ' . $leave->start_date . ' to ' . $leave->end_date,
+            [
+                'employee_id' => $leave->employee_id,
+                'subject_type' => LocalLeave::class,
+                'subject_id' => $leave->id,
+                'properties' => [
+                    'start_date' => $leave->start_date,
+                    'end_date' => $leave->end_date,
+                    'days' => $leave->total_leave_days,
+                    'type' => $isPaidLeave ? 'Paid' : 'LOP',
+                    'status' => 'Pending',
+                ],
+            ]
+        );
+
         // Google calendar sync
         if ($request->get('synchronize_type') == 'google_calender') {
             $type = 'leave';
@@ -504,7 +542,7 @@ class LeaveController extends Controller
         
         // Also include the creator if they are company type
         $creator = User::find(\Auth::user()->creatorId());
-        if ($creator && $creator->type == 'company') {
+        if ($creator && $creator->hasCompanyAccess()) {
             $companyAndHrUsers->push($creator);
         }
         
@@ -672,6 +710,36 @@ class LeaveController extends Controller
                     $total_leave_days = $startDate->diff($endDate)->days;
                 }
 
+                $monthlyLimit = 2;
+                $isPaidSelection = ($request->leave_type_selection == 'paid');
+                if ($isPaidSelection) {
+                    if ($total_leave_days > $monthlyLimit) {
+                        return redirect()->back()->with('error',
+                            __('You cannot apply for more than ' . $monthlyLimit . ' paid leave days at a time. Please apply for max ' . $monthlyLimit . ' days or select LOP.')
+                        );
+                    }
+                    $leaveStart = \Carbon\Carbon::parse($request->start_date);
+                    $monthlyPaidLeavesUsed = $this->paidLeaveDaysInMonth(
+                        $employeeId,
+                        $leave_type->id,
+                        $leaveStart->year,
+                        $leaveStart->month,
+                        ['Approved', 'Pending'],
+                        $leave->id
+                    );
+                    $remainingMonthlyPaid = max(0, $monthlyLimit - $monthlyPaidLeavesUsed);
+                    if ($monthlyPaidLeavesUsed >= $monthlyLimit) {
+                        return redirect()->back()->with('error',
+                            __('You have already used all ' . $monthlyLimit . ' paid leaves this month. Please select LOP (Loss of Pay).')
+                        );
+                    }
+                    if (($monthlyPaidLeavesUsed + $total_leave_days) > $monthlyLimit) {
+                        return redirect()->back()->with('error',
+                            __('You can only take ' . $remainingMonthlyPaid . ' more paid leave day(s) this month (limit: ' . $monthlyLimit . '). Please reduce the days or select LOP for the extra days.')
+                        );
+                    }
+                }
+
                 // Calculate pro-rata leave entitlement
                 $proRataLeaves = $this->calculateProRataLeaves($employeeId);
                 
@@ -745,6 +813,21 @@ class LeaveController extends Controller
     {
         if (\Auth::user()->can('Delete Leave')) {
             if ($leave->created_by == \Auth::user()->creatorId()) {
+                $emp = Employee::find($leave->employee_id);
+                HrmActionLogger::record(
+                    'leave',
+                    'deleted',
+                    (\Auth::user()->name) . ' deleted leave for ' . ($emp->name ?? 'employee') . ' (' . $leave->start_date . ' to ' . $leave->end_date . ')',
+                    [
+                        'employee_id' => $leave->employee_id,
+                        'employee_name' => $emp->name ?? null,
+                        'subject_id' => $leave->id,
+                        'properties' => [
+                            'start_date' => $leave->start_date,
+                            'end_date' => $leave->end_date,
+                        ],
+                    ]
+                );
                 $leave->delete();
 
                 return redirect()->route('leave.index')->with('success', __('Leave successfully deleted.'));
@@ -843,16 +926,16 @@ class LeaveController extends Controller
         if ($leave->status == 'Approved') {
             $total_leave_days = $leave->total_leave_days;
             
-            // Check monthly paid leaves limit (only 2 paid leaves per month allowed)
-            $now = now();
-            $monthlyPaidLeavesUsed = LocalLeave::whereNotIn('id', [$leave->id])
-                ->where('employee_id', $leave->employee_id)
-                ->where('leave_type_id', $leave->leave_type_id)
-                ->where('is_paid', true)
-                ->where('status', 'Approved')
-                ->whereYear('start_date', $now->year)
-                ->whereMonth('start_date', $now->month)
-                ->sum('total_leave_days');
+            // Check monthly paid leaves limit against the leave's month (not today)
+            $leaveStart = \Carbon\Carbon::parse($leave->start_date);
+            $monthlyPaidLeavesUsed = $this->paidLeaveDaysInMonth(
+                $leave->employee_id,
+                $leave->leave_type_id,
+                $leaveStart->year,
+                $leaveStart->month,
+                ['Approved'],
+                $leave->id
+            );
 
             $monthlyLimit = 2;
             // Determine if this leave should be paid or LOP
@@ -884,6 +967,27 @@ class LeaveController extends Controller
         }
         
         $leave->save();
+
+        $emp = Employee::find($leave->employee_id);
+        $actionKey = in_array($leave->status, ['Reject', 'Rejected']) ? 'rejected' : (strtolower($leave->status) === 'approved' ? 'approved' : 'updated');
+        HrmActionLogger::record(
+            'leave',
+            $actionKey,
+            (\Auth::user()->name) . ' ' . $actionKey . ' leave for ' . ($emp->name ?? 'employee') . ' from ' . $leave->start_date . ' to ' . $leave->end_date,
+            [
+                'employee_id' => $leave->employee_id,
+                'employee_name' => $emp->name ?? null,
+                'subject_type' => LocalLeave::class,
+                'subject_id' => $leave->id,
+                'properties' => [
+                    'status' => $leave->status,
+                    'start_date' => $leave->start_date,
+                    'end_date' => $leave->end_date,
+                    'days' => $leave->total_leave_days,
+                    'paid' => $leave->is_paid ? 'Paid' : 'LOP',
+                ],
+            ]
+        );
 
         // twilio
         $setting = Utility::settings(\Auth::user()->creatorId());
@@ -948,7 +1052,7 @@ class LeaveController extends Controller
             $isDepartmentManager = str_contains(strtolower($currentEmployee->designation->name), 'manager');
         }
 
-        if ($currentUser->type != 'company' && $currentUser->type != 'hr' && !$isDepartmentManager) {
+        if (!$currentUser->hasCompanyAccess() && $currentUser->type != 'hr' && !$isDepartmentManager) {
             $errorMsg = __('Permission denied.');
             if ($request->ajax() || $request->wantsJson()) {
                 return response()->json(['success' => false, 'message' => $errorMsg], 403);
@@ -995,15 +1099,15 @@ class LeaveController extends Controller
             // Re-apply the logic from changeaction for 'Approved' status
             $total_leave_days = $leave->total_leave_days;
             
-            $now = now();
-            $monthlyPaidLeavesUsed = LocalLeave::whereNotIn('id', [$leave->id])
-                ->where('employee_id', $leave->employee_id)
-                ->where('leave_type_id', $leave->leave_type_id)
-                ->where('is_paid', true)
-                ->where('status', 'Approved')
-                ->whereYear('start_date', $now->year)
-                ->whereMonth('start_date', $now->month)
-                ->sum('total_leave_days');
+            $leaveStart = \Carbon\Carbon::parse($leave->start_date);
+            $monthlyPaidLeavesUsed = $this->paidLeaveDaysInMonth(
+                $leave->employee_id,
+                $leave->leave_type_id,
+                $leaveStart->year,
+                $leaveStart->month,
+                ['Approved'],
+                $leave->id
+            );
 
             $monthlyLimit = 2;
             $isPaidLeave = true;
@@ -1018,6 +1122,7 @@ class LeaveController extends Controller
             $leave->is_paid = $isPaidLeave;
             $leave->is_lop = !$isPaidLeave;
             
+            $now = now();
             $balance = EmployeeLeaveBalance::where('employee_id', $leave->employee_id)
                 ->where('leave_type_id', $leave->leave_type_id)
                 ->where('year', $now->year)
@@ -1030,6 +1135,18 @@ class LeaveController extends Controller
             }
             
             $leave->save();
+
+            HrmActionLogger::record(
+                'leave',
+                'approved',
+                (\Auth::user()->name) . ' bulk-approved leave from ' . $leave->start_date . ' to ' . $leave->end_date,
+                [
+                    'employee_id' => $leave->employee_id,
+                    'subject_type' => LocalLeave::class,
+                    'subject_id' => $leave->id,
+                    'properties' => ['status' => 'Approved', 'bulk' => true],
+                ]
+            );
 
             // notifications
             $setting = Utility::settings(\Auth::user()->creatorId());
@@ -1152,7 +1269,7 @@ class LeaveController extends Controller
         $managerDepartmentId = null;
         
         // Check if user has permission (Company user or HR department)
-        if ($currentUser->type != 'company' && 
+        if (!$currentUser->hasCompanyAccess() && 
             !($currentUser->type == 'employee' && $currentUser->employee && $currentUser->employee->department && strcasecmp($currentUser->employee->department->name, 'Human Resources') == 0)) {
             
             // Check if current user is a reporting manager or has Manager designation
@@ -1303,7 +1420,7 @@ class LeaveController extends Controller
         $managerDepartmentId = null;
         
         // Check if this is manager access
-        if ($currentUser->type != 'company' && 
+        if (!$currentUser->hasCompanyAccess() && 
             !($currentUser->type == 'employee' && $currentUser->employee && $currentUser->employee->department && strcasecmp($currentUser->employee->department->name, 'Human Resources') == 0)) {
             
             $currentEmployee = Employee::where('user_id', $currentUser->id)->first();

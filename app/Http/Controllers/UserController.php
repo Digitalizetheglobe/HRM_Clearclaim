@@ -32,7 +32,7 @@ class UserController extends Controller
     $user = \Auth::user();
 
     // Allow super admin without permission check
-    if ($user->type == 'super admin' || $user->can('Manage User')) {
+    if ($user->type == 'super admin' || $user->hasCompanyAccess() || $user->type == 'hr' || $user->can('Manage User')) {
 
         if ($user->type == 'super admin') {
             $users = User::where('created_by', '=', $user->creatorId())
@@ -159,6 +159,10 @@ class UserController extends Controller
                         ]
                     );
                     $user->assignRole($role_r);
+                    if ($role_r->name === 'super-admin') {
+                        Utility::syncSuperAdminRolePermissions(\Auth::user()->creatorId());
+                        $user->syncPermissions(\Spatie\Permission\Models\Permission::all());
+                    }
                 } else {
                     return redirect()->back()->with('error', __('Your user limit is over, Please upgrade plan.'));
                 }
@@ -230,6 +234,10 @@ class UserController extends Controller
             $user->fill($input)->save();
 
             $user->assignRole($role);
+            if ($role->name === 'super-admin') {
+                Utility::syncSuperAdminRolePermissions(\Auth::user()->creatorId());
+                $user->syncPermissions(\Spatie\Permission\Models\Permission::all());
+            }
         }
 
         return redirect()->route('user.index')->with('success', 'User successfully updated.');

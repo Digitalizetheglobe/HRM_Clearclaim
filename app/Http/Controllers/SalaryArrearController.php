@@ -7,12 +7,13 @@ use App\Models\Employee;
 use App\Models\Department;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
+use App\Support\HrmActionLogger;
 
 class SalaryArrearController extends Controller
 {
     public function index()
     {
-        if (\Auth::user()->can('Manage Set Salary') || \Auth::user()->type == 'company') {
+        if (\Auth::user()->can('Manage Set Salary') || \Auth::user()->hasCompanyAccess()) {
             $arrears = SalaryArrear::where('created_by', \Auth::user()->creatorId())
                 ->with('employee')
                 ->orderBy('created_at', 'desc')
@@ -26,7 +27,7 @@ class SalaryArrearController extends Controller
 
     public function store(Request $request)
     {
-        if (\Auth::user()->can('Manage Set Salary') || \Auth::user()->type == 'company') {
+        if (\Auth::user()->can('Manage Set Salary') || \Auth::user()->hasCompanyAccess()) {
             $request->validate([
                 'employee_id' => 'required|exists:employees,id',
                 'pending_month' => 'required|date',
@@ -46,6 +47,22 @@ class SalaryArrearController extends Controller
                 'created_by' => \Auth::user()->creatorId(),
             ]);
 
+            $emp = Employee::find($request->employee_id);
+            HrmActionLogger::record(
+                'salary_arrears',
+                'created',
+                (\Auth::user()->name) . ' added salary arrear for ' . ($emp->name ?? 'employee') . ' amount ' . $request->amount,
+                [
+                    'employee_id' => $request->employee_id,
+                    'employee_name' => $emp->name ?? null,
+                    'properties' => [
+                        'amount' => $request->amount,
+                        'pending_month' => $pendingMonth,
+                        'payment_month' => $paymentMonth,
+                    ],
+                ]
+            );
+
             return redirect()->route('salary-arrears.index')
                 ->with('success', __('Salary arrears added successfully.'));
         } else {
@@ -54,7 +71,7 @@ class SalaryArrearController extends Controller
     }
     public function createPopup(Request $request)
     {
-        if (\Auth::user()->can('Manage Set Salary') || \Auth::user()->type == 'company') {
+        if (\Auth::user()->can('Manage Set Salary') || \Auth::user()->hasCompanyAccess()) {
             $employee_id = $request->get('employee_id');
             $month = $request->get('month'); // Format: YYYY-MM
             
@@ -73,7 +90,7 @@ class SalaryArrearController extends Controller
 
     public function storePopup(Request $request)
     {
-        if (\Auth::user()->can('Manage Set Salary') || \Auth::user()->type == 'company') {
+        if (\Auth::user()->can('Manage Set Salary') || \Auth::user()->hasCompanyAccess()) {
             $request->validate([
                 'employee_id' => 'required|exists:employees,id',
                 'payment_month' => 'required|date_format:Y-m',
@@ -158,10 +175,22 @@ class SalaryArrearController extends Controller
 
     public function destroy($id)
     {
-        if (\Auth::user()->can('Manage Set Salary') || \Auth::user()->type == 'company') {
+        if (\Auth::user()->can('Manage Set Salary') || \Auth::user()->hasCompanyAccess()) {
             $arrear = SalaryArrear::where('id', $id)
                 ->where('created_by', \Auth::user()->creatorId())
                 ->firstOrFail();
+
+            $emp = Employee::find($arrear->employee_id);
+            HrmActionLogger::record(
+                'salary_arrears',
+                'deleted',
+                (\Auth::user()->name) . ' deleted salary arrear for ' . ($emp->name ?? 'employee'),
+                [
+                    'employee_id' => $arrear->employee_id,
+                    'employee_name' => $emp->name ?? null,
+                    'properties' => ['amount' => $arrear->amount],
+                ]
+            );
 
             $arrear->delete();
 

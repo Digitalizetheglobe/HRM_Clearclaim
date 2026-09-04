@@ -14,9 +14,9 @@
             <div class="card-body">
                 @php
                     $user = \Auth::user();
-                    $isManagerOrCompany = $user->type == 'company' || 
+                    $isManagerOrCompany = $user->hasCompanyAccess() || 
                                         ($user->type == 'employee' && $user->employee && $user->employee->designation && strcasecmp($user->employee->designation->name, 'Manager') == 0);
-                    $isHRUser = $user->type == 'company' || 
+                    $isHRUser = $user->hasCompanyAccess() || 
                                ($user->type == 'employee' && $user->employee && $user->employee->department && strcasecmp($user->employee->department->name, 'Human Resources') == 0);
                 @endphp
                 

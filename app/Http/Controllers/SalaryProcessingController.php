@@ -12,12 +12,13 @@ use Illuminate\Support\Facades\DB;
 use Carbon\Carbon;
 use Maatwebsite\Excel\Facades\Excel;
 use App\Exports\SalaryProcessingExport;
+use App\Support\HrmActionLogger;
 
 class SalaryProcessingController extends Controller
 {
     public function index(Request $request)
     {
-        if (\Auth::user()->can('Manage Pay Slip') || \Auth::user()->type == 'hr' || \Auth::user()->type == 'company') {
+        if (\Auth::user()->can('Manage Pay Slip') || \Auth::user()->type == 'hr' || \Auth::user()->hasCompanyAccess()) {
             // Month and year options for dropdown
             $monthOptions = [
                 '01' => 'JAN', '02' => 'FEB', '03' => 'MAR', '04' => 'APR',
@@ -364,7 +365,7 @@ class SalaryProcessingController extends Controller
 
     public function export(Request $request)
     {
-        if (\Auth::user()->can('Manage Pay Slip') || \Auth::user()->type == 'hr' || \Auth::user()->type == 'company') {
+        if (\Auth::user()->can('Manage Pay Slip') || \Auth::user()->type == 'hr' || \Auth::user()->hasCompanyAccess()) {
             $monthOptions = [
                 '01' => 'JAN', '02' => 'FEB', '03' => 'MAR', '04' => 'APR',
                 '05' => 'MAY', '06' => 'JUN', '07' => 'JUL', '08' => 'AUG',
@@ -402,6 +403,13 @@ class SalaryProcessingController extends Controller
             }
             
             $fileName = 'Salary_Processing_' . $monthOptions[$month] . '_' . $year . '.xlsx';
+
+            HrmActionLogger::record(
+                'salary_processing',
+                'exported',
+                (\Auth::user()->name) . ' exported salary processing for ' . $monthOptions[$month] . ' ' . $year,
+                ['properties' => ['month' => $month, 'year' => $year, 'file' => $fileName]]
+            );
             
             return Excel::download(new SalaryProcessingExport($salaryData), $fileName);
         } else {

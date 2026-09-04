@@ -66,7 +66,7 @@
     </div>
 </div>
 
-@if (Auth::user()->type == 'company' || Auth::user()->type == 'hr' || (isset($isDepartmentManager) && $isDepartmentManager))
+@if (Auth::user()->hasCompanyAccess() || Auth::user()->type == 'hr' || (isset($isDepartmentManager) && $isDepartmentManager))
     <div class="modal-footer">
         @if ($leave->status == 'Pending')
             <input type="submit" value="{{ __('Approved') }}" class="btn btn-success rounded" name="status">

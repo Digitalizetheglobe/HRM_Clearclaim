@@ -21,7 +21,7 @@ class NoticeController extends Controller
 
     public function create()
     {
-        if (\Auth::user()->type == 'company') {
+        if (\Auth::user()->hasCompanyAccess()) {
             return view('notice.create');
         } else {
             return response()->json(['error' => __('Permission Denied.')], 401);

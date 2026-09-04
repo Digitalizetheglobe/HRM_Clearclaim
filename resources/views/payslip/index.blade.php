@@ -10,7 +10,7 @@
 @endsection
 
 @section('content')
-   @if (\Auth::user()->type == 'company' || \Auth::user()->type == 'hr')
+   @if (\Auth::user()->hasCompanyAccess() || \Auth::user()->type == 'hr')
         <div class="col-sm-12 col-lg-12 col-xl-12 col-md-12 mt-4">
             <div class="card">
                 <div class="card-body">
@@ -74,20 +74,15 @@
                                     {{ Form::select('year', $year, date('Y'), ['class' => 'form-control year_date ']) }}
                                 </div>
                             </div>
-                            @if (Auth::user()->type == 'company' || Auth::user()->type == 'hr')
+                            @if (Auth::user()->hasCompanyAccess() || Auth::user()->type == 'hr')
                                 {{ Form::open(['route' => ['payslip.export'], 'method' => 'POST', 'id' => 'payslip_form']) }}
                                 <input type="hidden" name="filter_month" class="filter_month">
                                 <input type="hidden" name="filter_year" class="filter_year">
-                                <input type="submit" value="{{ __('Export') }}" class="btn btn-primary">
+                                <button type="submit" class="btn btn-sm btn-primary" data-bs-toggle="tooltip" title="{{ __('Export') }}">
+                                    <i class="ti ti-file-export"></i>
+                                </button>
                                 {{ Form::close() }}
                             @endif
-                            {{-- </div> --}}
-                            <div class="ml-2 float-end">
-                                @can('Create Pay Slip')
-                                    <input type="button" value="{{ __('Bulk Payment') }}" class="btn btn-primary"
-                                        style="margin-left: 5px" id="bulk_payment">
-                                @endcan
-                            </div>
                         </div>
                     </div>
                 </div>
@@ -181,14 +176,12 @@
                                 var payslip =
                                     '<a href="#" data-url="{{ url('payslip/pdf/') }}/' + id +
                                     '/' + datePicker +
-                                    '" data-size="md-pdf"  data-ajax-popup="true" class="btn btn-primary" data-title="{{ __('Employee Payslip') }}">' +
-                                    '{{ __('Payslip') }}' + '</a> ';
+                                    '" data-size="md-pdf"  data-ajax-popup="true" class="btn btn-sm btn-warning" data-bs-toggle="tooltip" title="{{ __('Payslip') }}" data-title="{{ __('Employee Payslip') }}">' +
+                                    '<i class="ti ti-file-text"></i></a> ';
                             }
 
                             if (status == "UnPaid" && data != 0) {
-                                clickToPaid = '<a href="{{ url('payslip/paysalary/') }}/' + id +
-                                    '/' + datePicker + '"  class="view-btn primary-bg btn-sm">' +
-                                    '{{ __('Click To Paid') }}' + '</a>  ';
+                                clickToPaid = '';
                             }
 
                             if (data != 0) {
@@ -200,21 +193,17 @@
                             }
 
                             if (data != 0 && status == "UnPaid") {
-                                edit =
-                                    '<a href="#" data-url="{{ url('payslip/editemployee/') }}/' +
-                                    payslip_id +
-                                    '"  data-ajax-popup="true" class="view-btn blue-bg" data-title="{{ __('Edit Employee salary') }}">' +
-                                    '{{ __('Edit') }}' + '</a>';
+                                edit = '';
                             }
 
                             var url = '{{ route('payslip.delete', ':id') }}';
                             url = url.replace(':id', payslip_id);
 
-                            @if (\Auth::user()->type == 'company' || \Auth::user()->type == 'employee')
+                            @if (\Auth::user()->hasCompanyAccess() || \Auth::user()->type == 'employee')
                                 if (data != 0) {
                                     deleted = '<a href="#"  data-url="' + url +
-                                        '" class="payslip_delete view-btn red-bg" >' +
-                                        '{{ __('Delete') }}' + '</a>';
+                                        '" class="payslip_delete btn btn-sm btn-danger ms-1" data-bs-toggle="tooltip" title="{{ __('Delete') }}">' +
+                                        '<i class="ti ti-trash"></i></a>';
                                 }
                             @endif
 
@@ -239,46 +228,30 @@
                                 var employee_id = valueOfElement[1];
                                 var payslip_id = valueOfElement[7];
 
+                                var payslip = '';
                                 if (valueOfElement[7] != 0) {
                                     var payslip =
                                         '<a href="#" data-url="{{ url('payslip/pdf/') }}/' +
                                         id + '/' + datePicker +
-                                        '" data-size="lg"  data-ajax-popup="true" class=" btn-sm btn btn-warning" data-title="{{ __('Employee Payslip') }}">' +
-                                        '{{ __('Payslip') }}' + '</a> ';
+                                        '" data-size="lg"  data-ajax-popup="true" class="btn btn-sm btn-warning" data-bs-toggle="tooltip" title="{{ __('Payslip') }}" data-title="{{ __('Employee Payslip') }}">' +
+                                        '<i class="ti ti-file-text"></i></a> ';
                                 }
-                                if (valueOfElement[6] == "UnPaid" && valueOfElement[7] != 0) {
-                                    var clickToPaid =
-                                        '<a href="{{ url('payslip/paysalary/') }}/' + id +
-                                        '/' + datePicker +
-                                        '"  class="btn-sm btn btn-primary">' +
-                                        '{{ __('Click To Paid') }}' + '</a>  ';
-                                } else {
-                                    var clickToPaid = '';
-                                }
-
-                                if (valueOfElement[7] != 0 && valueOfElement[6] == "UnPaid") {
-                                    var edit =
-                                        '<a href="#" data-url="{{ url('payslip/editemployee/') }}/' +
-                                        payslip_id +
-                                        '"  data-ajax-popup="true" class="btn-sm btn btn-info" data-title="{{ __('Edit Employee salary') }}">' +
-                                        '{{ __('Edit') }}' + '</a>';
-                                } else {
-                                    var edit = '';
-                                }
+                                var clickToPaid = '';
+                                var edit = '';
 
                                 var url = '{{ route('payslip.delete', ':id') }}';
                                 url = url.replace(':id', payslip_id);
 
-                                @if (\Auth::user()->type == 'company' || \Auth::user()->type == 'hr')
+                                @if (\Auth::user()->hasCompanyAccess() || \Auth::user()->type == 'hr')
                                     var deleted = '<a href="#"  data-url="' + url +
-                                        '" class="payslip_delete view-btn btn btn-danger ms-1 btn-sm"  >' +
-                                        '{{ __('Delete') }}' + '</a>';
+                                        '" class="payslip_delete btn btn-sm btn-danger ms-1" data-bs-toggle="tooltip" title="{{ __('Delete') }}">' +
+                                        '<i class="ti ti-trash"></i></a>';
                                 @else
                                     var deleted = '';
                                 @endif
 
                                 var url_employee = valueOfElement['url'];
-                                @if (\Auth::user()->type == 'company' || \Auth::user()->type == 'hr')
+                                @if (\Auth::user()->hasCompanyAccess() || \Auth::user()->type == 'hr')
                                     tr +=
                                         '<tr>' +
                                         '<td> <a class="btn btn-outline-primary" href="' +
@@ -314,6 +287,10 @@
                         $('#pc-dt-render-column-cells tbody').html(tr);
                         var table = document.querySelector("#pc-dt-render-column-cells");
                         var datatable = new simpleDatatables.DataTable(table);
+                        var tooltipTriggerList = [].slice.call(document.querySelectorAll('[data-bs-toggle="tooltip"]'));
+                        tooltipTriggerList.map(function (tooltipTriggerEl) {
+                            return new bootstrap.Tooltip(tooltipTriggerEl);
+                        });
                     },
                     error: function(data) {
 

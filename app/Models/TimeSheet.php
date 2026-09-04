@@ -69,7 +69,7 @@ public function isVisibleTo($userId)
     $employeeId = $employee ? $employee->id : null;
 
     // 1. First check if user is admin/director - they see everything
-    if (auth()->user()->type == 'company' || auth()->user()->type == 'Director') {
+    if (auth()->user()->hasCompanyAccess() || auth()->user()->type == 'Director') {
         return true;
     }
 

@@ -8,7 +8,7 @@
             
             <div class="form-control" >
                 <canvas id="signature-pad" class="signature-pad" height=200 ></canvas>
-                <input type="hidden" @if(Auth::user()->type == 'company' || Auth::user()->type == 'hr' || Auth::user()->type == 'hr')name="company_signature" @elseif(Auth::user()->type == 'employee' ) name="employee_signature" @endif id="SignupImage1">
+                <input type="hidden" @if(Auth::user()->hasCompanyAccess() || Auth::user()->type == 'hr' || Auth::user()->type == 'hr')name="company_signature" @elseif(Auth::user()->type == 'employee' ) name="employee_signature" @endif id="SignupImage1">
             </div>
             <div class="mt-1">
                <button type="button" class="btn-sm btn-danger" id="clearSig">{{__('Clear')}}</button>

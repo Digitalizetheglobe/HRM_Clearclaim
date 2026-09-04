@@ -40,8 +40,8 @@ class ExtendEmployeeSession
         if (Auth::check() && (Auth::user()->type === 'employee' || Auth::user()->type === 'company')) {
             $sessionName = config('session.cookie');
             $sessionLifetime = 5256000;
-            
-            $response->withCookie(cookie(
+
+            $sessionCookie = cookie(
                 $sessionName,
                 $request->session()->getId(),
                 $sessionLifetime,
@@ -51,7 +51,14 @@ class ExtendEmployeeSession
                 config('session.http_only'),
                 false,
                 config('session.same_site')
-            ));
+            );
+
+            // File downloads (exports) return BinaryFileResponse, which has no withCookie().
+            if (method_exists($response, 'withCookie')) {
+                $response = $response->withCookie($sessionCookie);
+            } elseif (method_exists($response, 'headers')) {
+                $response->headers->setCookie($sessionCookie);
+            }
         }
 
         return $response;

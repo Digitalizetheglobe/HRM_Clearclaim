@@ -10,6 +10,7 @@ use App\Notifications\AttendanceRegularisationNotification;
 use Carbon\Carbon;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
+use App\Support\HrmActionLogger;
 
 class AttendanceRegularisationController extends Controller
 {
@@ -151,6 +152,24 @@ class AttendanceRegularisationController extends Controller
         $regularisation->created_by = \Auth::user()->creatorId();
         $regularisation->is_updating_existing = $isUpdatingExisting;
         $regularisation->save();
+
+        HrmActionLogger::record(
+            'attendance_regularisation',
+            'applied',
+            (\Auth::user()->name) . ' applied attendance regularisation for ' . $employee->name . ' on ' . $request->date,
+            [
+                'employee_id' => $employee->id,
+                'employee_name' => $employee->name,
+                'subject_type' => AttendanceRegularisation::class,
+                'subject_id' => $regularisation->id,
+                'properties' => [
+                    'date' => $request->date,
+                    'punch_in' => $punchInTime,
+                    'punch_out' => $punchOutTime,
+                    'reason' => $request->reason,
+                ],
+            ]
+        );
 
         // Send notifications to Company and HR users
         $this->sendNotifications($regularisation, $employee);
@@ -324,7 +343,7 @@ class AttendanceRegularisationController extends Controller
         }
 
         // Only Company, HR and Managers can approve
-        if ($currentUser->type != 'company' && $currentUser->type != 'hr' && !$isManager) {
+        if (!$currentUser->hasCompanyAccess() && $currentUser->type != 'hr' && !$isManager) {
             $errorMsg = __('Permission denied. Only Company, HR, and Managers can approve requests.');
             if ($request->ajax() || $request->wantsJson()) {
                 return response()->json(['success' => false, 'message' => $errorMsg], 403);
@@ -380,6 +399,20 @@ class AttendanceRegularisationController extends Controller
         $regularisation->approved_at = now();
         $regularisation->save();
 
+        $empName = optional($regularisation->employee)->name;
+        HrmActionLogger::record(
+            'attendance_regularisation',
+            'approved',
+            (\Auth::user()->name) . ' approved attendance regularisation for ' . ($empName ?: 'employee') . ' on ' . $regularisation->date,
+            [
+                'employee_id' => $regularisation->employee_id,
+                'employee_name' => $empName,
+                'subject_type' => AttendanceRegularisation::class,
+                'subject_id' => $regularisation->id,
+                'properties' => ['date' => $regularisation->date],
+            ]
+        );
+
         // Send notification to employee
         $this->sendApprovalNotification($regularisation);
 
@@ -406,7 +439,7 @@ class AttendanceRegularisationController extends Controller
         }
 
         // Only Company, HR and Managers can approve
-        if ($currentUser->type != 'company' && $currentUser->type != 'hr' && !$isManager) {
+        if (!$currentUser->hasCompanyAccess() && $currentUser->type != 'hr' && !$isManager) {
             $errorMsg = __('Permission denied. Only Company, HR, and Managers can approve requests.');
             if ($request->ajax() || $request->wantsJson()) {
                 return response()->json(['success' => false, 'message' => $errorMsg], 403);
@@ -464,6 +497,20 @@ class AttendanceRegularisationController extends Controller
             $regularisation->approved_at = now();
             $regularisation->save();
 
+            $empName = optional($regularisation->employee)->name;
+            HrmActionLogger::record(
+                'attendance_regularisation',
+                'approved',
+                (\Auth::user()->name) . ' bulk-approved attendance regularisation for ' . ($empName ?: 'employee') . ' on ' . $regularisation->date,
+                [
+                    'employee_id' => $regularisation->employee_id,
+                    'employee_name' => $empName,
+                    'subject_type' => AttendanceRegularisation::class,
+                    'subject_id' => $regularisation->id,
+                    'properties' => ['date' => $regularisation->date, 'bulk' => true],
+                ]
+            );
+
             // Send notification to employee
             $this->sendApprovalNotification($regularisation);
             $successCount++;
@@ -492,7 +539,7 @@ class AttendanceRegularisationController extends Controller
         }
 
         // Only Company, HR and Managers can reject
-        if ($currentUser->type != 'company' && $currentUser->type != 'hr' && !$isManager) {
+        if (!$currentUser->hasCompanyAccess() && $currentUser->type != 'hr' && !$isManager) {
             $errorMsg = __('Permission denied. Only Company, HR, and Managers can reject requests.');
             if ($request->ajax() || $request->wantsJson()) {
                 return response()->json(['success' => false, 'message' => $errorMsg], 403);
@@ -552,6 +599,23 @@ class AttendanceRegularisationController extends Controller
         $regularisation->rejection_reason = $request->rejection_reason;
         $regularisation->save();
 
+        $empName = optional($regularisation->employee)->name;
+        HrmActionLogger::record(
+            'attendance_regularisation',
+            'rejected',
+            (\Auth::user()->name) . ' rejected attendance regularisation for ' . ($empName ?: 'employee') . ' on ' . $regularisation->date,
+            [
+                'employee_id' => $regularisation->employee_id,
+                'employee_name' => $empName,
+                'subject_type' => AttendanceRegularisation::class,
+                'subject_id' => $regularisation->id,
+                'properties' => [
+                    'date' => $regularisation->date,
+                    'rejection_reason' => $request->rejection_reason,
+                ],
+            ]
+        );
+
         // Send notification to employee
         $this->sendRejectionNotification($regularisation);
 
@@ -580,7 +644,7 @@ class AttendanceRegularisationController extends Controller
 
         // Also include the creator if they are company type
         $creator = User::find(\Auth::user()->creatorId());
-        if ($creator && $creator->type == 'company') {
+        if ($creator && $creator->hasCompanyAccess()) {
             $companyAndHrUsers->push($creator);
         }
 

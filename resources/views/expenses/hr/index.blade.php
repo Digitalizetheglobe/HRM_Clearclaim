@@ -10,7 +10,7 @@
 @endsection
 
 @section('action-button')
-    @if(Auth::user()->type == 'company' || Auth::user()->type == 'super admin')
+    @if(Auth::user()->hasCompanyAccess() || Auth::user()->type == 'super admin')
         <a href="{{ route('expense-categories.index') }}" class="btn btn-sm btn-primary">
             <i class="ti ti-tag"></i> {{ __('Manage Categories') }}
         </a>

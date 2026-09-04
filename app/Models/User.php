@@ -2375,6 +2375,15 @@ class User extends Authenticatable
         return $this->lang;
     }
 
+    /**
+     * Company owner or company-level super-admin (same permissions/access).
+     * Data is still scoped by creatorId() — super-admin keeps created_by = company.
+     */
+    public function hasCompanyAccess()
+    {
+        return $this->type === 'company' || $this->type === 'super-admin';
+    }
+
     public function creatorId()
     {
 

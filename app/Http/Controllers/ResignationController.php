@@ -257,7 +257,7 @@ class ResignationController extends Controller
         $user = \Auth::user();
         
         // Check if user has access (company, HR department, or Manager designation)
-        $hasAccess = $user->type == 'company' || 
+        $hasAccess = $user->hasCompanyAccess() || 
                     ($user->type == 'employee' && $user->employee && $user->employee->department && strcasecmp($user->employee->department->name, 'Human Resources') == 0) ||
                     ($user->type == 'employee' && $user->employee && $user->employee->designation && strcasecmp($user->employee->designation->name, 'Manager') == 0);
         
@@ -314,7 +314,7 @@ class ResignationController extends Controller
 
             // Check if this is HR approval (can only approve manager_approved resignations)
             $user = \Auth::user();
-            $isHRUser = $user->type == 'company' || 
+            $isHRUser = $user->hasCompanyAccess() || 
                        ($user->type == 'employee' && $user->employee && $user->employee->department && strcasecmp($user->employee->department->name, 'Human Resources') == 0);
             
             if ($isHRUser && $resignation->status != 'manager_approved') {
@@ -387,7 +387,7 @@ class ResignationController extends Controller
             
             // Check if user is a manager or company user
             $user = \Auth::user();
-            $isManagerOrCompany = $user->type == 'company' || 
+            $isManagerOrCompany = $user->hasCompanyAccess() || 
                                 ($user->type == 'employee' && $user->employee && $user->employee->designation && strcasecmp($user->employee->designation->name, 'Manager') == 0);
             
             if (!$isManagerOrCompany) {

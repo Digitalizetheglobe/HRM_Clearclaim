@@ -24,7 +24,7 @@ class ZoomMeetingController extends Controller
     public function index()
     {
         if (\Auth::user()->can('Manage Zoom meeting')) {
-            if (\Auth::user()->type == 'company' || \Auth::user()->type == 'hr') {
+            if (\Auth::user()->hasCompanyAccess() || \Auth::user()->type == 'hr') {
                 $created_by = \Auth::user()->creatorId();
                 $ZoomMeetings = LocalZoomMeeting::where('created_by', $created_by)->get();
                 // $this->statusUpdate();

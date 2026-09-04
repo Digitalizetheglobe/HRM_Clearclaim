@@ -31,7 +31,7 @@ class ContractController extends Controller
     public function index()
     {
         if (\Auth::user()->can('Manage Contract')) {
-            if (\Auth::user()->type == 'company' || \Auth::user()->type == 'hr') {
+            if (\Auth::user()->hasCompanyAccess() || \Auth::user()->type == 'hr') {
 
                 $contracts   = Contract::where('created_by', '=', \Auth::user()->creatorId())->with(['employee', 'contract_type'])->get();
                 $curr_month  = Contract::where('created_by', '=', \Auth::user()->creatorId())->whereMonth('start_date', '=', date('m'))->get();
@@ -319,7 +319,7 @@ class ContractController extends Controller
 
     public function descriptionStore($id, Request $request)
     {
-        if (\Auth::user()->type == 'company' || \Auth::user()->type == 'hr') {
+        if (\Auth::user()->hasCompanyAccess() || \Auth::user()->type == 'hr') {
             $contract        = Contract::find($id);
             $contract->contract_description = $request->contract_description;
             $contract->save();
@@ -333,7 +333,7 @@ class ContractController extends Controller
     {
         $contract = Contract::find($id);
 
-        if (\Auth::user()->type == 'company' || \Auth::user()->type == 'hr') {
+        if (\Auth::user()->hasCompanyAccess() || \Auth::user()->type == 'hr') {
             $request->validate(['file' => 'required']);
             $dir = 'contract_attechment/';
             $files = $request->file->getClientOriginalName();
@@ -651,7 +651,7 @@ class ContractController extends Controller
     {
         $contract              = Contract::find($request->contract_id);
 
-        if (\Auth::user()->type == 'company' || \Auth::user()->type == 'hr') {
+        if (\Auth::user()->hasCompanyAccess() || \Auth::user()->type == 'hr') {
             $contract->company_signature       = $request->company_signature;
         }
         if (\Auth::user()->type == 'employee') {

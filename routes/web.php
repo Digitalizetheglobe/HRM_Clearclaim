@@ -2202,6 +2202,8 @@ Route::group(['middleware' => ['auth']], function () {
     Route::post('/notifications/clear-all', [App\Http\Controllers\NotificationController::class, 'clearAll'])->middleware(['auth'])->name('notifications.clearAll');
     Route::get('/notifications/count', [App\Http\Controllers\NotificationController::class, 'getCount'])->middleware(['auth'])->name('notifications.count');
 
+    Route::get('hrm-logs', [\App\Http\Controllers\HrmActionLogController::class, 'index'])->name('hrm.logs.index')->middleware(['auth', 'XSS']);
+
     Route::post('/dashboard/filter', [HomeController::class, 'filterDashboardData'])->name('dashboard.filter');
     Route::get('/organization/hierarchy', [HomeController::class, 'getOrganizationHierarchy'])->name('organization.hierarchy')->middleware(['auth', 'XSS']);
 

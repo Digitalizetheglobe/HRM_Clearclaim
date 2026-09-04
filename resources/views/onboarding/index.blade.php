@@ -246,7 +246,7 @@
 @push('script-page')
 <script src="{{ asset('assets/js/plugins/dragula.min.js') }}"></script>
 <script>
-    @if(\Auth::user()->type == 'company' || Gate::check('Manage Employee'))
+    @if(\Auth::user()->hasCompanyAccess() || Gate::check('Manage Employee'))
     !function(a){"use strict";var t=function(){this.$body=a("body")};t.prototype.init=function(){a('[data-plugin="dragula"]').each(function(){var t=a(this).data("containers"),n=[];if(t)for(var i=0;i<t.length;i++)n.push(a("#"+t[i])[0]);else n=[a(this)[0]];var r=a(this).data("handleclass");r?dragula(n,{moves:function(a,t,n){return n.classList.contains(r)}}):dragula(n).on('drop',function(el,target,source,sibling){var order=[];$("#"+target.id+"> div").each(function(){order[$(this).index()]=$(this).attr('data-id')});var id=$(el).attr('data-id');var old_status=$("#"+source.id).data('status');var new_status=$("#"+target.id).data('status');var stage_id=$(target).attr('data-id');var sourceVisibleCount=$("#"+source.id+"> div:not(.d-none):not([style*='display: none'])").length;var targetVisibleCount=$("#"+target.id+"> div:not(.d-none):not([style*='display: none'])").length;$("#"+source.id).parent().find('.ob-stage-count').text(sourceVisibleCount);$("#"+target.id).parent().find('.ob-stage-count').text(targetVisibleCount);$.ajax({url:'{{ route('onboarding.order') }}',type:'POST',data:{order:order,stage_id:stage_id,"_token":$('meta[name="csrf-token"]').attr('content')},success:function(data){show_toastr('Success','Process successfully updated','success')},error:function(data){data=data.responseJSON;show_toastr('Error',data.error,'error')}})})})},a.Dragula=new t,a.Dragula.Constructor=t}(window.jQuery),function(a){"use strict";a.Dragula.init()}(window.jQuery);
     @endif
 </script>

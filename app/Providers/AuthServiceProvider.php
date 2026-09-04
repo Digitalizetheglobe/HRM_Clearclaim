@@ -25,6 +25,12 @@ class AuthServiceProvider extends ServiceProvider
     {
         $this->registerPolicies();
 
-        //
+        Gate::before(function ($user, $ability) {
+            if ($user && method_exists($user, 'hasCompanyAccess') && $user->hasCompanyAccess()) {
+                return true;
+            }
+
+            return null;
+        });
     }
 }

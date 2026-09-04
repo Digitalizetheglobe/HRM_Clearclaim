@@ -130,7 +130,7 @@ class PerformanceTypeController extends Controller
     public function destroy($id)
     {
         if (\Auth::user()->can('Delete Performance Type')) {
-            if (\Auth::user()->type == 'company') {
+            if (\Auth::user()->hasCompanyAccess()) {
                 $performance_Type = Performance_Type::findOrFail($id);
                 $competencies = Competencies::where('type', $performance_Type->id)->get();
                 if (count($competencies) == 0) {

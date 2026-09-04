@@ -7,6 +7,7 @@
     $emailTemplate = App\Models\EmailTemplate::getemailTemplate();
     $lang = Auth::user()->lang;
     $userType = auth()->user()->type;
+    $isCompanyOrHr = in_array($userType, ['company', 'hr', 'super-admin']);
 
     // Get storage setting to determine if we should use asset() or get_file()
     $settings = \App\Models\Utility::settings();
@@ -88,7 +89,7 @@
         <ul class="dash-navbar">
 
             <!-- dashboard-->
-            @if (\Auth::user()->type != 'company')
+            @if (!\Auth::user()->hasCompanyAccess())
             <li class="dash-item" style="color: white;" >
                 <a href="{{ route('dashboard') }}" class="dash-link text-white hover:text-white hover:bg-[#001a3b] text-lg flex items-center space-x-2"">
                     <span class="dash-micon shadow-none" style="background: none;"><i class="ti ti-home text-white text-[30px]"></i></span>
@@ -97,7 +98,7 @@
             </li>
 
             @endif
-            @if (\Auth::user()->type == 'company')
+            @if (\Auth::user()->hasCompanyAccess())
                 <li class="dash-item dash-hasmenu {{ Request::segment(1) == 'null' ? 'active dash-trigger' : '' }}">
                     <a href="{{ route('dashboard') }}" class="dash-link text-white hover:text-white hover:bg-[#001a3b] text-lg flex items-center space-x-2">
                         <span class="dash-micon  shadow-none" style="background: none;">
@@ -121,7 +122,8 @@
                     </a>
                 </li>
             @else
-                <!-- @if (Gate::check('Manage User') ||
+                @if ($isCompanyOrHr ||
+                        Gate::check('Manage User') ||
                         Gate::check('Manage Role') ||
                         Gate::check('Manage Employee Profile') ||
                         Gate::check('Manage Employee Last Login'))
@@ -143,30 +145,30 @@
                             {{ Request::route()->getName() == 'user.index' || Request::route()->getName() == 'users.create' || Request::route()->getName() == 'user.edit' || Request::route()->getName() == 'lastlogin'
                                 ? 'active'
                                 : '' }}">
-                            @can('Manage User')
+                            @if ($isCompanyOrHr || Gate::check('Manage User'))
                                 <li class="dash-item {{ Request::segment(1) == 'lastlogin' ? 'active' : '' }}">
                                     <a class="dash-link text-white hover:text-white hover:bg-[#001a3b] text-lg" 
                                     href="{{ route('user.index') }}">
                                     {{ __('User') }}
                                     </a>
                                 </li>
-                            @endcan
-                            @can('Manage Role')
+                            @endif
+                            @if ($isCompanyOrHr || Gate::check('Manage Role'))
                                 <li class="dash-item">
                                     <a class="dash-link text-white hover:text-white hover:bg-[#001a3b] text-lg" 
                                     href="{{ route('roles.index') }}">
                                     {{ __('Role') }}
                                     </a>
                                 </li>
-                            @endcan
-                            @can('Manage Employee Profile')
+                            @endif
+                            @if ($isCompanyOrHr || Gate::check('Manage Employee Profile'))
                                 <li class="dash-item">
                                     <a class="dash-link text-white hover:text-white hover:bg-[#001a3b] text-lg" 
                                     href="{{ route('employee.profile') }}">
                                     {{ __('Employee Profile') }}
                                     </a>
                                 </li>
-                            @endcan
+                            @endif
                             {{-- Uncomment if needed
                             @can('Manage Employee Last Login')
                                 <li class="dash-item">
@@ -178,7 +180,18 @@
                             @endcan --}}
                         </ul>
                     </li>
-                @endif -->
+                @endif
+            @endif
+
+            @if (\Auth::user()->type == 'super-admin')
+                <li class="dash-item {{ Request::segment(1) == 'hrm-logs' ? 'active' : '' }}">
+                    <a href="{{ route('hrm.logs.index') }}" class="dash-link text-white hover:text-white hover:bg-[#001a3b] text-lg flex items-center space-x-2">
+                        <span class="dash-micon text-white text-[30px] shadow-none" style="background: none;">
+                            <i class="ti ti-history text-white text-[30px]"></i>
+                        </span>
+                        <span class="dash-mtext">{{ __('Logs') }}</span>
+                    </a>
+                </li>
             @endif
 
             <!-- user-->
@@ -276,7 +289,7 @@
                             </li>
                         @endcan
                         
-                        @if(\Auth::user()->type == 'company' || \Auth::user()->type == 'hr')
+                        @if(\Auth::user()->hasCompanyAccess() || \Auth::user()->type == 'hr')
                             <li class="dash-item">
                                 <a class="dash-link text-white hover:text-white hover:bg-[#001a3b] text-lg"
                                 href="{{ route('monthly.working.hours.index') }}">{{ __('Monthly Working Hours Summary') }}</a>
@@ -336,7 +349,7 @@
                             </li>
                         @endif
 
-                        @if(\Auth::user()->type == 'company' || (\Auth::user()->type == 'employee' && \Auth::user()->employee && \Auth::user()->employee->department && strcasecmp(\Auth::user()->employee->department->name, 'Human Resources') == 0) || (\Auth::user()->type == 'employee' && \Auth::user()->employee && \Auth::user()->employee->designation && strcasecmp(\Auth::user()->employee->designation->name, 'Manager') == 0))
+                        @if(\Auth::user()->hasCompanyAccess() || (\Auth::user()->type == 'employee' && \Auth::user()->employee && \Auth::user()->employee->department && strcasecmp(\Auth::user()->employee->department->name, 'Human Resources') == 0) || (\Auth::user()->type == 'employee' && \Auth::user()->employee && \Auth::user()->employee->designation && strcasecmp(\Auth::user()->employee->designation->name, 'Manager') == 0))
                             <li class="dash-item {{ Request::segment(1) == 'leave-details' ? ' active' : '' }}">
                                 <a class="dash-link text-white hover:text-white hover:bg-[#001a3b] text-lg" href="{{ route('leave-details.index') }}">{{ __('Leave Details') }}</a>
                             </li>

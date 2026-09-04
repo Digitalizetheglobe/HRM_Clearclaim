@@ -647,7 +647,7 @@
 
         public function profile(Request $request)
         {
-            if (\Auth::user()->can('Manage Employee Profile')) {
+            if (\Auth::user()->hasCompanyAccess() || \Auth::user()->type == 'hr' || \Auth::user()->type == 'super-admin' || \Auth::user()->can('Manage Employee Profile')) {
                 $employees = Employee::where('created_by', \Auth::user()->creatorId())->with(['designation', 'user']);
                 if (!empty($request->branch)) {
                     $employees->where('branch_id', $request->branch);

@@ -16,7 +16,7 @@ class MonthlyWorkingHoursController extends Controller
 {
     public function index(Request $request)
     {
-        if (\Auth::user()->type == 'company' || \Auth::user()->type == 'hr') {
+        if (\Auth::user()->hasCompanyAccess() || \Auth::user()->type == 'hr') {
             $month = $request->month ? $request->month : date('m');
             $year = $request->year ? $request->year : date('Y');
             
@@ -53,7 +53,7 @@ class MonthlyWorkingHoursController extends Controller
 
     public function export(Request $request)
     {
-        if (\Auth::user()->type == 'company' || \Auth::user()->type == 'hr') {
+        if (\Auth::user()->hasCompanyAccess() || \Auth::user()->type == 'hr') {
             $month = $request->month ? $request->month : date('m');
             $year = $request->year ? $request->year : date('Y');
             return Excel::download(new MonthlyWorkingHoursExport($request->all(), $month, $year), "monthly_working_hours_{$year}_{$month}.xlsx");

@@ -154,7 +154,7 @@
                                                             {{-- @endif --}}
                                                         @endcan
 
-                                                        {{-- @if (\Auth::user()->type == 'company' || \Auth::user()->type == 'hr' || \Auth::user()->type == 'employee') --}}
+                                                        {{-- @if (\Auth::user()->hasCompanyAccess() || \Auth::user()->type == 'hr' || \Auth::user()->type == 'employee') --}}
                                                         <div class="action-btn bg-warning ms-2">
                                                             <a href="{{ route('contract.show', \Illuminate\Support\Facades\Crypt::encrypt($contract->id)) }}"
                                                                 class="mx-3 btn btn-sm d-inline-flex align-items-center"

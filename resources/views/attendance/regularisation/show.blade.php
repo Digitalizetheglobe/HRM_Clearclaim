@@ -95,7 +95,7 @@
                 <div class="card-footer">
                     <a href="{{ route('attendance-regularisation.index') }}" class="btn btn-secondary">{{ __('Back') }}</a>
                     
-                    @if (\Auth::user()->type == 'company' || \Auth::user()->type == 'hr')
+                    @if (\Auth::user()->hasCompanyAccess() || \Auth::user()->type == 'hr')
                         @if ($regularisation->status == 'Pending')
                             <a href="#" class="btn btn-success approve-regularisation" data-id="{{ $regularisation->id }}">
                                 <i class="ti ti-check"></i> {{ __('Approve') }}

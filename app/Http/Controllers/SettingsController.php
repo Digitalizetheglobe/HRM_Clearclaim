@@ -67,7 +67,7 @@ class SettingsController extends Controller
         $incrementlangName = \App\Models\Languages::where('code', $incrementlang)->first();
 
         $user = \Auth::user();
-        if (\Auth::user()->type == 'company' || \Auth::user()->type == 'super admin') {
+        if (\Auth::user()->hasCompanyAccess() || \Auth::user()->type == 'super admin') {
             if ($user->type == 'super admin') {
                 $settings              = Utility::settings();
                 $admin_payment_setting = Utility::getAdminPaymentSetting();
@@ -124,7 +124,7 @@ $currIncrementLetterLang = \App\Models\IncrementLetter::where('created_by',  \Au
 
     public function store(Request $request)
     {
-        if (\Auth::user()->type == 'company' || \Auth::user()->type == 'super admin') {
+        if (\Auth::user()->hasCompanyAccess() || \Auth::user()->type == 'super admin') {
             if ($request->logo) {
 
                 $request->validate(
@@ -252,7 +252,7 @@ $currIncrementLetterLang = \App\Models\IncrementLetter::where('created_by',  \Au
 
     public function saveEmailSettings(Request $request)
     {
-        if (\Auth::user()->type == 'company' || \Auth::user()->type == 'super admin') {
+        if (\Auth::user()->hasCompanyAccess() || \Auth::user()->type == 'super admin') {
             $request->validate(
                 [
                     'mail_driver' => 'required|string|max:255',
@@ -267,7 +267,7 @@ $currIncrementLetterLang = \App\Models\IncrementLetter::where('created_by',  \Au
             );
 
 
-            if (\Auth::user()->type == 'company' || \Auth::user()->type == 'super admin') {
+            if (\Auth::user()->hasCompanyAccess() || \Auth::user()->type == 'super admin') {
                 $post = $request->all();
 
                 $settings = Utility::settings();
@@ -349,7 +349,7 @@ $currIncrementLetterLang = \App\Models\IncrementLetter::where('created_by',  \Au
 
     public function savePaymentSettings(Request $request)
     {
-        if (\Auth::user()->type == 'company' || \Auth::user()->type == 'super admin') {
+        if (\Auth::user()->hasCompanyAccess() || \Auth::user()->type == 'super admin') {
             $request->validate(
                 [
                     'currency' => 'required|string|max:255',
@@ -367,7 +367,7 @@ $currIncrementLetterLang = \App\Models\IncrementLetter::where('created_by',  \Au
 
     public function companyIndex()
     {
-        if (\Auth::user()->type == 'company' || \Auth::user()->type == 'super admin') {
+        if (\Auth::user()->hasCompanyAccess() || \Auth::user()->type == 'super admin') {
             $settings = Utility::settings();
 
 
@@ -379,7 +379,7 @@ $currIncrementLetterLang = \App\Models\IncrementLetter::where('created_by',  \Au
 
     public function saveCompanySettings(Request $request)
     {
-        if (\Auth::user()->type == 'company' || \Auth::user()->type == 'super admin') {
+        if (\Auth::user()->hasCompanyAccess() || \Auth::user()->type == 'super admin') {
 
             $user = \Auth::user();
             $request->validate(
@@ -428,7 +428,7 @@ $currIncrementLetterLang = \App\Models\IncrementLetter::where('created_by',  \Au
 
     public function saveSystemSettings(Request $request)
     {
-        if (\Auth::user()->type == 'company' || \Auth::user()->type == 'super admin') {
+        if (\Auth::user()->hasCompanyAccess() || \Auth::user()->type == 'super admin') {
             $user = \Auth::user();
             $request->validate(
                 [
@@ -556,7 +556,7 @@ $currIncrementLetterLang = \App\Models\IncrementLetter::where('created_by',  \Au
 
     public function zoomSetting(request $request)
     {
-        if (\Auth::user()->type == 'company') {
+        if (\Auth::user()->hasCompanyAccess()) {
             if (!empty($request->zoom_account_id) || !empty($request->zoom_client_id) || !empty($request->zoom_client_secret)) {
                 $post = $request->all();
 
@@ -581,7 +581,7 @@ $currIncrementLetterLang = \App\Models\IncrementLetter::where('created_by',  \Au
 
     public function updateEmailStatus($name)
     {
-        if (\Auth::user()->type == 'company' || \Auth::user()->type == 'super admin') {
+        if (\Auth::user()->hasCompanyAccess() || \Auth::user()->type == 'super admin') {
             $emailNotification = \DB::table('settings')->where('name', '=', $name)->where('created_by', \Auth::user()->creatorId())->first();
             if (empty($emailNotification)) {
                 \DB::insert(
@@ -608,7 +608,7 @@ $currIncrementLetterLang = \App\Models\IncrementLetter::where('created_by',  \Au
 
     public function savePusherSettings(Request $request)
     {
-        if (\Auth::user()->type == 'company' || \Auth::user()->type == 'super admin') {
+        if (\Auth::user()->hasCompanyAccess() || \Auth::user()->type == 'super admin') {
             $user = \Auth::user();
 
             $request->validate(
@@ -647,7 +647,7 @@ $currIncrementLetterLang = \App\Models\IncrementLetter::where('created_by',  \Au
 
     public function saveBusinessSettings(Request $request)
     {
-        if (\Auth::user()->type == 'company' || \Auth::user()->type == 'super admin') {
+        if (\Auth::user()->hasCompanyAccess() || \Auth::user()->type == 'super admin') {
 
             $user = \Auth::user();
             if ($request->company_logo) {
@@ -1093,7 +1093,7 @@ $currIncrementLetterLang = \App\Models\IncrementLetter::where('created_by',  \Au
 
     public function updateIp(Request $request, $id)
     {
-        if (\Auth::user()->type == 'company' || \Auth::user()->type == 'super admin') {
+        if (\Auth::user()->hasCompanyAccess() || \Auth::user()->type == 'super admin') {
             $validator = \Validator::make(
                 $request->all(),
                 [
@@ -1146,7 +1146,7 @@ $currIncrementLetterLang = \App\Models\IncrementLetter::where('created_by',  \Au
 
     public function destroyIp($id)
     {
-        if (\Auth::user()->type == 'company' || \Auth::user()->type == 'super admin') {
+        if (\Auth::user()->hasCompanyAccess() || \Auth::user()->type == 'super admin') {
             $ip = IpRestrict::find($id);
             $ip->delete();
 

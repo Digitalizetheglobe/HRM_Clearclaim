@@ -2313,6 +2313,22 @@ class Utility extends Model
             }
         }
 
+        $superAdminRole = Role::where('name', 'super-admin')->where('created_by', $company_id)->where('guard_name', 'web')->first();
+        if (empty($superAdminRole)) {
+            $superAdminRole = new Role();
+            $superAdminRole->name = 'super-admin';
+            $superAdminRole->guard_name = 'web';
+            $superAdminRole->created_by = $company_id;
+            $superAdminRole->save();
+
+            $allPermissions = Permission::all();
+            foreach ($allPermissions as $permission) {
+                $superAdminRole->givePermissionTo($permission);
+            }
+        } else {
+            self::syncSuperAdminRolePermissions($company_id);
+        }
+
         $employee_role_permission = [
             "Manage Award",
             "Manage Transfer",
@@ -2385,6 +2401,25 @@ class Utility extends Model
         $data['employee_permission'] = $employee_permission;
 
         return $data;
+    }
+
+    /**
+     * Keep the company super-admin role aligned with the company role's permissions.
+     */
+    public static function syncSuperAdminRolePermissions($company_id)
+    {
+        $superAdminRole = Role::where('name', 'super-admin')
+            ->where('created_by', $company_id)
+            ->where('guard_name', 'web')
+            ->first();
+
+        if (empty($superAdminRole)) {
+            return;
+        }
+
+        $companyRole = Role::where('name', 'company')->where('guard_name', 'web')->orderBy('id')->first();
+        $permissions = $companyRole ? $companyRole->permissions : Permission::all();
+        $superAdminRole->syncPermissions($permissions);
     }
 
     public static function getSMTPDetails($user_id)

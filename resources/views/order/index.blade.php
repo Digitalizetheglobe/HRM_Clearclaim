@@ -86,7 +86,7 @@
                                                         </a>
                                                     </div>
                                                 @endif
-                                            @elseif(\Auth::user()->type == 'company' && $order->payment_type == 'Bank Transfer')
+                                            @elseif(\Auth::user()->hasCompanyAccess() && $order->payment_type == 'Bank Transfer')
                                                 <div class="action-btn bg-success ms-2">
                                                     <a href="#" class="mx-3 btn btn-sm  align-items-center"
                                                         data-size="lg"

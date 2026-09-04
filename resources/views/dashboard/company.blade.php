@@ -60,7 +60,7 @@
             </div>
         @endif
 
-    @if (Auth::user()->type == 'company' || Auth::user()->type == 'hr' || Auth::user()->type == 'Director')
+    @if (Auth::user()->hasCompanyAccess() || Auth::user()->type == 'hr' || Auth::user()->type == 'Director')
 
         <!-- Welcome Section -->
         <div class="col-12 mb-3">
@@ -399,7 +399,7 @@
     <script src="{{ asset('assets/js/plugins/main.min.js') }}"></script>
     <script src="{{ asset('assets/js/plugins/apexcharts.min.js') }}"></script>
 
-    @if (Auth::user()->type == 'company' || Auth::user()->type == 'hr' || Auth::user()->type == 'Director')
+    @if (Auth::user()->hasCompanyAccess() || Auth::user()->type == 'hr' || Auth::user()->type == 'Director')
     <script type="text/javascript">
         $(document).ready(function() {
             get_data();
@@ -510,7 +510,7 @@
         </script>
     @endif
 
-    @if (Auth::user()->type == 'company' || Auth::user()->type == 'hr' || Auth::user()->type == 'Director')
+    @if (Auth::user()->hasCompanyAccess() || Auth::user()->type == 'hr' || Auth::user()->type == 'Director')
         <script>
             (function() {
                 var totalEmployees = {{ $totalEmployees }};

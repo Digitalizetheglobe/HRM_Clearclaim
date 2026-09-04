@@ -3,7 +3,7 @@
         box-shadow: inset 0 0 0 2px #000;
     }
 </style>
-@if (Auth::user()->type == 'company')
+@if (Auth::user()->hasCompanyAccess())
 
     @php
         $plan = Utility::getChatGPTSettings();

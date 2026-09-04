@@ -13,7 +13,7 @@ class DucumentUploadController extends Controller
     public function index()
     {
         if (\Auth::user()->can('Manage Document')) {
-            if (\Auth::user()->type == 'company') {
+            if (\Auth::user()->hasCompanyAccess()) {
                 $documents = DucumentUpload::where('created_by', \Auth::user()->creatorId())->get();
             } else {
                 $userRole  = \Auth::user()->roles->first();

@@ -29,7 +29,7 @@
 @endpush
 
 @section('action-button')
-    @if (\Auth::user()->type == 'company' || $ticket->ticket_created == \Auth::user()->id)
+    @if (\Auth::user()->hasCompanyAccess() || $ticket->ticket_created == \Auth::user()->id)
         <div class="float-end">
             <a href="#" data-size="lg" data-url="{{ URL::to('ticket/' . $ticket->id . '/edit') }}"
                 data-ajax-popup="true" data-bs-toggle="tooltip" title="{{ __('Edit') }}"

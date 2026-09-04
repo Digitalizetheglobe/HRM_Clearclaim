@@ -20,7 +20,7 @@
         {{ Form::time('clock_out', null, ['class' => 'form-control pc-timepicker-2 ','id'=>'clock_out']) }}
     </div>
     
-    @if(\Auth::user()->type == 'company' || \Auth::user()->type == 'hr')
+    @if(\Auth::user()->hasCompanyAccess() || \Auth::user()->type == 'hr')
     <div class="form-group col-lg-6 col-md-6">
         {{ Form::label('status', __('Status'), ['class' => 'col-form-label']) }}
         {{ Form::select('status', [

@@ -64,7 +64,7 @@
             </div>
         @endif
 
-        @if (\Auth::user()->type == 'company' || \Auth::user()->type == 'hr')
+        @if (\Auth::user()->hasCompanyAccess() || \Auth::user()->type == 'hr')
             <a href="{{ route('send.mail.contract', $contract->id) }}" class="btn btn-sm btn-primary btn-icon m-2"
                 data-bs-toggle="tooltip" data-bs-original-title="{{ __('Send Email') }}">
                 <i class="ti ti-mail text-white"></i>
@@ -72,7 +72,7 @@
 
 
             @can('Create Contract')
-                {{-- @if (\Auth::user()->type == 'company' && $contract->status == 'accept') --}}
+                {{-- @if (\Auth::user()->hasCompanyAccess() && $contract->status == 'accept') --}}
 
                 <a href="#" data-size="lg" data-url="{{ route('contracts.copy', $contract->id) }}"data-ajax-popup="true"
                     data-title="{{ __('Duplicate') }}" class="btn btn-sm btn-primary btn-icon m-2" data-bs-toggle="tooltip"
@@ -80,20 +80,20 @@
             @endcan
         @endif
 
-        {{-- @if (\Auth::user()->type == 'company' || \Auth::user()->type == 'employee') --}}
+        {{-- @if (\Auth::user()->hasCompanyAccess() || \Auth::user()->type == 'employee') --}}
         <a href="{{ route('contract.download.pdf', \Crypt::encrypt($contract->id)) }}"
             class="btn btn-sm btn-primary btn-icon m-2" data-bs-toggle="tooltip" data-bs-placement="top"
             title="{{ __('Download') }}" target="_blanks"><i class="ti ti-download text-white"></i></a>
         {{-- @endif --}}
 
-        {{-- @if (\Auth::user()->type == 'company' || \Auth::user()->type == 'employee') --}}
+        {{-- @if (\Auth::user()->hasCompanyAccess() || \Auth::user()->type == 'employee') --}}
         <a href="{{ route('get.contract', $contract->id) }}" target="_blank" class="btn btn-sm btn-primary btn-iconn m-2"
             title="{{ __('Preview') }}" data-bs-toggle="tooltip" data-bs-placement="top">
             <i class="ti ti-eye"></i>
         </a>
         {{-- @endif --}}
 
-        {{-- @if ((\Auth::user()->type == 'company' && $contract->company_signature == '') || (\Auth::user()->type == 'employee' && $contract->employee_signature == ''))
+        {{-- @if ((\Auth::user()->hasCompanyAccess() && $contract->company_signature == '') || (\Auth::user()->type == 'employee' && $contract->employee_signature == ''))
             @if ($contract->status == 'accept')
                 <a href="#" class="btn btn-sm btn-primary btn-icon m-2"
                     data-url="{{ route('signature', $contract->id) }}" data-ajax-popup="true"
@@ -104,7 +104,7 @@
             @endif
         @endif --}}
 
-        @if (\Auth::user()->type == 'company' || \Auth::user()->type == 'hr')
+        @if (\Auth::user()->hasCompanyAccess() || \Auth::user()->type == 'hr')
             <a href="#" class="btn btn-sm btn-primary btn-icon m-2"
                 data-url="{{ route('signature', $contract->id) }}" data-ajax-popup="true"
                 data-title="{{ __('Signature') }}" data-size="md" title="{{ __('Signature') }}" data-bs-toggle="tooltip"
@@ -278,7 +278,7 @@
                                             <h5>{{ __('Attachments') }}</h5>
                                         </div>
                                         <div class="card-body">
-                                            @if (\Auth::user()->type == 'company' || \Auth::user()->type == 'hr')
+                                            @if (\Auth::user()->hasCompanyAccess() || \Auth::user()->type == 'hr')
                                                 <div class=" ">
                                                     <div class="col-md-12 dropzone browse-file" id="my-dropzone"></div>
                                                 </div>
@@ -315,7 +315,7 @@
                                                             </div>
                                                             <div class="col-auto actions">
                                                                 @can('Delete Attachment')
-                                                                    @if (\Auth::user()->id == $file->user_id || \Auth::user()->type == 'company' || \Auth::user()->type == 'hr')
+                                                                    @if (\Auth::user()->id == $file->user_id || \Auth::user()->hasCompanyAccess() || \Auth::user()->type == 'hr')
                                                                         <div class="action-btn bg-danger ms-2">
 
                                                                             <form action=""></form>
@@ -356,7 +356,7 @@
 
                                                 <div class="col-12 d-flex">
 
-                                                    @if (\Auth::user()->type == 'company' || \Auth::user()->type == 'hr')
+                                                    @if (\Auth::user()->hasCompanyAccess() || \Auth::user()->type == 'hr')
                                                         <div class="form-group mb-0 form-send w-100">
                                                             <input type="hidden" id="commenturl"
                                                                 value="{{ route('comment.store', $contract->id) }}">
@@ -444,7 +444,7 @@
                                                                     </div>
 
                                                                     @can('Delete Comment')
-                                                                        @if (\Auth::user()->id == $comment->user_id || \Auth::user()->type == 'company' || \Auth::user()->type == 'hr')
+                                                                        @if (\Auth::user()->id == $comment->user_id || \Auth::user()->hasCompanyAccess() || \Auth::user()->type == 'hr')
                                                                             <div class="p-0 w-auto action-btn bg-danger">
                                                                                 <form action=""></form>
                                                                                 {!! Form::open(['method' => 'GET', 'route' => ['comment.destroy', $comment->id]]) !!}
@@ -481,7 +481,7 @@
                                             <div class="card-header">
                                                 <h5>{{ __('Notes') }}</h5>
                                                 @if ($plan->enable_chatgpt == 'on')
-                                                    @if (\Auth::user()->type == 'company' || \Auth::user()->type == 'hr')
+                                                    @if (\Auth::user()->hasCompanyAccess() || \Auth::user()->type == 'hr')
                                                         <div class="text-end">
                                                             <a href="#" data-size="md"
                                                                 class="btn btn-primary btn-icon btn-sm"
@@ -509,7 +509,7 @@
                                                 @endif
                                             </div>
                                             <div class="card-body">
-                                                @if (\Auth::user()->type == 'company' || \Auth::user()->type == 'hr')
+                                                @if (\Auth::user()->hasCompanyAccess() || \Auth::user()->type == 'hr')
                                                     <form action=""></form>
                                                     {{ Form::open(['route' => ['contracts.note.store', $contract->id]]) }}
                                                     <div class="form-group">
@@ -594,7 +594,7 @@
                                                                             class="d-block">{{ $note->created_at->diffForHumans() }}</small>
                                                                     </div>
                                                                     @can('Delete Note')
-                                                                        @if (\Auth::user()->id == $note->user_id || \Auth::user()->type == 'company' || \Auth::user()->type == 'hr')
+                                                                        @if (\Auth::user()->id == $note->user_id || \Auth::user()->hasCompanyAccess() || \Auth::user()->type == 'hr')
                                                                             <div class="p-0 w-auto action-btn bg-danger">
                                                                                 {!! Form::open(['method' => 'GET', 'route' => ['contracts.note.destroy', $note->id]]) !!}
                                                                                 <a href="#!"

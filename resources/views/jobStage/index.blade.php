@@ -112,7 +112,7 @@
 
 @push('script-page')
     <script src="{{ asset('js/jquery-ui.min.js') }}"></script>
-    @if (\Auth::user()->type == 'company')
+    @if (\Auth::user()->hasCompanyAccess())
         <script>
             $(function() {
                 $(".sortable").sortable();

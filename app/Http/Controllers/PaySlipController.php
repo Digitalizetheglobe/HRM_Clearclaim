@@ -24,6 +24,7 @@ use App\Models\SalaryArrear;
 use Illuminate\Http\Request;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\Auth;
+use App\Support\HrmActionLogger;
 use Illuminate\Support\Facades\Crypt;
 use Illuminate\Support\Facades\Mail;
 
@@ -216,6 +217,12 @@ class PaySlipController extends Controller
             }
             
             if ($payslipGenerated) {
+                HrmActionLogger::record(
+                    'payslip',
+                    'generated',
+                    (\Auth::user()->name) . ' generated payslips for ' . $formate_month_year,
+                    ['properties' => ['month' => $formate_month_year]]
+                );
                 return redirect()->route('payslip.index')->with('success', __('Payslip successfully created.'));
             } else {
                 return redirect()->route('payslip.index')->with('info', __('No new payslips to generate. All employees with salary already have payslips for this month.'));
@@ -332,6 +339,21 @@ class PaySlipController extends Controller
             $get_account->initial_balance = $total_balance;
             $get_account->save();
 
+            HrmActionLogger::record(
+                'payslip',
+                'paid',
+                (\Auth::user()->name) . ' paid payslip for ' . $get_employee->name . ' (' . $date . ')',
+                [
+                    'employee_id' => $get_employee->id,
+                    'employee_name' => $get_employee->name,
+                    'subject_id' => $employeePayslip->id,
+                    'properties' => [
+                        'salary_month' => $date,
+                        'net_salary' => $net_salary,
+                    ],
+                ]
+            );
+
             $set_expense = new Expense();
             $set_expense->account_id = $get_account->id;
             $set_expense->amount = $employeePayslip->net_payble;
@@ -366,6 +388,13 @@ class PaySlipController extends Controller
             $employee->status = 1;
             $employee->save();
         }
+
+        HrmActionLogger::record(
+            'payslip',
+            'paid',
+            (\Auth::user()->name) . ' processed bulk payslip payment for ' . $date . ' (' . $unpaidEmployees->count() . ' employees)',
+            ['properties' => ['salary_month' => $date, 'count' => $unpaidEmployees->count()]]
+        );
 
         return redirect()->route('payslip.index')->with('success', __('Payslip Bulk Payment successfully.'));
     }

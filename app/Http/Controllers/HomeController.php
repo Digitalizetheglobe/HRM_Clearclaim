@@ -335,7 +335,7 @@ class HomeController extends Controller
 
 
             } 
-            else if ($user->type == 'company' || $user->type == 'hr'|| $user->type == 'Director') {
+            else if ($user->hasCompanyAccess() || $user->type == 'hr'|| $user->type == 'Director') {
 
                 $today = Carbon::today();
                 $startOfMonth = $today->copy()->startOfMonth();

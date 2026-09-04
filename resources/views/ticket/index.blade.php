@@ -220,7 +220,7 @@
                                                     <i class="ti ti-arrow-back-up text-white"></i>
                                                 </a>
                                             </div>
-                                            @if (\Auth::user()->type == 'company' || $ticket->ticket_created == \Auth::user()->id)
+                                            @if (\Auth::user()->hasCompanyAccess() || $ticket->ticket_created == \Auth::user()->id)
                                                 @can('Delete Ticket')
                                                     <div class="action-btn bg-danger ms-2">
                                                         {!! Form::open([

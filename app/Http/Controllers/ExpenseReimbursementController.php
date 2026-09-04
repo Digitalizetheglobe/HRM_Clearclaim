@@ -14,6 +14,7 @@ use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Facades\Log;
 use Carbon\Carbon;
+use App\Support\HrmActionLogger;
 
 class ExpenseReimbursementController extends Controller
 {
@@ -335,7 +336,7 @@ class ExpenseReimbursementController extends Controller
 
         // STEP 1: Employee submits expense → Status set to 'pending_hr'
         // This expense will now appear in HR department's "Pending Approvals" list
-        EmployeeExpense::create([
+        $expense = EmployeeExpense::create([
             'employee_id' => $employee->id,
             'category_id' => $request->category_id,
             'amount' => $request->amount,
@@ -346,6 +347,22 @@ class ExpenseReimbursementController extends Controller
             'status' => 'pending_hr', // Initial status: waiting for HR approval
             'created_by' => Auth::user()->creatorId(),
         ]);
+
+        HrmActionLogger::record(
+            'expenses',
+            'applied',
+            (Auth::user()->name) . ' submitted expense of ' . $request->amount . ' for ' . $employee->name,
+            [
+                'employee_id' => $employee->id,
+                'employee_name' => $employee->name,
+                'subject_id' => $expense->id,
+                'properties' => [
+                    'amount' => $request->amount,
+                    'expense_date' => $request->expense_date,
+                    'status' => 'pending_hr',
+                ],
+            ]
+        );
 
         return redirect()->route('expenses.index')->with('success', __('Expense request submitted successfully. It will be reviewed by Human Resources department.'));
     }
@@ -368,7 +385,7 @@ class ExpenseReimbursementController extends Controller
             ->findOrFail($id);
 
         // Check if user is Company/Admin
-        $isAdmin = in_array($user->type, ['company', 'super admin']);
+        $isAdmin = $user->hasCompanyAccess() || $user->type == 'super admin';
         
         // Get employee record
         $employee = Employee::where('user_id', $user->id)->first();
@@ -419,7 +436,7 @@ class ExpenseReimbursementController extends Controller
         $companyId = $user->creatorId();
         
         // Check if user is Company/Admin - allow approval without employee record
-        $isAdmin = in_array($user->type, ['company', 'super admin']);
+        $isAdmin = $user->hasCompanyAccess() || $user->type == 'super admin';
         
         // For non-admin users, check if user is HR or Finance department employee
         $isHREmployee = false;
@@ -512,6 +529,19 @@ class ExpenseReimbursementController extends Controller
             'hr_approved_at' => now(),
         ]);
 
+        $empName = optional($expense->employee)->name;
+        HrmActionLogger::record(
+            'expenses',
+            'approved',
+            (Auth::user()->name) . ' approved expense of ' . $expense->amount . ' for ' . ($empName ?: 'employee'),
+            [
+                'employee_id' => $expense->employee_id,
+                'employee_name' => $empName,
+                'subject_id' => $expense->id,
+                'properties' => ['amount' => $expense->amount, 'status' => 'pending_finance'],
+            ]
+        );
+
         return redirect()->route('expenses.index')->with('success', __('Expense approved successfully. It has been forwarded to Finance department for payment processing.'));
     }
 
@@ -524,7 +554,7 @@ class ExpenseReimbursementController extends Controller
         $companyId = $user->creatorId();
         
         // Check if user is Company/Admin - allow rejection without employee record
-        $isAdmin = in_array($user->type, ['company', 'super admin']);
+        $isAdmin = $user->hasCompanyAccess() || $user->type == 'super admin';
         
         // For non-admin users, check if user is HR or Finance department employee
         $isHREmployee = false;
@@ -562,6 +592,19 @@ class ExpenseReimbursementController extends Controller
             'hr_approved_at' => now(),
         ]);
 
+        $empName = optional($expense->employee)->name;
+        HrmActionLogger::record(
+            'expenses',
+            'rejected',
+            (Auth::user()->name) . ' rejected expense of ' . $expense->amount . ' for ' . ($empName ?: 'employee'),
+            [
+                'employee_id' => $expense->employee_id,
+                'employee_name' => $empName,
+                'subject_id' => $expense->id,
+                'properties' => ['amount' => $expense->amount, 'status' => 'rejected_hr'],
+            ]
+        );
+
         return redirect()->route('expenses.index')->with('success', __('Expense rejected.'));
     }
 
@@ -588,7 +631,7 @@ class ExpenseReimbursementController extends Controller
         $companyId = $user->creatorId();
         
         // Check if user is Company/Admin
-        $isAdmin = in_array($user->type, ['company', 'super admin']);
+        $isAdmin = $user->hasCompanyAccess() || $user->type == 'super admin';
         
         // Check if user is Finance department employee
         $employee = Employee::where('user_id', $user->id)->first();
@@ -638,6 +681,23 @@ class ExpenseReimbursementController extends Controller
             'payment_mode' => $request->payment_mode,
             'payment_proof' => $paymentProof,
         ]);
+
+        $empName = optional($expense->employee)->name;
+        HrmActionLogger::record(
+            'expenses',
+            'paid',
+            (Auth::user()->name) . ' marked expense as paid for ' . ($empName ?: 'employee') . ' amount ' . $expense->amount,
+            [
+                'employee_id' => $expense->employee_id,
+                'employee_name' => $empName,
+                'subject_id' => $expense->id,
+                'properties' => [
+                    'amount' => $expense->amount,
+                    'paid_date' => $request->paid_date,
+                    'payment_mode' => $request->payment_mode,
+                ],
+            ]
+        );
 
         return redirect()->route('expenses.index')->with('success', __('Payment marked as completed. The employee has been reimbursed.'));
     }

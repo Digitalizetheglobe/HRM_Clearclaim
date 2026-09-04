@@ -15,6 +15,7 @@ use DateTime;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;  // Add this line
 use App\Models\Leave as LocalLeave;  // Add this line
+use App\Support\HrmActionLogger;
 
 class AttendanceEmployeeController extends Controller
 {
@@ -301,7 +302,7 @@ class AttendanceEmployeeController extends Controller
 
     // public function update(Request $request, $id)
     // {
-    //     if (\Auth::user()->type == 'company' || \Auth::user()->type == 'hr') {
+    //     if (\Auth::user()->hasCompanyAccess() || \Auth::user()->type == 'hr') {
     //         $employeeId      = AttendanceEmployee::where('employee_id', $request->employee_id)->first();
     //         $check = AttendanceEmployee::where('employee_id', '=', $request->employee_id)->where('date', $request->date)->first();
 
@@ -440,7 +441,7 @@ class AttendanceEmployeeController extends Controller
 
     public function update(Request $request, $id)
     {
-        if (\Auth::user()->type == 'company' || \Auth::user()->type == 'hr') {
+        if (\Auth::user()->hasCompanyAccess() || \Auth::user()->type == 'hr') {
             $check = AttendanceEmployee::where('id', '=', $id)
                                     ->where('employee_id', '=', $request->employee_id)
                                     ->where('date', $request->date)
@@ -485,7 +486,7 @@ class AttendanceEmployeeController extends Controller
                 }
 
                 // Calculate status using new rules (HR/Company can override)
-                if ((\Auth::user()->type == 'company' || \Auth::user()->type == 'hr') && $request->has('status')) {
+                if ((\Auth::user()->hasCompanyAccess() || \Auth::user()->type == 'hr') && $request->has('status')) {
                     $status = $request->status;
                 } else {
                     $status = $this->calculateAttendanceStatusWithNewRules(
@@ -524,6 +525,25 @@ class AttendanceEmployeeController extends Controller
                         'status' => $status
                     ]);
                 }
+
+                $emp = Employee::find($request->employee_id);
+                HrmActionLogger::record(
+                    'attendance',
+                    'updated',
+                    (\Auth::user()->name) . ' updated attendance for ' . ($emp->name ?? 'employee') . ' on ' . $request->date,
+                    [
+                        'employee_id' => $request->employee_id,
+                        'employee_name' => $emp->name ?? null,
+                        'subject_type' => AttendanceEmployee::class,
+                        'subject_id' => $id,
+                        'properties' => [
+                            'date' => $request->date,
+                            'clock_in' => $clockIn,
+                            'clock_out' => $clockOut,
+                            'status' => $status,
+                        ],
+                    ]
+                );
 
                 return redirect()->route('attendanceemployee.index')->with('success', __('Employee attendance successfully updated.'));
             } else {
@@ -747,6 +767,7 @@ class AttendanceEmployeeController extends Controller
 
                 $employees = $request->employee_id;
                 $atte      = [];
+                $loggedEmployees = [];
                 foreach ($employees as $employee) {
                     $present = 'present-' . $employee;
                     $in      = 'in-' . $employee;
@@ -803,6 +824,7 @@ class AttendanceEmployeeController extends Controller
                         $employeeAttendance->overtime      = $overtime;
                         $employeeAttendance->total_rest    = '00:00:00';
                         $employeeAttendance->save();
+                        $loggedEmployees[] = $employee;
                     } else {
                         $attendance = AttendanceEmployee::where('employee_id', '=', $employee)->where('date', '=', $request->date)->first();
 
@@ -811,6 +833,22 @@ class AttendanceEmployeeController extends Controller
                         }
                     }
                 }
+
+                $employeeNames = !empty($loggedEmployees)
+                    ? Employee::whereIn('id', $loggedEmployees)->pluck('name')->implode(', ')
+                    : '';
+                HrmActionLogger::record(
+                    'bulk_attendance',
+                    'updated',
+                    (\Auth::user()->name) . ' updated bulk attendance for ' . date('d M Y', strtotime($date)) . (!empty($employeeNames) ? ' (' . $employeeNames . ')' : ''),
+                    [
+                        'properties' => [
+                            'date' => $date,
+                            'employees' => $employeeNames,
+                            'count' => count($loggedEmployees),
+                        ],
+                    ]
+                );
 
                 return redirect()->back()->with('success', __('Employee attendance successfully created.'));
             } else {
