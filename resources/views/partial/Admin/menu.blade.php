@@ -121,6 +121,9 @@
                         <span class="dash-mtext">{{ __('Companies') }}</span>
                     </a>
                 </li>
+            @endif
+
+            {{-- Staff menu (User / Role / Employee Profile) hidden
             @else
                 @if ($isCompanyOrHr ||
                         Gate::check('Manage User') ||
@@ -169,19 +172,11 @@
                                     </a>
                                 </li>
                             @endif
-                            {{-- Uncomment if needed
-                            @can('Manage Employee Last Login')
-                                <li class="dash-item">
-                                    <a class="dash-link text-white hover:text-white hover:bg-[#001a3b] text-lg" 
-                                    href="{{ route('lastlogin') }}">
-                                    {{ __('Last Login') }}
-                                    </a>
-                                </li>
-                            @endcan --}}
                         </ul>
                     </li>
                 @endif
             @endif
+            --}}
 
             @if (\Auth::user()->type == 'super-admin')
                 <li class="dash-item {{ Request::segment(1) == 'hrm-logs' ? 'active' : '' }}">
