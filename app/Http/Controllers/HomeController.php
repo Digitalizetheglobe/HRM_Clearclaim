@@ -100,10 +100,8 @@ class HomeController extends Controller
                 
                 $date = date("Y-m-d");
 
-                // Fetch the latest attendance record for today
-                $employeeAttendance = AttendanceEmployee::where('employee_id', '=', $emp->id ?? 0)
-                    ->where('date', '=', $date)
-                    ->first();
+                // Keep the morning punch for the rest of the day, even if a blank row also exists.
+                $employeeAttendance = AttendanceEmployee::forEmployeeOnDate($emp->id ?? 0, $date);
 
                 // Pass clock-in time if available
                 $clockInTime = $employeeAttendance ? $employeeAttendance->clock_in : null;    
@@ -181,6 +179,7 @@ class HomeController extends Controller
                         
                         // Get birthdays this month (not passed yet)
                         $birthdays = Employee::where('created_by', \Auth::user()->creatorId())
+                            ->active()
                             ->whereMonth('dob', $currentMonth)
                             ->get()
                             ->map(function ($employee) use ($today, $currentYear) {
@@ -200,6 +199,7 @@ class HomeController extends Controller
                         
                         // Get anniversaries this month (completed 1 year or more and not passed yet)
                         $anniversaries = Employee::where('created_by', \Auth::user()->creatorId())
+                            ->active()
                             ->whereMonth('company_doj', $currentMonth)
                             ->whereYear('company_doj', '<=', $currentYear - 1)
                             ->get()
@@ -606,6 +606,7 @@ class HomeController extends Controller
                         
                         // Get birthdays this month (not passed yet)
                         $birthdays = Employee::where('created_by', \Auth::user()->creatorId())
+                            ->active()
                             ->whereMonth('dob', $currentMonth)
                             ->get()
                             ->map(function ($employee) use ($today, $currentYear) {
@@ -625,6 +626,7 @@ class HomeController extends Controller
                         
                         // Get anniversaries this month (completed 1 year or more and not passed yet)
                         $anniversaries = Employee::where('created_by', \Auth::user()->creatorId())
+                            ->active()
                             ->whereMonth('company_doj', $currentMonth)
                             ->whereYear('company_doj', '<=', $currentYear - 1)
                             ->get()
@@ -696,13 +698,15 @@ class HomeController extends Controller
             return response()->json(['error' => 'Employee not found'], 404);
         }
         
-        // Get ALL employees from all departments for full organizational view
+        // Active employees only. Exited and inactive employees are left out of the chart.
         $employees = Employee::where('created_by', $creatorId)
+            ->active()
             ->with(['designation', 'department', 'reportingManager'])
             ->get();
         
         // Find CEO (employee with CEO designation) - search across all departments
         $ceo = Employee::where('created_by', $creatorId)
+            ->active()
             ->with(['designation', 'department', 'reportingManager'])
             ->get()
             ->first(function($employee) {
@@ -823,7 +827,19 @@ class HomeController extends Controller
             } else {
                 // Find manager
                 $manager = $employees->find($managerId);
-                if ($manager && $manager->id !== $topPerson->id && (!$ceo || $manager->id !== $ceo->id)) {
+                if (!$manager) {
+                    foreach ($subordinates as $employee) {
+                        if (!in_array($employee->id, array_column($hierarchy, 'id'))) {
+                            $hierarchy[] = [
+                                'id' => $employee->id,
+                                'name' => $employee->name,
+                                'designation' => $employee->designation->name ?? '',
+                                'level' => 'employee',
+                                'avatar' => $this->getEmployeeInitials($employee)
+                            ];
+                        }
+                    }
+                } elseif ($manager->id !== ($topPerson->id ?? null) && (!$ceo || $manager->id !== $ceo->id)) {
                     // Add manager card if not already added
                     if (!in_array($manager->id, array_column($hierarchy, 'id'))) {
                         $hierarchy[] = [
@@ -910,6 +926,7 @@ class HomeController extends Controller
         // If CEO is selected, get ALL employees from all departments
         if ($ceo && $selectedEmployee->id === $ceo->id) {
             $allEmployees = Employee::where('created_by', \Auth::user()->creatorId())
+                ->active()
                 ->with(['designation', 'department', 'reportingManager'])
                 ->get();
             
@@ -980,7 +997,18 @@ class HomeController extends Controller
                 }
                 break;
             } else {
-                $current = $employees->find($current->reporting_manager);
+                $managerId = $current->reporting_manager;
+                $current = null;
+                $guard = 0;
+                while ($managerId && $guard < 25) {
+                    $manager = $employees->firstWhere('id', $managerId);
+                    if ($manager) {
+                        $current = $manager;
+                        break;
+                    }
+                    $managerId = Employee::where('id', $managerId)->value('reporting_manager');
+                    $guard++;
+                }
             }
         }
         

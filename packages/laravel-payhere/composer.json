@@ -1,0 +1,28 @@
+{
+    "name": "lahirulhr/laravel-payhere",
+    "description": "Local stand-in for lahirulhr/laravel-payhere. The upstream GitHub repository is no longer available.",
+    "version": "0.2.1",
+    "type": "library",
+    "license": "MIT",
+    "require": {
+        "php": "^8.0",
+        "guzzlehttp/guzzle": "^7.4",
+        "illuminate/contracts": "^10.0",
+        "spatie/laravel-package-tools": "^1.9.2"
+    },
+    "autoload": {
+        "psr-4": {
+            "Lahirulhr\\PayHere\\": "src/"
+        }
+    },
+    "extra": {
+        "laravel": {
+            "providers": [
+                "Lahirulhr\\PayHere\\PayHereServiceProvider"
+            ],
+            "aliases": {
+                "PayHere": "Lahirulhr\\PayHere\\PayHereFacade"
+            }
+        }
+    }
+}

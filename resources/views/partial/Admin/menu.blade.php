@@ -284,8 +284,8 @@
                             </li>
                         @endcan
                         
-                        @if(\Auth::user()->hasCompanyAccess() || \Auth::user()->type == 'hr')
-                            <li class="dash-item">
+                        @if(\Auth::user()->hasCompanyAccess() || \Auth::user()->type == 'hr' || (\Auth::user()->type == 'employee' && \Auth::user()->employee && \Auth::user()->employee->designation && str_contains(strtolower(\Auth::user()->employee->designation->name), 'manager')))
+                            <li class="dash-item {{ Request::segment(1) == 'monthly-working-hours' ? ' active' : '' }}">
                                 <a class="dash-link text-white hover:text-white hover:bg-[#001a3b] text-lg"
                                 href="{{ route('monthly.working.hours.index') }}">{{ __('Monthly Working Hours Summary') }}</a>
                             </li>

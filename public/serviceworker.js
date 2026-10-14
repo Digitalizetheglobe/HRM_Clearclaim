@@ -1,48 +1,61 @@
-const staticCacheName = "pwa-v" + new Date().getTime();
+const isLocal = self.location.hostname === '127.0.0.1' || self.location.hostname === 'localhost';
+const staticCacheName = 'pwa-v' + new Date().getTime();
 
 const filesToCache = [
-  '/',
   '/offline',
   '/css/app.css',
   '/js/app.js',
-  '/images/icons/icon-72x72.png',
-  '/images/icons/icon-96x96.png',
-  '/images/icons/icon-128x128.png',
-  '/images/icons/icon-144x144.png',
-  '/images/icons/icon-152x152.png',
-  '/images/icons/icon-192x192.png',
-  '/images/icons/icon-384x384.png',
-  '/images/icons/icon-512x512.png',
 ];
 
-// Install
 self.addEventListener('install', event => {
+  self.skipWaiting();
+  if (isLocal) {
+    return;
+  }
+
   event.waitUntil(
-    caches.open(staticCacheName).then(cache => {
-      return cache.addAll(filesToCache);
-    })
+    caches.open(staticCacheName).then(cache => cache.addAll(filesToCache))
   );
 });
 
-// Activate
 self.addEventListener('activate', event => {
-  event.waitUntil(
-    caches.keys().then(cacheNames =>
-      Promise.all(
-        cacheNames
-          .filter(cache => cache.startsWith("pwa-"))
-          .filter(cache => cache !== staticCacheName)
-          .map(cache => caches.delete(cache))
-      )
-    )
-  );
+  event.waitUntil((async () => {
+    const cacheNames = await caches.keys();
+    await Promise.all(
+      cacheNames
+        .filter(cache => isLocal || (cache.startsWith('pwa-') && cache !== staticCacheName))
+        .map(cache => caches.delete(cache))
+    );
+
+    if (isLocal) {
+      await self.registration.unregister();
+    }
+
+    await self.clients.claim();
+    const clients = await self.clients.matchAll({ type: 'window' });
+    await Promise.all(clients.map(client => {
+      const url = new URL(client.url);
+      if (url.pathname === '/offline') {
+        return client.navigate('/');
+      }
+      return undefined;
+    }));
+  })());
 });
 
-// Fetch
 self.addEventListener('fetch', event => {
+  if (isLocal || event.request.method !== 'GET') {
+    return;
+  }
+
+  if (event.request.mode === 'navigate') {
+    event.respondWith(
+      fetch(event.request).catch(() => caches.match('/offline'))
+    );
+    return;
+  }
+
   event.respondWith(
-    caches.match(event.request).then(response =>
-      response || fetch(event.request).catch(() => caches.match('/offline'))
-    )
+    caches.match(event.request).then(response => response || fetch(event.request))
   );
 });

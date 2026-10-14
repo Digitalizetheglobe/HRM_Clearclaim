@@ -57,9 +57,7 @@ class XSS
                 });
 
                 if ($numberOfUpdatesPending > 0) {
-                    // run code like seeder only when new migration
                     Utility::addNewData();
-                    return redirect()->route('LaravelUpdater::welcome');
                 }
             }
         }

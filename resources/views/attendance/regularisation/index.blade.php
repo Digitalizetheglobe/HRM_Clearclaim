@@ -154,24 +154,6 @@
                                                 @endif
                                             @endif
                                             
-                                            @if (\Auth::user()->type == 'employee')
-                                                @if ($regularisation->status == 'Pending')
-                                                    <div class="action-btn bg-warning ms-2">
-                                                        <a href="#" 
-                                                           class="mx-3 btn btn-sm align-items-center edit-regularisation" 
-                                                           data-id="{{ $regularisation->id }}"
-                                                           data-date="{{ $regularisation->date ? date('Y-m-d', strtotime($regularisation->date)) : '' }}"
-                                                           data-punch-in="{{ date('H:i', strtotime($regularisation->punch_in_time)) }}"
-                                                           data-punch-out="{{ date('H:i', strtotime($regularisation->punch_out_time)) }}"
-                                                           data-reason="{{ $regularisation->reason }}"
-                                                           data-remarks="{{ $regularisation->remarks }}"
-                                                           data-bs-toggle="tooltip" 
-                                                           title="{{ __('Edit') }}">
-                                                            <i class="ti ti-edit text-white"></i>
-                                                        </a>
-                                                    </div>
-                                                @endif
-                                            @endif
                                         </td>
                                     </tr>
                                 @empty

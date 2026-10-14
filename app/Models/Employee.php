@@ -302,6 +302,22 @@ class Employee extends Model
         return $this->hasOne('App\Models\User', 'id', 'user_id');
     }
 
+    /**
+     * Employees who are still with the organization.
+     * A termination record means they have exited, and an inactive login means they are inactive.
+     */
+    public function scopeActive($query)
+    {
+        return $query->whereNotIn('employees.id', function ($subquery) {
+            $subquery->select('employee_id')->from('terminations');
+        })->where(function ($query) {
+            $query->whereDoesntHave('user')
+                ->orWhereHas('user', function ($userQuery) {
+                    $userQuery->where('is_active', 1);
+                });
+        });
+    }
+
     public function paySlip()
     {
         return $this->hasOne('App\Models\PaySlip', 'id', 'employee_id');

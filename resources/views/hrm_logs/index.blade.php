@@ -101,7 +101,7 @@
                                                 </div>
                                             </div>
                                         </div>
-                                        <p class="mb-1 mt-3">{{ $log->description }}</p>
+                                        <p class="mb-1 mt-3">{!! nl2br(e($log->description)) !!}</p>
                                         @if ($log->employee_name)
                                             <div class="small text-muted">
                                                 {{ __('Employee') }}: <strong>{{ $log->employee_name }}</strong>

@@ -211,9 +211,16 @@ class AttendanceRegularisationController extends Controller
      */
     public function update(Request $request, $id)
     {
-        // Only employees can update their own requests
-        if (\Auth::user()->type != 'employee') {
-            $errorMsg = __('Permission denied. Only employees can edit their requests.');
+        $regularisation = AttendanceRegularisation::with('employee')->find($id);
+        $manager = Employee::where('user_id', \Auth::user()->id)->first();
+        $isReportingManager = $regularisation
+            && $regularisation->employee
+            && $manager
+            && (int) $regularisation->employee->reporting_manager === (int) $manager->id
+            && (int) $regularisation->employee_id !== (int) $manager->id;
+
+        if (!$isReportingManager) {
+            $errorMsg = __('Permission denied. Only the reporting manager can edit a submitted request.');
             if ($request->ajax() || $request->wantsJson()) {
                 return response()->json(['success' => false, 'message' => $errorMsg], 403);
             }
@@ -240,28 +247,7 @@ class AttendanceRegularisationController extends Controller
             return redirect()->back()->with('error', $errorMsg);
         }
 
-        // Get employee
-        $employee = Employee::where('user_id', \Auth::user()->id)->first();
-        if (!$employee) {
-            $errorMsg = __('Employee not found.');
-            if ($request->ajax() || $request->wantsJson()) {
-                return response()->json(['success' => false, 'message' => $errorMsg], 404);
-            }
-            return redirect()->back()->with('error', $errorMsg);
-        }
-
-        // Find the regularisation request
-        $regularisation = AttendanceRegularisation::where('id', $id)
-            ->where('employee_id', $employee->id)
-            ->first();
-
-        if (!$regularisation) {
-            $errorMsg = __('Regularisation request not found or you do not have permission to edit it.');
-            if ($request->ajax() || $request->wantsJson()) {
-                return response()->json(['success' => false, 'message' => $errorMsg], 404);
-            }
-            return redirect()->back()->with('error', $errorMsg);
-        }
+        $employee = $regularisation->employee;
 
         // Check if request is still pending
         if ($regularisation->status != AttendanceRegularisation::STATUS_PENDING) {
@@ -323,11 +309,11 @@ class AttendanceRegularisationController extends Controller
             return response()->json([
                 'success' => true,
                 'message' => __('Attendance regularisation request updated successfully.'),
-                'redirect' => route('attendance-regularisation.index')
+                'redirect' => route('attendance.request')
             ]);
         }
 
-        return redirect()->route('attendance-regularisation.index')->with('success', __('Attendance regularisation request updated successfully.'));
+        return redirect()->route('attendance.request')->with('success', __('Attendance regularisation request updated successfully.'));
     }
 
     /**

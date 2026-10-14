@@ -10,46 +10,14 @@
 @endsection
 
 @section('content')
-   @if (\Auth::user()->hasCompanyAccess() || \Auth::user()->type == 'hr')
-        <div class="col-sm-12 col-lg-12 col-xl-12 col-md-12 mt-4">
-            <div class="card">
-                <div class="card-body">
-                    {{ Form::open(['route' => ['payslip.store'], 'method' => 'POST', 'id' => 'payslip_form']) }}
-                    <div class="d-flex align-items-center justify-content-end">
-                        <div class="col-xl-2 col-lg-3 col-md-6 col-sm-12 col-12 mx-2">
-                            <div class="btn-box">
-                                {{ Form::label('month', __('Select Month'), ['class' => 'form-label']) }}
-                                {{ Form::select('month', $month, date('m'), ['class' => 'form-control select', 'id' => 'month']) }}
-                            </div>
-                        </div>
-                        <div class="col-xl-2 col-lg-3 col-md-6 col-sm-12 col-12 mx-2">
-                            <div class="btn-box">
-                                {{ Form::label('year', __('Select Year'), ['class' => 'form-label']) }}
-                                {{ Form::select('year', $year, date('Y'), ['class' => 'form-control select']) }}
-                            </div>
-                        </div>
-                        <div class="col-auto float-end ms-2 mt-4">
-                            <a href="#" class="btn btn-primary"
-                                onclick="document.getElementById('payslip_form').submit(); return false;"
-                                data-bs-toggle="tooltip" title="{{ __('Generate Payslip') }}"
-                                data-original-title="{{ __('Generate Payslip') }}">
-                                {{ __('Generate Payslip') }}
-                            </a>
-                        </div>
-                    </div>
-                    {{ Form::close() }}
-                </div>
-            </div>
-        </div>
-    @endif
-
     <div class="col-12">
         <div class="card">
             <div class="card-header">
                 <div class="row">
                     <div class="col-md-4" style="margin-bottom: 10px;">
-                        <div class="d-flex align-items-center justify-content-start">
-                            <h5>{{ __('Find Employee Payslip') }}</h5>
+                        <div>
+                            <h5 class="mb-0">{{ __('Find Employee Payslip') }}</h5>
+                            <small class="text-muted">{{ __('Earlier months keep payslips for employees who were still employed then, including people who later left.') }}</small>
                         </div>
                     </div>
                     <div class="col-md-8">
@@ -110,10 +78,48 @@
             </div>
         </div>
     </div>
+
+    @if (\Auth::user()->hasCompanyAccess() || \Auth::user()->type == 'hr')
+        <div class="col-sm-12 col-lg-12 col-xl-12 col-md-12 mt-4">
+            <div class="card">
+                <div class="card-body">
+                    {{ Form::open(['route' => ['payslip.store'], 'method' => 'POST', 'id' => 'generate_payslip_form', 'onsubmit' => 'return confirmGeneratePayslip();']) }}
+                    <div class="d-flex align-items-center justify-content-end">
+                        <div class="col-xl-2 col-lg-3 col-md-6 col-sm-12 col-12 mx-2">
+                            <div class="btn-box">
+                                {{ Form::label('month', __('Select Month'), ['class' => 'form-label']) }}
+                                {{ Form::select('month', $month, date('m'), ['class' => 'form-control select', 'id' => 'generate_month']) }}
+                            </div>
+                        </div>
+                        <div class="col-xl-2 col-lg-3 col-md-6 col-sm-12 col-12 mx-2">
+                            <div class="btn-box">
+                                {{ Form::label('year', __('Select Year'), ['class' => 'form-label']) }}
+                                {{ Form::select('year', $year, date('Y'), ['class' => 'form-control select', 'id' => 'generate_year']) }}
+                            </div>
+                        </div>
+                        <div class="col-auto float-end ms-2 mt-4">
+                            <button type="submit" class="btn btn-primary">
+                                {{ __('Generate Payslip') }}
+                            </button>
+                        </div>
+                    </div>
+                    {{ Form::close() }}
+                </div>
+            </div>
+        </div>
+    @endif
 @endsection
 
 @push('script-page')
     <script>
+        function confirmGeneratePayslip() {
+            var month = document.getElementById('generate_month');
+            var year = document.getElementById('generate_year');
+            var label = month.options[month.selectedIndex].text + ' ' + year.value;
+
+            return confirm('Generate payslips for ' + label + '?\n\nThis creates payslips only for active employees who do not already have one for that month.');
+        }
+
         $(document).ready(function() {
             callback();
 

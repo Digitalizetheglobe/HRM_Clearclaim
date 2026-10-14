@@ -16,49 +16,86 @@ class MonthlyWorkingHoursController extends Controller
 {
     public function index(Request $request)
     {
-        if (\Auth::user()->hasCompanyAccess() || \Auth::user()->type == 'hr') {
-            $month = $request->month ? $request->month : date('m');
-            $year = $request->year ? $request->year : date('Y');
-            
-            $departments = Department::where('created_by', \Auth::user()->creatorId())->get()->pluck('name', 'id');
-            $departments->prepend('All', '');
-
-            $employeesQuery = Employee::where('created_by', \Auth::user()->creatorId())
-                ->whereNotIn('id', \App\Models\Termination::pluck('employee_id')->toArray());
-            
-            if (!empty($request->department)) {
-                $employeesQuery->where('department_id', $request->department);
-            }
-            if (!empty($request->employee)) {
-                $employeesQuery->where('id', $request->employee);
-            }
-
-            if (!empty($request->search)) {
-                $employeesQuery->whereHas('user', function($q) use ($request) {
-                    $q->where('name', 'LIKE', "%{$request->search}%");
-                });
-            }
-
-            $employees = $employeesQuery->with('department')->get();
-            $employeeFilter = $employees->pluck('name', 'id');
-            $employeeFilter->prepend('All', '');
-
-            $summaryData = $this->calculateSummary($employees, $month, $year);
-
-            return view('attendance.monthly_summary', compact('summaryData', 'departments', 'employeeFilter', 'month', 'year'));
-        } else {
+        if (!$this->canViewMonthlySummary()) {
             return redirect()->back()->with('error', __('Permission denied.'));
         }
+
+        $month = $request->month ? $request->month : date('m');
+        $year = $request->year ? $request->year : date('Y');
+
+        $teamQuery = $this->summaryEmployeeQuery();
+        $departmentIds = (clone $teamQuery)->pluck('department_id')->filter()->unique();
+        $departments = Department::whereIn('id', $departmentIds)->pluck('name', 'id');
+        $departments->prepend('All', '');
+
+        $employeeFilterQuery = clone $teamQuery;
+        if (!empty($request->department)) {
+            $employeeFilterQuery->where('department_id', $request->department);
+        }
+        $employeeFilter = $employeeFilterQuery->orderBy('name')->pluck('name', 'id');
+        $employeeFilter->prepend('All', '');
+
+        $employeesQuery = clone $teamQuery;
+        if (!empty($request->department)) {
+            $employeesQuery->where('department_id', $request->department);
+        }
+        if (!empty($request->employee)) {
+            $employeesQuery->where('id', $request->employee);
+        }
+        if (!empty($request->search)) {
+            $employeesQuery->whereHas('user', function ($q) use ($request) {
+                $q->where('name', 'LIKE', "%{$request->search}%");
+            });
+        }
+
+        $employees = $employeesQuery->with('department')->get();
+        $summaryData = $this->calculateSummary($employees, $month, $year);
+
+        return view('attendance.monthly_summary', compact('summaryData', 'departments', 'employeeFilter', 'month', 'year'));
     }
 
     public function export(Request $request)
     {
-        if (\Auth::user()->hasCompanyAccess() || \Auth::user()->type == 'hr') {
-            $month = $request->month ? $request->month : date('m');
-            $year = $request->year ? $request->year : date('Y');
-            return Excel::download(new MonthlyWorkingHoursExport($request->all(), $month, $year), "monthly_working_hours_{$year}_{$month}.xlsx");
+        if (!$this->canViewMonthlySummary()) {
+            return redirect()->back()->with('error', __('Permission denied.'));
         }
-        return redirect()->back()->with('error', __('Permission denied.'));
+
+        $month = $request->month ? $request->month : date('m');
+        $year = $request->year ? $request->year : date('Y');
+
+        return Excel::download(new MonthlyWorkingHoursExport($request->all(), $month, $year), "monthly_working_hours_{$year}_{$month}.xlsx");
+    }
+
+    public function summaryEmployeeQuery()
+    {
+        $user = \Auth::user();
+        $query = Employee::where('created_by', $user->creatorId())
+            ->whereNotIn('id', \App\Models\Termination::pluck('employee_id')->toArray());
+
+        if (!($user->hasCompanyAccess() || $user->type == 'hr')) {
+            $manager = Employee::where('user_id', $user->id)->first();
+            $query->where('reporting_manager', $manager ? $manager->id : 0);
+        }
+
+        return $query;
+    }
+
+    private function canViewMonthlySummary()
+    {
+        $user = \Auth::user();
+        if ($user->hasCompanyAccess() || $user->type == 'hr') {
+            return true;
+        }
+
+        if ($user->type != 'employee') {
+            return false;
+        }
+
+        $employee = Employee::with('designation')->where('user_id', $user->id)->first();
+
+        return $employee
+            && $employee->designation
+            && str_contains(strtolower($employee->designation->name), 'manager');
     }
 
     public function calculateSummary($employees, $month, $year)

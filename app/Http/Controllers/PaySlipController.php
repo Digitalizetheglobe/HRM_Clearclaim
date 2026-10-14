@@ -113,6 +113,7 @@ class PaySlipController extends Controller
         $validatePaysilp    = PaySlip::where('salary_month', '=', $formate_month_year)->where('created_by', \Auth::user()->creatorId())->pluck('employee_id');
         // Only count employees with salary > 0
         $payslip_employee   = Employee::where('created_by', \Auth::user()->creatorId())
+            ->active()
             ->where('company_doj', '<=', date($year . '-' . $month . '-t'))
             ->where('salary', '>', 0)
             ->count();
@@ -124,6 +125,7 @@ class PaySlipController extends Controller
         if ($payslip_employee > count($validatePaysilp)) {
             // Only get employees with salary > 0 who don't have payslips yet
             $employees = Employee::where('created_by', \Auth::user()->creatorId())
+                ->active()
                 ->where('company_doj', '<=', date($year . '-' . $month . '-t'))
                 ->where('salary', '>', 0)
                 ->whereNotIn('employee_id', $validatePaysilp)
@@ -279,7 +281,9 @@ class PaySlipController extends Controller
                     $join->on('pay_slips.salary_month', '=', \DB::raw("'" . $formate_month_year . "'"));
                     $join->leftjoin('payslip_types', 'payslip_types.id', '=', 'employees.salary_type');
                 }
-            )->where('employees.created_by', \Auth::user()->creatorId())->get();
+            )->where('employees.created_by', \Auth::user()->creatorId())
+                ->forEmployedDuring($formate_month_year)
+                ->get();
 
             foreach ($paylip_employee as $employee) {
                 if (Auth::user()->type == 'employee') {
@@ -374,15 +378,15 @@ class PaySlipController extends Controller
 
     public function bulk_pay_create($date)
     {
-        $Employees       = PaySlip::where('salary_month', $date)->where('created_by', \Auth::user()->creatorId())->get();
-        $unpaidEmployees = PaySlip::where('salary_month', $date)->where('created_by', \Auth::user()->creatorId())->where('status', '=', 0)->get();
+        $Employees       = PaySlip::where('salary_month', $date)->where('created_by', \Auth::user()->creatorId())->forEmployedDuring($date)->get();
+        $unpaidEmployees = PaySlip::where('salary_month', $date)->where('created_by', \Auth::user()->creatorId())->where('status', '=', 0)->forEmployedDuring($date)->get();
 
         return view('payslip.bulkcreate', compact('Employees', 'unpaidEmployees', 'date'));
     }
 
     public function bulkpayment(Request $request, $date)
     {
-        $unpaidEmployees = PaySlip::where('salary_month', $date)->where('created_by', \Auth::user()->creatorId())->where('status', '=', 0)->get();
+        $unpaidEmployees = PaySlip::where('salary_month', $date)->where('created_by', \Auth::user()->creatorId())->where('status', '=', 0)->forEmployedDuring($date)->get();
 
         foreach ($unpaidEmployees as $employee) {
             $employee->status = 1;

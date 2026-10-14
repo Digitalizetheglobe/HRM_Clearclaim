@@ -95,7 +95,7 @@ class LeaveController extends Controller
                 $leavesQuery->where('created_by', '=', $user->creatorId());
             }
 
-            $leavesQuery->with(['employees', 'leaveType', 'approver']);
+            $leavesQuery->with(['employees.reportingManager', 'leaveType', 'approver']);
 
             if ($status == 'Reject' || $status == 'Rejected') {
                 $leavesQuery->whereIn('status', ['Reject', 'Rejected']);
@@ -143,7 +143,7 @@ class LeaveController extends Controller
                 ->toArray();
                 
             $leavesQuery = LocalLeave::whereIn('employee_id', $departmentEmployeeIds)
-                ->with(['employees', 'leaveType', 'approver']);
+                ->with(['employees.reportingManager', 'leaveType', 'approver']);
 
             if ($status == 'Reject' || $status == 'Rejected') {
                 $leavesQuery->whereIn('status', ['Reject', 'Rejected']);

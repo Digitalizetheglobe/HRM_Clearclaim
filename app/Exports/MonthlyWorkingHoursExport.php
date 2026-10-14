@@ -8,7 +8,6 @@ use Maatwebsite\Excel\Concerns\WithMapping;
 use Maatwebsite\Excel\Concerns\WithStyles;
 use PhpOffice\PhpSpreadsheet\Worksheet\Worksheet;
 use App\Http\Controllers\MonthlyWorkingHoursController;
-use App\Models\Employee;
 
 class MonthlyWorkingHoursExport implements FromCollection, WithHeadings, WithMapping, WithStyles
 {
@@ -25,9 +24,9 @@ class MonthlyWorkingHoursExport implements FromCollection, WithHeadings, WithMap
 
     public function collection()
     {
-        $employeesQuery = Employee::where('created_by', \Auth::user()->creatorId())
-            ->whereNotIn('id', \App\Models\Termination::pluck('employee_id')->toArray());
-        
+        $controller = new MonthlyWorkingHoursController();
+        $employeesQuery = $controller->summaryEmployeeQuery();
+
         if (!empty($this->request['department'])) {
             $employeesQuery->where('department_id', $this->request['department']);
         }

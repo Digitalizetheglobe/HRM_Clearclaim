@@ -38,6 +38,7 @@ class PayslipExport implements FromCollection, WithHeadings
         }
         $formate_month_year = $year . '-' . $month;
         $data->where('salary_month', '=', $formate_month_year);
+        $data->forEmployedDuring($formate_month_year);
         $data=$data->get();
         $result = array();
         foreach($data as $k => $payslip)

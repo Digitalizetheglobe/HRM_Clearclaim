@@ -224,13 +224,6 @@ Route::any('/hrm/loan/deduction/{id}/update', function($id) {
     return response()->json(['message' => 'Debug endpoint']);
 });
 
-// web.php
-Route::post('/attendance/overview', [AttendanceController::class, 'attendanceOverview'])
-    ->name('attendance.overview')
-    ->middleware(['auth']); // or your middleware
-
-
-
 Route::get('/get-latest-attendance', function() {
     $employeeId = !empty(\Auth::user()->employee) ? \Auth::user()->employee->id : 0;
     $date = date("Y-m-d");
@@ -2207,12 +2200,6 @@ Route::group(['middleware' => ['auth']], function () {
     Route::post('/dashboard/filter', [HomeController::class, 'filterDashboardData'])->name('dashboard.filter');
     Route::get('/organization/hierarchy', [HomeController::class, 'getOrganizationHierarchy'])->name('organization.hierarchy')->middleware(['auth', 'XSS']);
 
-Route::get('/offline', function () {
-    return view('vendor.laravelpwa.offline');
-});
-
-
-
     Route::get('/debug-manifest', function() {
     return response()->json([
         'exists' => file_exists(public_path('manifest.json')),
@@ -2221,4 +2208,8 @@ Route::get('/offline', function () {
     ]);
 });
 
+});
+
+Route::get('/offline', function () {
+    return view('vendor.laravelpwa.offline');
 });

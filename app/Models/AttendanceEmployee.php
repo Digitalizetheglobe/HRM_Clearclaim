@@ -45,6 +45,42 @@ class AttendanceEmployee extends Model
     }
 
     /**
+     * The attendance row that should drive today's punch status.
+     * A real punch is preferred over a blank row for the same date.
+     */
+    public static function forEmployeeOnDate($employeeId, $date = null)
+    {
+        $date = $date ?: now()->toDateString();
+
+        $punched = static::where('employee_id', $employeeId)
+            ->whereDate('date', $date)
+            ->where('clock_in', '!=', '00:00:00')
+            ->orderByDesc('id')
+            ->first();
+
+        if ($punched) {
+            return $punched;
+        }
+
+        return static::where('employee_id', $employeeId)
+            ->whereDate('date', $date)
+            ->orderByDesc('id')
+            ->first();
+    }
+
+    public function hasPunchedIn()
+    {
+        return !empty($this->clock_in) && $this->clock_in !== '00:00:00';
+    }
+
+    public function hasPunchedOut()
+    {
+        return $this->hasPunchedIn()
+            && !empty($this->clock_out)
+            && $this->clock_out !== '00:00:00';
+    }
+
+    /**
      * Get department-specific punch-in time for an employee
      */
     public static function getEmployeePunchInTime($employeeId)

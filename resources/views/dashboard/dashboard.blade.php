@@ -137,10 +137,14 @@
                                     <div class="card-body">
                                         <!-- Punch In/Out Section -->
                                         <div id="punchInOutSection" class="text-center mb-4 pb-3 border-bottom">
+                                            @php
+                                                $hasPunchedIn = !empty($employeeAttendance) && $employeeAttendance->hasPunchedIn();
+                                                $hasPunchedOut = $hasPunchedIn && $employeeAttendance->hasPunchedOut();
+                                            @endphp
                                             <p id="attendanceStatus" class="font-bold mb-3">
-                                                    @if (!isset($employeeAttendance) || !$employeeAttendance->clock_in)
+                                                    @if (!$hasPunchedIn)
                                                         <span class="text-primary"><i class="fas fa-fingerprint"></i> Not Punched In</span>
-                                                    @elseif ($employeeAttendance->clock_out == '00:00:00' || !$employeeAttendance->clock_out)
+                                                    @elseif (!$hasPunchedOut)
                                                         @php
                                                             $companyStartTime = \Utility::getValByName('company_start_time');
                                                             $isLate = false;
@@ -157,12 +161,14 @@
                                                 </p>
 
                                                 {{ Form::open(['url' => 'attendanceemployee/attendance', 'method' => 'post', 'id' => 'attendanceForm']) }}
-                                                    @if (empty($employeeAttendance) || $employeeAttendance->clock_out != '00:00:00')
+                                                    @if (!$hasPunchedIn)
                                                     <button type="submit" value="0" name="in" id="clock_in" class="btn btn-primary btn-lg">{{ __('Punch In') }}</button>
-                                                    @else
+                                                    @elseif (!$hasPunchedOut)
                                                     <button type="button" value="1" name="out" id="clock_out" class="btn btn-danger btn-lg" data-bs-toggle="modal" data-bs-target="#confirmClockOutModal">
                                                             {{ __('Punch Out') }}
                                                         </button>
+                                                    @else
+                                                    <p class="text-muted mb-0">{{ __('Attendance is already marked for today.') }}</p>
                                                     @endif
                                                 {{ Form::close() }}
                                     </div>
@@ -682,8 +688,7 @@
                         setTimeout(function() {
                             attendanceStatus.innerHTML = '<span class="text-danger"><i class="fas fa-sign-out-alt"></i> Punched Out at ' + timeString + '</span>';
                             
-                            // Replace button with punch in button for next day
-                            attendanceForm.innerHTML = '<button type="submit" value="0" name="in" id="clock_in" class="btn btn-primary" disabled>{{ __("Punch In") }}</button>';
+                            attendanceForm.innerHTML = '<p class="text-muted mb-0">{{ __("Attendance is already marked for today.") }}</p>';
                         }, 1500);
                     } else {
                         attendanceStatus.innerHTML = '<span class="text-danger"><i class="fas fa-exclamation-circle"></i> ' + data.message + '</span>';
@@ -1341,10 +1346,30 @@ function updateProgressBarRealTime() {
                 const badgeClass = isLate ? 'bg-danger' : (data.hours_completed >= 9 ? 'bg-success' : 'bg-success');
                 const lateText = isLate ? ' <span class="text-danger">(Late Punch-In)</span>' : '';
                 
+                const extraText = data.day_complete === false ? '—' : (data.overtime || '00:00');
+                const shortfallText = data.day_complete === false ? '—' : (data.shortfall || '00:00');
+                const netText = data.day_complete === false ? '—' : (data.net_hours || '+00:00');
+                const hoursBalanceHtml = `
+                    <div class="row mt-2 pt-2 border-top text-center">
+                        <div class="col-4">
+                            <small class="text-muted d-block" style="font-size: 0.75rem;">Extra Hours</small>
+                            <span class="${extraText !== '00:00' && extraText !== '—' ? 'text-success' : 'text-muted'}" style="font-size: 0.875rem; font-weight: 600;">${extraText}</span>
+                        </div>
+                        <div class="col-4">
+                            <small class="text-muted d-block" style="font-size: 0.75rem;">Shortfall Hours</small>
+                            <span class="${shortfallText !== '00:00' && shortfallText !== '—' ? 'text-danger' : 'text-muted'}" style="font-size: 0.875rem; font-weight: 600;">${shortfallText}</span>
+                        </div>
+                        <div class="col-4">
+                            <small class="text-muted d-block" style="font-size: 0.75rem;">Net Hours</small>
+                            <span class="${netText.startsWith('+') && netText !== '+00:00' ? 'text-success' : (netText.startsWith('-') && netText !== '-00:00' ? 'text-danger' : 'text-muted')}" style="font-size: 0.875rem; font-weight: 600;">${netText}</span>
+                        </div>
+                    </div>
+                `;
+
                 if (filterType === 'date' && !isSelectedDateToday) {
                     // For selected date (not today), show punch in and punch out times with progress bar
                     const hoursCompleted = data.hours_completed || 0;
-                    const totalHours = 9; // Expected hours per day
+                    const totalHours = data.required_hours !== undefined && data.required_hours !== null ? data.required_hours : 9;
                     const percentage = totalHours > 0 ? (hoursCompleted / totalHours * 100) : 0;
                     
                     html = `
@@ -1376,30 +1401,33 @@ function updateProgressBarRealTime() {
                                     <p class="small mb-0" style="font-size: 0.875rem;">${data.clock_out || 'N/A'}</p>
                                 </div>
                             </div>
+                            ${hoursBalanceHtml}
                         </div>
                     `;
                 } else {
                     // Today view - show hours completed with progress (buttons shown above)
+                    const todayRequired = data.day_complete === false ? 9 : (data.required_hours || 9);
                     html = `
                         <div class="attendance-detail">
                             <div class="mb-2">
                                 <h6 class="text-muted mb-2">Hours Completed${lateText}</h6>
                                 <div class="d-flex justify-content-between align-items-center mb-2">
-                                    <span class="h5 mb-0">${data.hours_completed || '0'}/9 hours</span>
-                                    <span class="badge ${badgeClass}">${((data.hours_completed || 0) / 9 * 100).toFixed(1)}%</span>
+                                    <span class="h5 mb-0">${data.hours_completed || '0'}/${todayRequired} hours</span>
+                                    <span class="badge ${badgeClass}">${(todayRequired > 0 ? ((data.hours_completed || 0) / todayRequired * 100) : 0).toFixed(1)}%</span>
                                 </div>
                                 <div class="progress" style="height: 30px;">
                                     <div class="progress-bar ${progressBarClass}" 
                                          role="progressbar" 
-                                         style="width: ${Math.min(((data.hours_completed || 0) / 9 * 100), 100)}%" 
+                                         style="width: ${Math.min((todayRequired > 0 ? ((data.hours_completed || 0) / todayRequired * 100) : 0), 100)}%" 
                                          aria-valuenow="${data.hours_completed || 0}" 
                                          aria-valuemin="0" 
-                                         aria-valuemax="9">
-                                        ${Math.min(((data.hours_completed || 0) / 9 * 100), 100).toFixed(1)}%
+                                         aria-valuemax="${todayRequired}">
+                                        ${(todayRequired > 0 ? ((data.hours_completed || 0) / todayRequired * 100) : 0).toFixed(1)}%
                                     </div>
                                 </div>
                             </div>
                             ${data.clock_out ? `<div class="mb-2"><h6 class="text-muted mb-2">Punch Out Time</h6><p class="h6 mb-0">${data.clock_out}</p></div>` : ''}
+                            ${hoursBalanceHtml}
                         </div>
                     `;
                 }
@@ -1440,11 +1468,11 @@ function updateProgressBarRealTime() {
                         </div>
                         <div class="row mt-2 pt-2 border-top text-center">
                             <div class="col-4">
-                                <small class="text-muted d-block" style="font-size: 0.75rem;">Overtime</small>
+                                <small class="text-muted d-block" style="font-size: 0.75rem;">Extra Hours</small>
                                 <span class="${data.overtime && data.overtime !== '00:00' ? 'text-success' : 'text-muted'}" style="font-size: 0.875rem; font-weight: 600;">${data.overtime || '00:00'}</span>
                             </div>
                             <div class="col-4">
-                                <small class="text-muted d-block" style="font-size: 0.75rem;">Shortfall</small>
+                                <small class="text-muted d-block" style="font-size: 0.75rem;">Shortfall Hours</small>
                                 <span class="${data.shortfall && data.shortfall !== '00:00' ? 'text-danger' : 'text-muted'}" style="font-size: 0.875rem; font-weight: 600;">${data.shortfall || '00:00'}</span>
                             </div>
                             <div class="col-4">
@@ -1516,11 +1544,11 @@ function updateProgressBarRealTime() {
                         </div>
                         <div class="row mt-2 pt-2 border-top text-center">
                             <div class="col-4">
-                                <small class="text-muted d-block" style="font-size: 0.75rem;">Overtime</small>
+                                <small class="text-muted d-block" style="font-size: 0.75rem;">Extra Hours</small>
                                 <span class="${data.overtime && data.overtime !== '00:00' ? 'text-success' : 'text-muted'}" style="font-size: 0.875rem; font-weight: 600;">${data.overtime || '00:00'}</span>
                             </div>
                             <div class="col-4">
-                                <small class="text-muted d-block" style="font-size: 0.75rem;">Shortfall</small>
+                                <small class="text-muted d-block" style="font-size: 0.75rem;">Shortfall Hours</small>
                                 <span class="${data.shortfall && data.shortfall !== '00:00' ? 'text-danger' : 'text-muted'}" style="font-size: 0.875rem; font-weight: 600;">${data.shortfall || '00:00'}</span>
                             </div>
                             <div class="col-4">

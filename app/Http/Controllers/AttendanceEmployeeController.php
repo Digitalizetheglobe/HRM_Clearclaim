@@ -767,7 +767,13 @@ class AttendanceEmployeeController extends Controller
 
                 $employees = $request->employee_id;
                 $atte      = [];
-                $loggedEmployees = [];
+                $formatLogTime = function ($time) {
+                    if ($time === null || $time === '' || $time === '00:00:00') {
+                        return null;
+                    }
+
+                    return date('h:i A', strtotime($time));
+                };
                 foreach ($employees as $employee) {
                     $present = 'present-' . $employee;
                     $in      = 'in-' . $employee;
@@ -806,6 +812,8 @@ class AttendanceEmployeeController extends Controller
                         }
 
                         $attendance = AttendanceEmployee::where('employee_id', '=', $employee)->where('date', '=', $request->date)->first();
+                        $previousIn = !empty($attendance) ? $attendance->clock_in : null;
+                        $previousOut = !empty($attendance) ? $attendance->clock_out : null;
 
                         if (!empty($attendance)) {
                             $employeeAttendance = $attendance;
@@ -824,31 +832,19 @@ class AttendanceEmployeeController extends Controller
                         $employeeAttendance->overtime      = $overtime;
                         $employeeAttendance->total_rest    = '00:00:00';
                         $employeeAttendance->save();
-                        $loggedEmployees[] = $employee;
+
+                        $this->logBulkAttendanceChange($employee, $date, $previousIn, $previousOut, $in, $out, $formatLogTime);
                     } else {
                         $attendance = AttendanceEmployee::where('employee_id', '=', $employee)->where('date', '=', $request->date)->first();
 
                         if (!empty($attendance)) {
+                            $previousIn = $attendance->clock_in;
+                            $previousOut = $attendance->clock_out;
                             $attendance->delete();
+                            $this->logBulkAttendanceChange($employee, $date, $previousIn, $previousOut, null, null, $formatLogTime, 'deleted');
                         }
                     }
                 }
-
-                $employeeNames = !empty($loggedEmployees)
-                    ? Employee::whereIn('id', $loggedEmployees)->pluck('name')->implode(', ')
-                    : '';
-                HrmActionLogger::record(
-                    'bulk_attendance',
-                    'updated',
-                    (\Auth::user()->name) . ' updated bulk attendance for ' . date('d M Y', strtotime($date)) . (!empty($employeeNames) ? ' (' . $employeeNames . ')' : ''),
-                    [
-                        'properties' => [
-                            'date' => $date,
-                            'employees' => $employeeNames,
-                            'count' => count($loggedEmployees),
-                        ],
-                    ]
-                );
 
                 return redirect()->back()->with('success', __('Employee attendance successfully created.'));
             } else {
@@ -857,6 +853,44 @@ class AttendanceEmployeeController extends Controller
         } else {
             return redirect()->back()->with('error', __('Permission denied.'));
         }
+    }
+
+    /**
+     * Write one activity-log line per employee, and only when an in or out time actually changed.
+     */
+    private function logBulkAttendanceChange($employeeId, $date, $previousIn, $previousOut, $newIn, $newOut, callable $formatLogTime, $action = 'updated')
+    {
+        $lines = [];
+        $oldIn = $formatLogTime($previousIn);
+        $oldOut = $formatLogTime($previousOut);
+        $nextIn = $formatLogTime($newIn);
+        $nextOut = $formatLogTime($newOut);
+
+        if ($oldIn !== $nextIn) {
+            $lines[] = 'Changed In time from ' . ($oldIn ?: 'Not set') . ' to ' . ($nextIn ?: 'Not set');
+        }
+        if ($oldOut !== $nextOut) {
+            $lines[] = 'Changed Out time from ' . ($oldOut ?: 'Not set') . ' to ' . ($nextOut ?: 'Not set');
+        }
+
+        if (empty($lines)) {
+            return;
+        }
+
+        $employeeName = optional(Employee::find($employeeId))->name;
+        HrmActionLogger::record(
+            'bulk_attendance',
+            $action,
+            implode("\n", $lines),
+            [
+                'employee_id' => $employeeId,
+                'employee_name' => $employeeName,
+                'subject_type' => AttendanceEmployee::class,
+                'properties' => [
+                    'date' => date('d M Y', strtotime($date)),
+                ],
+            ]
+        );
     }
 
     public function importFile()
@@ -1076,17 +1110,18 @@ class AttendanceEmployeeController extends Controller
         $date = date("Y-m-d");
         $time = date("H:i:s");
 
-        // Check existing attendance
-        $todayAttendance = AttendanceEmployee::where('employee_id', $employeeId)
-                                            ->where('date', $date)
-                                            ->first();
+        // Use the same row the dashboard shows, so a morning punch is not treated as missing later.
+        $todayAttendance = AttendanceEmployee::forEmployeeOnDate($employeeId, $date);
 
-        if (!$todayAttendance) {
+        if (!$todayAttendance || !$todayAttendance->hasPunchedIn()) {
             // PUNCH IN LOGIC
             $pendingClockIn = AttendanceEmployee::where('employee_id', $employeeId)
-                                            ->where('date', $date)
+                                            ->whereDate('date', $date)
                                             ->where('clock_in', '!=', '00:00:00')
-                                            ->where('clock_out', '00:00:00')
+                                            ->where(function ($query) {
+                                                $query->whereNull('clock_out')
+                                                    ->orWhere('clock_out', '00:00:00');
+                                            })
                                             ->first();
             
             if ($pendingClockIn) {
@@ -1102,7 +1137,7 @@ class AttendanceEmployeeController extends Controller
             // Calculate late time based on department-specific punch-in time
             $late = $this->calculateLateTime($time, $date, $employeeId);
 
-            $employeeAttendance = new AttendanceEmployee();
+            $employeeAttendance = $todayAttendance ?: new AttendanceEmployee();
             $employeeAttendance->employee_id = $employeeId;
             $employeeAttendance->date = $date;
             $employeeAttendance->status = AttendanceEmployee::STATUS_SINGLE_PUNCH; // Set initial status
@@ -1127,7 +1162,7 @@ class AttendanceEmployeeController extends Controller
 
             return redirect()->back()->with('success', __('Employee Successfully Clocked In.'));
         } 
-        elseif ($todayAttendance->clock_out == '00:00:00') {
+        elseif (!$todayAttendance->hasPunchedOut()) {
             // PUNCH OUT LOGIC
             $clockInTime = strtotime($todayAttendance->clock_in);
             $clockOutTime = strtotime($time);
@@ -2581,9 +2616,19 @@ class AttendanceEmployeeController extends Controller
                     $data = [
                         'clock_in' => null,
                         'clock_out' => null,
-                        'hours_completed' => 0
+                        'hours_completed' => 0,
+                        'date' => $date,
                     ];
                 }
+
+                $day = Carbon::parse($date)->startOfDay();
+                $daySummary = $this->calculateRangeSummary($employeeId, $day->copy(), $day->copy());
+                $dayComplete = $day->lt(Carbon::today()) || !empty($data['clock_out']);
+                $data['day_complete'] = $dayComplete;
+                $data['required_hours'] = $dayComplete ? $daySummary['expected_hours'] : 9;
+                $data['overtime'] = $dayComplete ? $daySummary['overtime'] : null;
+                $data['shortfall'] = $dayComplete ? $daySummary['shortfall'] : null;
+                $data['net_hours'] = $dayComplete ? $daySummary['net_hours'] : null;
             } elseif ($filterType === 'weekly') {
                 // Get reference date from request (the date selected by user)
                 $referenceDate = $request->input('date');
@@ -2723,142 +2768,180 @@ class AttendanceEmployeeController extends Controller
     }
 
     /**
-     * Helper to calculate expected/actual hours and days worked for a given date range
-     * using the exact same logic as MonthlyWorkingHoursController::calculateSummary.
+     * Expected hours are the hours the employee was required to work.
+     * Extra hours and shortfall are each the sum of the daily difference,
+     * so time over on one day does not cancel time short on another.
+     * A full day requires 9 hours and a half day requires 4.5 hours.
      */
     private function calculateRangeSummary($employeeId, $startDate, $endDate)
     {
+        $empty = [
+            'expected_hours' => 0,
+            'actual_hours' => 0,
+            'days_worked' => 0,
+            'overtime' => '00:00',
+            'shortfall' => '00:00',
+            'net_hours' => '+00:00',
+        ];
+
         $employee = Employee::find($employeeId);
         if (!$employee) {
-            return [
-                'expected_hours' => 0,
-                'actual_hours' => 0,
-                'days_worked' => 0,
-            ];
+            return $empty;
         }
 
-        $monthNum = (int)$startDate->format('m');
-        $yearNum = (int)$startDate->format('Y');
-        
+        $rangeStart = $startDate->copy()->startOfDay();
+        $rangeEnd = $endDate->copy()->startOfDay();
+        $today = Carbon::today();
+
         $holidays = \App\Models\Holiday::where('created_by', $employee->created_by)
-            ->whereBetween('date', [$startDate->format('Y-m-d'), $endDate->format('Y-m-d')])
-            ->pluck('date')->toArray();
+            ->whereBetween('date', [$rangeStart->format('Y-m-d'), $rangeEnd->format('Y-m-d')])
+            ->pluck('date')
+            ->map(function ($date) {
+                return Carbon::parse($date)->format('Y-m-d');
+            })
+            ->toArray();
 
         $attendances = AttendanceEmployee::where('employee_id', $employee->id)
-            ->whereBetween('date', [$startDate->format('Y-m-d'), $endDate->format('Y-m-d')])
-            ->get()->keyBy('date');
+            ->whereBetween('date', [$rangeStart->format('Y-m-d'), $rangeEnd->format('Y-m-d')])
+            ->get()
+            ->keyBy(function ($attendance) {
+                return Carbon::parse($attendance->date)->format('Y-m-d');
+            });
 
         $leaves = \App\Models\Leave::where('employee_id', $employee->id)
             ->where('status', 'Approved')
-            ->where(function($q) use ($startDate, $endDate) {
-                $q->whereBetween('start_date', [$startDate->format('Y-m-d'), $endDate->format('Y-m-d')])
-                  ->orWhereBetween('end_date', [$startDate->format('Y-m-d'), $endDate->format('Y-m-d')]);
-            })->get();
+            ->whereDate('start_date', '<=', $rangeEnd->format('Y-m-d'))
+            ->whereDate('end_date', '>=', $rangeStart->format('Y-m-d'))
+            ->get();
 
-        $leaveDates = [];
+        $fullLeaveDates = [];
+        $halfLeaveDates = [];
         foreach ($leaves as $leave) {
-            $start = Carbon::parse($leave->start_date);
-            $end = Carbon::parse($leave->end_date);
-            for ($d = $start; $d->lte($end); $d->addDay()) {
-                if ($d->between($startDate, $endDate)) {
-                    $leaveDates[] = $d->format('Y-m-d');
+            $isHalfLeave = strcasecmp((string) $leave->leave_duration, 'Half Day') === 0;
+            $leaveStart = Carbon::parse($leave->start_date)->startOfDay();
+            $leaveEnd = Carbon::parse($leave->end_date)->startOfDay();
+            for ($d = $leaveStart->copy(); $d->lte($leaveEnd); $d->addDay()) {
+                if ($d->lt($rangeStart) || $d->gt($rangeEnd)) {
+                    continue;
+                }
+                $leaveDate = $d->format('Y-m-d');
+                if ($isHalfLeave) {
+                    $halfLeaveDates[$leaveDate] = true;
+                } else {
+                    $fullLeaveDates[$leaveDate] = true;
                 }
             }
         }
 
-        $expectedHours = 0;
-        $actualHours = 0;
+        $joinedOn = null;
+        if (!empty($employee->company_doj)) {
+            try {
+                $joinedOn = Carbon::parse($employee->company_doj)->startOfDay();
+            } catch (\Exception $e) {
+                $joinedOn = null;
+            }
+        }
+
+        $expectedSeconds = 0;
+        $actualSeconds = 0;
+        $overtimeSeconds = 0;
+        $shortfallSeconds = 0;
         $workingDays = 0;
+        $fullDaySeconds = 9 * 3600;
+        $halfDaySeconds = (int) (4.5 * 3600);
 
-        $current = $startDate->copy();
-        while ($current <= $endDate) {
-            $dateStr = $current->format('Y-m-d');
-
-            $isWeekend = \App\Models\Utility::isWeekOff($current);
-            $isHoliday = in_array($dateStr, $holidays);
-            $isLeave = in_array($dateStr, $leaveDates);
-
-            if ($isLeave) {
+        $current = $rangeStart->copy();
+        while ($current->lte($rangeEnd)) {
+            if ($current->gt($today)) {
+                break;
+            }
+            if ($joinedOn && $current->lt($joinedOn)) {
                 $current->addDay();
-                continue; 
+                continue;
             }
 
-            if ($attendances->has($dateStr)) {
-                $attendance = $attendances[$dateStr];
-                $clockIn = $attendance->clock_in;
-                $clockOut = $attendance->clock_out;
-                $status = $attendance->status;
+            $dateStr = $current->format('Y-m-d');
+            $isWeekend = \App\Models\Utility::isWeekOff($current);
+            $isHoliday = in_array($dateStr, $holidays, true);
+            $isFullLeave = isset($fullLeaveDates[$dateStr]);
+            $isHalfLeave = isset($halfLeaveDates[$dateStr]);
+            $attendance = $attendances->get($dateStr);
 
-                // Exclude today until the employee has punched out
-                if ($dateStr === Carbon::today()->format('Y-m-d') && $clockOut == '00:00:00') {
-                    $current->addDay();
-                    continue;
+            $clockIn = $attendance->clock_in ?? null;
+            $clockOut = $attendance->clock_out ?? null;
+            $status = (string) ($attendance->status ?? '');
+            $punchedOut = !empty($clockOut) && $clockOut !== '00:00:00';
+
+            // Today's shift is still open, so it is not extra or shortfall yet.
+            if ($current->isToday() && !$punchedOut) {
+                $current->addDay();
+                continue;
+            }
+
+            $workedSeconds = 0;
+            if (!empty($clockIn) && $clockIn !== '00:00:00' && $punchedOut) {
+                $in = Carbon::parse($dateStr . ' ' . $clockIn);
+                $out = Carbon::parse($dateStr . ' ' . $clockOut);
+                if ($out->lt($in)) {
+                    $out->addDay();
+                }
+                $workedSeconds = max(0, $out->getTimestamp() - $in->getTimestamp());
+            }
+
+            $requiredSeconds = 0;
+            if (!$isWeekend && !$isHoliday && !$isFullLeave) {
+                $workedHours = $workedSeconds / 3600;
+                $isHalfDay = $isHalfLeave || strpos($status, 'Half Day') !== false;
+                $isAbsent = ($status === 'Absent');
+
+                // More than 5 hours worked is a full day, including a late half-day mark.
+                // An approved half-day leave still requires only 4.5 hours.
+                if ($workedHours > 5 && !$isHalfLeave) {
+                    $isHalfDay = false;
+                    $isAbsent = false;
                 }
 
-                $isHalfDay = (strpos($status, 'Half Day') !== false);
-                $isAbsent = ($status == 'Absent');
-
-                $workedSeconds = 0;
-                if ($clockIn != '00:00:00' && $clockOut != '00:00:00') {
-                    $in = Carbon::parse($clockIn);
-                    $out = Carbon::parse($clockOut);
-                    $workedSeconds = $in->diffInSeconds($out);
-                }
-
-                if (($workedSeconds / 3600) > 5) {
-                    if (strpos($status, 'Half Day (Late)') === false) {
-                        $isHalfDay = false;
-                        $isAbsent = false;
-                    }
-                }
-
-                if (!$isWeekend && !$isHoliday) {
-                    if ($isHalfDay) {
+                if ($isHalfDay) {
+                    $requiredSeconds = $halfDaySeconds;
+                    if ($attendance) {
                         $workingDays += 0.5;
-                        $expectedHours += 4.5;
-                    } elseif (!$isAbsent) {
+                    }
+                } else {
+                    $requiredSeconds = $fullDaySeconds;
+                    if ($attendance && !$isAbsent) {
                         $workingDays += 1;
-                        $expectedHours += 9;
                     }
                 }
-
-                if ($workedSeconds > 0) {
-                    $actualHours += ($workedSeconds / 3600);
-                }
             }
+
+            if ($workedSeconds > $requiredSeconds) {
+                $overtimeSeconds += ($workedSeconds - $requiredSeconds);
+            } else {
+                $shortfallSeconds += ($requiredSeconds - $workedSeconds);
+            }
+
+            $expectedSeconds += $requiredSeconds;
+            $actualSeconds += $workedSeconds;
             $current->addDay();
         }
 
-        $expectedSeconds = $expectedHours * 3600;
-        $actualSeconds = $actualHours * 3600;
-        $netSeconds = $actualSeconds - $expectedSeconds;
-        
-        if ($netSeconds > 0) {
-            $overtimeSeconds = $netSeconds;
-            $shortfallSeconds = 0;
-        } else {
-            $overtimeSeconds = 0;
-            $shortfallSeconds = abs($netSeconds);
-        }
-
-        $formatTime = function($seconds) {
+        $formatTime = function ($seconds) {
+            $seconds = (int) abs($seconds);
             $h = floor($seconds / 3600);
             $m = floor(($seconds % 3600) / 60);
             return sprintf('%02d:%02d', $h, $m);
         };
 
+        $netSeconds = $overtimeSeconds - $shortfallSeconds;
         $netPrefix = $netSeconds >= 0 ? '+' : '-';
-        $netHoursFormatted = $netPrefix . $formatTime(abs($netSeconds));
-        $overtimeFormatted = $formatTime($overtimeSeconds);
-        $shortfallFormatted = $formatTime($shortfallSeconds);
 
         return [
-            'expected_hours' => $expectedHours,
-            'actual_hours' => $actualHours,
+            'expected_hours' => round($expectedSeconds / 3600, 2),
+            'actual_hours' => round($actualSeconds / 3600, 2),
             'days_worked' => $workingDays,
-            'overtime' => $overtimeFormatted,
-            'shortfall' => $shortfallFormatted,
-            'net_hours' => $netHoursFormatted,
+            'overtime' => $formatTime($overtimeSeconds),
+            'shortfall' => $formatTime($shortfallSeconds),
+            'net_hours' => $netPrefix . $formatTime($netSeconds),
         ];
     }
     

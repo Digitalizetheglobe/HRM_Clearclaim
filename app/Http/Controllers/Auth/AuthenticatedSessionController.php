@@ -18,14 +18,6 @@ use WhichBrowser\Parser;
 
 class AuthenticatedSessionController extends Controller
 {
-    public function __construct()
-    {
-        if (!file_exists(storage_path() . "/installed")) {
-            header('location:install');
-            die;
-        }
-    }
-
     /**
      * Show login form
      */
@@ -240,10 +232,16 @@ class AuthenticatedSessionController extends Controller
     public function destroy(Request $request)
     {
         Auth::guard('web')->logout();
+
         $request->session()->invalidate();
         $request->session()->regenerateToken();
 
-        return redirect('/');
+        return redirect()->route('login')
+            ->withHeaders([
+                'Cache-Control' => 'no-store, no-cache, must-revalidate, max-age=0',
+                'Pragma' => 'no-cache',
+            ])
+            ->withCookie(cookie()->forget(Auth::guard('web')->getRecallerName()));
     }
 
     /**

@@ -97,7 +97,9 @@
     },
     "extra": {
         "laravel": {
-            "dont-discover": []
+            "dont-discover": [
+                "rachidlaasri/laravel-installer"
+            ]
         }
     },
     "config": {
@@ -106,5 +108,14 @@
         "sort-packages": true
     },
     "minimum-stability": "dev",
-    "prefer-stable": true
+    "prefer-stable": true,
+    "repositories": [
+        {
+            "type": "path",
+            "url": "packages/laravel-payhere",
+            "options": {
+                "symlink": false
+            }
+        }
+    ]
 }

@@ -198,9 +198,6 @@ return [
         App\Providers\EventServiceProvider::class,
         App\Providers\RouteServiceProvider::class,
 
-        /* Setup Wizard */
-
-        RachidLaasri\LaravelInstaller\Providers\LaravelInstallerServiceProvider::class,
         Maatwebsite\Excel\ExcelServiceProvider::class,
         Obydul\LaraSkrill\LaraSkrillServiceProvider::class,
         /* End */

@@ -99,15 +99,24 @@
 
 <script>
     if ('serviceWorker' in navigator) {
-        window.addEventListener('load', function () {
-            navigator.serviceWorker.register('/serviceworker.js')
-                .then(function (registration) {
-                    console.log('ServiceWorker registration successful with scope: ', registration.scope);
-                })
-                .catch(function (error) {
-                    console.error('ServiceWorker registration failed:', error);
+        var isLocal = location.hostname === '127.0.0.1' || location.hostname === 'localhost';
+        if (isLocal) {
+            navigator.serviceWorker.getRegistrations().then(function (registrations) {
+                registrations.forEach(function (registration) {
+                    registration.unregister();
                 });
-        });
+            });
+        } else {
+            window.addEventListener('load', function () {
+                navigator.serviceWorker.register('/serviceworker.js')
+                    .then(function (registration) {
+                        console.log('ServiceWorker registration successful with scope: ', registration.scope);
+                    })
+                    .catch(function (error) {
+                        console.error('ServiceWorker registration failed:', error);
+                    });
+            });
+        }
     }
 </script>
 
