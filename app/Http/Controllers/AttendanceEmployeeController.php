@@ -2678,6 +2678,8 @@ class AttendanceEmployeeController extends Controller
                 $data = [
                     'hours_completed' => round($hoursCompleted, 2),
                     'total_hours' => $totalHours,
+                    'hours_completed_formatted' => $summary['actual_formatted'],
+                    'total_hours_formatted' => $summary['expected_formatted'],
                     'days_worked' => $daysWorked,
                     'percentage' => $totalHours > 0 ? round(($hoursCompleted / $totalHours) * 100, 1) : 0,
                     'week_start' => $startOfWeek->format('M d, Y'),
@@ -2741,6 +2743,8 @@ class AttendanceEmployeeController extends Controller
                 $data = [
                     'hours_completed' => round($hoursCompleted, 2),
                     'total_hours' => $totalHours,
+                    'hours_completed_formatted' => $summary['actual_formatted'],
+                    'total_hours_formatted' => $summary['expected_formatted'],
                     'days_worked' => $daysWorked,
                     'percentage' => $totalHours > 0 ? round(($hoursCompleted / $totalHours) * 100, 1) : 0,
                     'month_name' => $month->format('F Y'),
@@ -2768,16 +2772,19 @@ class AttendanceEmployeeController extends Controller
     }
 
     /**
-     * Expected hours are the hours the employee was required to work.
-     * Extra hours and shortfall are each the sum of the daily difference,
-     * so time over on one day does not cancel time short on another.
-     * A full day requires 9 hours and a half day requires 4.5 hours.
+     * Uses the same rules as MonthlyWorkingHoursController::calculateSummary so the
+     * dashboard matches the Monthly Working Hours Summary page:
+     * - Expected hours = attendance days (not Absent) on working days x 9 (4.5 for half day).
+     * - Approved leave days, and today's shift until punch-out, are excluded.
+     * - Net = actual - expected; extra or shortfall is the positive / negative net.
      */
     private function calculateRangeSummary($employeeId, $startDate, $endDate)
     {
         $empty = [
             'expected_hours' => 0,
             'actual_hours' => 0,
+            'expected_formatted' => '00:00',
+            'actual_formatted' => '00:00',
             'days_worked' => 0,
             'overtime' => '00:00',
             'shortfall' => '00:00',
@@ -2814,38 +2821,20 @@ class AttendanceEmployeeController extends Controller
             ->whereDate('end_date', '>=', $rangeStart->format('Y-m-d'))
             ->get();
 
-        $fullLeaveDates = [];
-        $halfLeaveDates = [];
+        $leaveDates = [];
         foreach ($leaves as $leave) {
-            $isHalfLeave = strcasecmp((string) $leave->leave_duration, 'Half Day') === 0;
             $leaveStart = Carbon::parse($leave->start_date)->startOfDay();
             $leaveEnd = Carbon::parse($leave->end_date)->startOfDay();
             for ($d = $leaveStart->copy(); $d->lte($leaveEnd); $d->addDay()) {
                 if ($d->lt($rangeStart) || $d->gt($rangeEnd)) {
                     continue;
                 }
-                $leaveDate = $d->format('Y-m-d');
-                if ($isHalfLeave) {
-                    $halfLeaveDates[$leaveDate] = true;
-                } else {
-                    $fullLeaveDates[$leaveDate] = true;
-                }
-            }
-        }
-
-        $joinedOn = null;
-        if (!empty($employee->company_doj)) {
-            try {
-                $joinedOn = Carbon::parse($employee->company_doj)->startOfDay();
-            } catch (\Exception $e) {
-                $joinedOn = null;
+                $leaveDates[$d->format('Y-m-d')] = true;
             }
         }
 
         $expectedSeconds = 0;
         $actualSeconds = 0;
-        $overtimeSeconds = 0;
-        $shortfallSeconds = 0;
         $workingDays = 0;
         $fullDaySeconds = 9 * 3600;
         $halfDaySeconds = (int) (4.5 * 3600);
@@ -2855,24 +2844,21 @@ class AttendanceEmployeeController extends Controller
             if ($current->gt($today)) {
                 break;
             }
-            if ($joinedOn && $current->lt($joinedOn)) {
+
+            $dateStr = $current->format('Y-m-d');
+            $attendance = $attendances->get($dateStr);
+
+            if (isset($leaveDates[$dateStr]) || !$attendance) {
                 $current->addDay();
                 continue;
             }
 
-            $dateStr = $current->format('Y-m-d');
-            $isWeekend = \App\Models\Utility::isWeekOff($current);
-            $isHoliday = in_array($dateStr, $holidays, true);
-            $isFullLeave = isset($fullLeaveDates[$dateStr]);
-            $isHalfLeave = isset($halfLeaveDates[$dateStr]);
-            $attendance = $attendances->get($dateStr);
-
-            $clockIn = $attendance->clock_in ?? null;
-            $clockOut = $attendance->clock_out ?? null;
-            $status = (string) ($attendance->status ?? '');
+            $clockIn = $attendance->clock_in;
+            $clockOut = $attendance->clock_out;
+            $status = (string) $attendance->status;
             $punchedOut = !empty($clockOut) && $clockOut !== '00:00:00';
 
-            // Today's shift is still open, so it is not extra or shortfall yet.
+            // Today's shift is still open, so it is not counted until punch-out.
             if ($current->isToday() && !$punchedOut) {
                 $current->addDay();
                 continue;
@@ -2888,39 +2874,27 @@ class AttendanceEmployeeController extends Controller
                 $workedSeconds = max(0, $out->getTimestamp() - $in->getTimestamp());
             }
 
-            $requiredSeconds = 0;
-            if (!$isWeekend && !$isHoliday && !$isFullLeave) {
-                $workedHours = $workedSeconds / 3600;
-                $isHalfDay = $isHalfLeave || strpos($status, 'Half Day') !== false;
-                $isAbsent = ($status === 'Absent');
+            $isWeekend = \App\Models\Utility::isWeekOff($current);
+            $isHoliday = in_array($dateStr, $holidays, true);
+            $isHalfDay = strpos($status, 'Half Day') !== false;
+            $isAbsent = ($status === 'Absent');
 
-                // More than 5 hours worked is a full day, including a late half-day mark.
-                // An approved half-day leave still requires only 4.5 hours.
-                if ($workedHours > 5 && !$isHalfLeave) {
-                    $isHalfDay = false;
-                    $isAbsent = false;
-                }
+            // More than 5 hours worked is a full day, unless it is a late-arrival penalty.
+            if (($workedSeconds / 3600) > 5 && strpos($status, 'Half Day (Late)') === false) {
+                $isHalfDay = false;
+                $isAbsent = false;
+            }
 
+            if (!$isWeekend && !$isHoliday) {
                 if ($isHalfDay) {
-                    $requiredSeconds = $halfDaySeconds;
-                    if ($attendance) {
-                        $workingDays += 0.5;
-                    }
-                } else {
-                    $requiredSeconds = $fullDaySeconds;
-                    if ($attendance && !$isAbsent) {
-                        $workingDays += 1;
-                    }
+                    $workingDays += 0.5;
+                    $expectedSeconds += $halfDaySeconds;
+                } elseif (!$isAbsent) {
+                    $workingDays += 1;
+                    $expectedSeconds += $fullDaySeconds;
                 }
             }
 
-            if ($workedSeconds > $requiredSeconds) {
-                $overtimeSeconds += ($workedSeconds - $requiredSeconds);
-            } else {
-                $shortfallSeconds += ($requiredSeconds - $workedSeconds);
-            }
-
-            $expectedSeconds += $requiredSeconds;
             $actualSeconds += $workedSeconds;
             $current->addDay();
         }
@@ -2932,15 +2906,17 @@ class AttendanceEmployeeController extends Controller
             return sprintf('%02d:%02d', $h, $m);
         };
 
-        $netSeconds = $overtimeSeconds - $shortfallSeconds;
+        $netSeconds = $actualSeconds - $expectedSeconds;
         $netPrefix = $netSeconds >= 0 ? '+' : '-';
 
         return [
             'expected_hours' => round($expectedSeconds / 3600, 2),
             'actual_hours' => round($actualSeconds / 3600, 2),
+            'expected_formatted' => $formatTime($expectedSeconds),
+            'actual_formatted' => $formatTime($actualSeconds),
             'days_worked' => $workingDays,
-            'overtime' => $formatTime($overtimeSeconds),
-            'shortfall' => $formatTime($shortfallSeconds),
+            'overtime' => $formatTime(max(0, $netSeconds)),
+            'shortfall' => $formatTime(max(0, -$netSeconds)),
             'net_hours' => $netPrefix . $formatTime($netSeconds),
         ];
     }

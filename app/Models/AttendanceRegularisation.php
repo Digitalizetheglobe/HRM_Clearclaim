@@ -27,12 +27,14 @@ class AttendanceRegularisation extends Model
         'rejection_reason',
         'created_by',
         'is_updating_existing',
+        'original_attendance',
     ];
 
     protected $casts = [
         'date' => 'date',
         'approved_at' => 'datetime',
         'is_updating_existing' => 'boolean',
+        'original_attendance' => 'array',
     ];
 
     public function employee()

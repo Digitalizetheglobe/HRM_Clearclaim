@@ -103,6 +103,10 @@
                             <a href="#" class="btn btn-danger reject-regularisation" data-id="{{ $regularisation->id }}">
                                 <i class="ti ti-x"></i> {{ __('Reject') }}
                             </a>
+                        @elseif ($regularisation->status == 'Approved')
+                            <a href="#" class="btn btn-danger reject-regularisation" data-id="{{ $regularisation->id }}">
+                                <i class="ti ti-x"></i> {{ __('Reject') }}
+                            </a>
                         @endif
                     @endif
                 </div>

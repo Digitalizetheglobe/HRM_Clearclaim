@@ -366,18 +366,7 @@ class AttendanceRegularisationController extends Controller
             return redirect()->back()->with('error', $errorMsg);
         }
 
-        // Check if attendance already exists for this date
-        $existingAttendance = AttendanceEmployee::where('employee_id', $regularisation->employee_id)
-            ->where('date', $regularisation->date)
-            ->first();
-
-        if ($existingAttendance) {
-            // Update existing attendance record
-            $this->updateAttendanceFromRegularisation($regularisation, $existingAttendance);
-        } else {
-            // Create new attendance record
-            $this->createAttendanceFromRegularisation($regularisation);
-        }
+        $this->applyRegularisationToAttendance($regularisation);
 
         // Update regularisation status
         $regularisation->status = AttendanceRegularisation::STATUS_APPROVED;
@@ -464,18 +453,7 @@ class AttendanceRegularisationController extends Controller
                 continue;
             }
 
-            // Check if attendance already exists for this date
-            $existingAttendance = AttendanceEmployee::where('employee_id', $regularisation->employee_id)
-                ->where('date', $regularisation->date)
-                ->first();
-
-            if ($existingAttendance) {
-                // Update existing attendance record
-                $this->updateAttendanceFromRegularisation($regularisation, $existingAttendance);
-            } else {
-                // Create new attendance record
-                $this->createAttendanceFromRegularisation($regularisation);
-            }
+            $this->applyRegularisationToAttendance($regularisation);
 
             // Update regularisation status
             $regularisation->status = AttendanceRegularisation::STATUS_APPROVED;
@@ -570,12 +548,17 @@ class AttendanceRegularisationController extends Controller
             }
         }
 
-        if ($regularisation->status != AttendanceRegularisation::STATUS_PENDING) {
-            $errorMsg = __('This request has already been processed.');
+        if (!in_array($regularisation->status, [AttendanceRegularisation::STATUS_PENDING, AttendanceRegularisation::STATUS_APPROVED], true)) {
+            $errorMsg = __('This request has already been rejected.');
             if ($request->ajax() || $request->wantsJson()) {
                 return response()->json(['success' => false, 'message' => $errorMsg], 400);
             }
             return redirect()->back()->with('error', $errorMsg);
+        }
+
+        $wasApproved = $regularisation->status == AttendanceRegularisation::STATUS_APPROVED;
+        if ($wasApproved) {
+            $this->revertAttendanceFromRegularisation($regularisation);
         }
 
         // Update regularisation status
@@ -598,6 +581,7 @@ class AttendanceRegularisationController extends Controller
                 'properties' => [
                     'date' => $regularisation->date,
                     'rejection_reason' => $request->rejection_reason,
+                    'was_approved' => $wasApproved,
                 ],
             ]
         );
@@ -686,6 +670,54 @@ class AttendanceRegularisationController extends Controller
             ];
 
             $employee->user->notify(new AttendanceRegularisationNotification($notificationData));
+        }
+    }
+
+    /**
+     * Create or update the attendance record for an approved regularisation,
+     * keeping a copy of the original record so a later rejection can restore it.
+     */
+    private function applyRegularisationToAttendance($regularisation)
+    {
+        $existingAttendance = AttendanceEmployee::where('employee_id', $regularisation->employee_id)
+            ->where('date', Carbon::parse($regularisation->date)->format('Y-m-d'))
+            ->first();
+
+        if ($existingAttendance) {
+            $regularisation->is_updating_existing = true;
+            $regularisation->original_attendance = $existingAttendance->only([
+                'status', 'clock_in', 'clock_out', 'late', 'early_leaving', 'overtime', 'total_rest',
+            ]);
+            $this->updateAttendanceFromRegularisation($regularisation, $existingAttendance);
+        } else {
+            $regularisation->is_updating_existing = false;
+            $regularisation->original_attendance = null;
+            $this->createAttendanceFromRegularisation($regularisation);
+        }
+    }
+
+    /**
+     * Undo the attendance change made when the regularisation was approved.
+     * Requests approved before original_attendance existed cannot be restored
+     * if they updated an existing record, so that record is left unchanged.
+     */
+    private function revertAttendanceFromRegularisation($regularisation)
+    {
+        $attendance = AttendanceEmployee::where('employee_id', $regularisation->employee_id)
+            ->where('date', Carbon::parse($regularisation->date)->format('Y-m-d'))
+            ->first();
+
+        if (!$attendance) {
+            return;
+        }
+
+        if (!empty($regularisation->original_attendance)) {
+            foreach ($regularisation->original_attendance as $field => $value) {
+                $attendance->{$field} = $value;
+            }
+            $attendance->save();
+        } elseif (!$regularisation->is_updating_existing) {
+            $attendance->delete();
         }
     }
 

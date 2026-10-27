@@ -1433,8 +1433,8 @@ function updateProgressBarRealTime() {
                 }
             } else if (filterType === 'weekly') {
                 // Weekly view - show hours completed with progress bar, Days Worked and Week Period
-                const hoursCompleted = Math.round(data.hours_completed || 0);
-                const totalHours = Math.round(data.total_hours || 0);
+                const hoursCompleted = data.hours_completed || 0;
+                const totalHours = data.total_hours || 0;
                 const percentage = data.percentage || 0;
                 
                 html = `
@@ -1442,7 +1442,7 @@ function updateProgressBarRealTime() {
                         <div class="mb-3">
                             <h6 class="text-muted mb-2">Hours Completed</h6>
                             <div class="d-flex justify-content-between align-items-center mb-2">
-                                <span class="h5 mb-0">${hoursCompleted}/${totalHours} hours</span>
+                                <span class="h5 mb-0">${data.hours_completed_formatted || '00:00'}/${data.total_hours_formatted || '00:00'} hours</span>
                                 <span class="badge ${hoursCompleted >= totalHours ? 'bg-success' : 'bg-success'}">${percentage.toFixed(1)}%</span>
                             </div>
                             <div class="progress" style="height: 30px;">
@@ -1509,8 +1509,8 @@ function updateProgressBarRealTime() {
                 }, 100);
             } else if (filterType === 'monthly') {
                 // Monthly view - show hours completed with progress bar, Days Worked and Month Name
-                const hoursCompleted = Math.round(data.hours_completed || 0);
-                const totalHours = Math.round(data.total_hours || 0);
+                const hoursCompleted = data.hours_completed || 0;
+                const totalHours = data.total_hours || 0;
                 const percentage = data.percentage || 0;
                 
                 html = `
@@ -1518,7 +1518,7 @@ function updateProgressBarRealTime() {
                         <div class="mb-3">
                             <h6 class="text-muted mb-2">Hours Completed</h6>
                             <div class="d-flex justify-content-between align-items-center mb-2">
-                                <span class="h5 mb-0">${hoursCompleted}/${totalHours} hours</span>
+                                <span class="h5 mb-0">${data.hours_completed_formatted || '00:00'}/${data.total_hours_formatted || '00:00'} hours</span>
                                 <span class="badge ${hoursCompleted >= totalHours ? 'bg-success' : 'bg-success'}">${percentage.toFixed(1)}%</span>
                             </div>
                             <div class="progress" style="height: 30px;">
@@ -1569,8 +1569,9 @@ function updateProgressBarRealTime() {
             // Stop any existing interval
             stopRealTimeUpdates();
             
-            // Start real-time updates if viewing current period
-            if (isCurrentPeriod(filterType, data)) {
+            // Weekly/monthly totals must match the Monthly Working Hours Summary,
+            // which excludes today's open shift, so only today/date update live.
+            if ((filterType === 'today' || filterType === 'date') && isCurrentPeriod(filterType, data)) {
                 // Update immediately
                 updateProgressBarRealTime();
                 
@@ -1581,46 +1582,6 @@ function updateProgressBarRealTime() {
                     // This runs every 5 seconds for smooth continuous progress
                     updateProgressBarRealTime();
                 }, 5000); // Update every 5 seconds for smooth continuous progress
-                
-                // For weekly/monthly, also refresh data from server every 2 minutes in background
-                // but don't show loading - just update the stored data silently
-                if (filterType === 'weekly' || filterType === 'monthly') {
-                    setInterval(() => {
-                        const url = '{{ route("attendance.overview") }}';
-                        const payload = {
-                            _token: '{{ csrf_token() }}',
-                            filter_type: filterType,
-                            employee_id: {{ $emp->id ?? 0 }}
-                        };
-                        
-                        if (filterType === 'weekly' && currentWeekDate) {
-                            payload.date = currentWeekDate;
-                        } else if (filterType === 'monthly' && currentMonth) {
-                            payload.month = currentMonth;
-                        }
-                        
-                        fetch(url, {
-                            method: 'POST',
-                            headers: {
-                                'Content-Type':'application/json',
-                                'X-CSRF-TOKEN': '{{ csrf_token() }}',
-                                'X-Requested-With': 'XMLHttpRequest'
-                            },
-                            body: JSON.stringify(payload)
-                        })
-                        .then(r => r.json())
-                        .then(json => {
-                            if (json.success && json.data) {
-                                // Update stored data silently without reloading UI
-                                currentAttendanceData = json.data;
-                                // Progress bar will update on next interval automatically
-                            }
-                        })
-                        .catch(err => {
-                            console.error('Background refresh error:', err);
-                        });
-                    }, 300000); // Refresh every 5 minutes in background
-                }
             }
         }
     </script>
