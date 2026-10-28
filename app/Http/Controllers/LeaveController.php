@@ -465,17 +465,17 @@ class LeaveController extends Controller
                 ->sum('total_leave_days');
 
             // Use pro-rata leaves (15 per year, calculated based on joining date)
-            $return = $proRataLeaves - $leaves_used;
+            $return = max(0, $proRataLeaves - $leaves_used);
             
             // Only check yearly balance if user is requesting PAID leave
             // LOP leaves should not be restricted by yearly balance
-            if ($request->leave_type_selection == 'paid') {
+            if ($isPaidSelection = ($request->leave_type_selection == 'paid')) {
                 // Check if requested days exceed available days
-                if ($total_leave_days > $return) {
+                if ($isPaidSelection && $total_leave_days > $return) {
                     return redirect()->back()->with('error', __('You cannot take more than '.$return.' paid days. Your pro-rata entitlement is '.$proRataLeaves.' days. Please select LOP if you want to proceed.'));
                 }
 
-                if (!empty($leaves_pending) && $leaves_pending + $total_leave_days > $return) {
+                if ($isPaidSelection && !empty($leaves_pending) && $leaves_pending + $total_leave_days > $return) {
                     return redirect()->back()->with('error', __('Multiple leave entry is pending.'));
                 }
             }
@@ -763,13 +763,13 @@ class LeaveController extends Controller
                     ->sum('total_leave_days');
 
                 // Use pro-rata leaves (15 per year, calculated based on joining date)
-                $return = $proRataLeaves - $leaves_used;
+                $return = max(0, $proRataLeaves - $leaves_used);
 
-                if ($total_leave_days > $return) {
+                if ($isPaidSelection && $total_leave_days > $return) {
                     return redirect()->back()->with('error', __('You are not eligible for leave. Your pro-rata entitlement is '.$proRataLeaves.' days.'));
                 }
 
-                if (!empty($leaves_pending) && $leaves_pending + $total_leave_days > $return) {
+                if ($isPaidSelection && !empty($leaves_pending) && $leaves_pending + $total_leave_days > $return) {
                     return redirect()->back()->with('error', __('Multiple leave entry is pending.'));
                 }
 
@@ -1366,7 +1366,7 @@ class LeaveController extends Controller
             $monthlyLeaves = 2;
             
             // Leaves taken this month
-            $leavesTakenThisMonth = LocalLeave::where('employee_id', $employee->id)
+            $leavesTakenThisMonth = LocalLeave::where('employee_id', $employee->id)->where('is_paid', true)
                 ->where('leave_type_id', $leaveType->id)
                 ->where('status', 'Approved')
                 ->whereYear('start_date', $selectedYear)
@@ -1396,8 +1396,8 @@ class LeaveController extends Controller
                 'monthly_leaves' => $monthlyLeaves,
                 'leaves_taken' => $leavesTakenThisMonth,
                 'pending_leaves' => $pendingLeaves,
-                'remaining_monthly' => $monthlyLeaves - $leavesTakenThisMonth,
-                'remaining_yearly' => $yearlyLeaves - $yearlyUsed
+                'remaining_monthly' => max(0, $monthlyLeaves - $leavesTakenThisMonth),
+                'remaining_yearly' => max(0, $yearlyLeaves - $yearlyUsed)
             ];
         }
 

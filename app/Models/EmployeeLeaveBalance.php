@@ -30,6 +30,6 @@ class EmployeeLeaveBalance extends Model
     // Helper method to get available days
     public function getAvailableDaysAttribute()
     {
-        return ($this->allocated_days + $this->carry_forward_days) - $this->used_days;
+        return max(0, ($this->allocated_days + $this->carry_forward_days) - $this->used_days);
     }
 }

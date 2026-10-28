@@ -119,7 +119,7 @@
                                             {{ __('Used: :used / :total | Remaining: :remaining', [
                                                 'used' => number_format($detail['leaves_taken'], 2),
                                                 'total' => number_format($detail['monthly_leaves'], 2),
-                                                'remaining' => number_format($detail['remaining_monthly'], 2)
+                                                'remaining' => number_format(max(0, $detail['remaining_monthly']), 2)
                                             ]) }}
                                         </small>
                                     </td>
@@ -132,14 +132,14 @@
                                     </td>
                                     <td>
                                         <span class="badge bg-{{ $detail['remaining_monthly'] > 0 ? 'success' : 'danger' }}">
-                                            {{ number_format($detail['remaining_monthly'], 2) }}
+                                            {{ number_format(max(0, $detail['remaining_monthly']), 2) }}
                                         </span>
                                         <br>
                                         <small class="text-muted">{{ __('Available balance') }}</small>
                                     </td>
                                     <td>
                                         <span class="badge bg-{{ $detail['remaining_yearly'] > 0 ? 'success' : 'danger' }}">
-                                            {{ number_format($detail['remaining_yearly'], 2) }}
+                                            {{ number_format(max(0, $detail['remaining_yearly']), 2) }}
                                         </span>
                                         <br>
                                         <small class="text-muted">{{ __('Available balance') }}</small>
