@@ -358,8 +358,8 @@ class AttendanceRegularisationController extends Controller
             }
         }
 
-        if ($regularisation->status != AttendanceRegularisation::STATUS_PENDING) {
-            $errorMsg = __('This request has already been processed.');
+        if ($regularisation->status == AttendanceRegularisation::STATUS_APPROVED) {
+            $errorMsg = __('This request has already been approved.');
             if ($request->ajax() || $request->wantsJson()) {
                 return response()->json(['success' => false, 'message' => $errorMsg], 400);
             }
@@ -449,7 +449,7 @@ class AttendanceRegularisationController extends Controller
                 }
             }
 
-            if ($regularisation->status != AttendanceRegularisation::STATUS_PENDING) {
+            if ($regularisation->status == AttendanceRegularisation::STATUS_APPROVED) {
                 continue;
             }
 

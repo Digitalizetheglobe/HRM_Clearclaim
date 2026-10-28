@@ -164,6 +164,16 @@
                                                         <i class="ti ti-x text-white"></i>
                                                     </a>
                                                 </div>
+                                            @elseif ($regularisation->status == 'Rejected' || $regularisation->status == 'Reject')
+                                                <div class="action-btn bg-success ms-2">
+                                                    <a href="#" 
+                                                       class="mx-3 btn btn-sm align-items-center approve-regularisation" 
+                                                       data-id="{{ $regularisation->id }}"
+                                                       data-bs-toggle="tooltip" 
+                                                       title="{{ __('Approve') }}">
+                                                        <i class="ti ti-check text-white"></i>
+                                                    </a>
+                                                </div>
                                             @endif
                                         </td>
                                     </tr>
