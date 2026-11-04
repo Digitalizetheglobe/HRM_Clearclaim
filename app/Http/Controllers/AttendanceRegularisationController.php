@@ -219,8 +219,20 @@ class AttendanceRegularisationController extends Controller
             && (int) $regularisation->employee->reporting_manager === (int) $manager->id
             && (int) $regularisation->employee_id !== (int) $manager->id;
 
-        if (!$isReportingManager) {
-            $errorMsg = __('Permission denied. Only the reporting manager can edit a submitted request.');
+        $isAdmin = false;
+        if ($regularisation && $regularisation->employee
+            && (\Auth::user()->hasCompanyAccess() || \Auth::user()->type == 'hr')
+            && $regularisation->employee->created_by == \Auth::user()->creatorId()) {
+            $isAdmin = true;
+        }
+
+        // Employee may edit & resubmit their own rejected request
+        $isOwnRejected = $regularisation && $manager
+            && (int) $regularisation->employee_id === (int) $manager->id
+            && in_array($regularisation->status, [AttendanceRegularisation::STATUS_REJECTED, 'Reject'], true);
+
+        if (!$isReportingManager && !$isAdmin && !$isOwnRejected) {
+            $errorMsg = __('Permission denied. Only the reporting manager or admin can edit a submitted request.');
             if ($request->ajax() || $request->wantsJson()) {
                 return response()->json(['success' => false, 'message' => $errorMsg], 403);
             }
@@ -250,7 +262,7 @@ class AttendanceRegularisationController extends Controller
         $employee = $regularisation->employee;
 
         // Check if request is still pending
-        if ($regularisation->status != AttendanceRegularisation::STATUS_PENDING) {
+        if (!$isAdmin && !$isOwnRejected && $regularisation->status != AttendanceRegularisation::STATUS_PENDING) {
             $errorMsg = __('Only pending requests can be edited.');
             if ($request->ajax() || $request->wantsJson()) {
                 return response()->json(['success' => false, 'message' => $errorMsg], 400);
@@ -296,6 +308,21 @@ class AttendanceRegularisationController extends Controller
             return redirect()->back()->with('error', $errorMsg);
         }
 
+        // Resubmission of a rejected request: back to Pending for fresh approval
+        $wasRejected = in_array($regularisation->status, [AttendanceRegularisation::STATUS_REJECTED, 'Reject'], true);
+        if ($wasRejected && ($isOwnRejected || !$isAdmin)) {
+            $regularisation->status = AttendanceRegularisation::STATUS_PENDING;
+            $regularisation->approved_by = null;
+            $regularisation->approved_at = null;
+            $regularisation->rejection_reason = null;
+        }
+
+        // If an approved request is being edited, undo its attendance effect first
+        $wasApproved = $regularisation->status == AttendanceRegularisation::STATUS_APPROVED;
+        if ($wasApproved) {
+            $this->revertAttendanceFromRegularisation($regularisation);
+        }
+
         // Update regularisation request
         $regularisation->date = $request->date;
         $regularisation->punch_in_time = $punchInTime;
@@ -304,6 +331,26 @@ class AttendanceRegularisationController extends Controller
         $regularisation->remarks = $request->remarks;
         $regularisation->is_updating_existing = $isUpdatingExisting;
         $regularisation->save();
+
+        if ($wasApproved) {
+            $this->applyRegularisationToAttendance($regularisation);
+            $regularisation->save();
+        }
+
+        if ($isAdmin) {
+            HrmActionLogger::record(
+                'attendance_regularisation',
+                'edited',
+                (\Auth::user()->name) . ' edited attendance regularisation for ' . optional($employee)->name . ' on ' . $request->date,
+                [
+                    'employee_id' => $regularisation->employee_id,
+                    'employee_name' => optional($employee)->name,
+                    'subject_type' => AttendanceRegularisation::class,
+                    'subject_id' => $regularisation->id,
+                    'properties' => ['date' => $request->date, 'punch_in' => $punchInTime, 'punch_out' => $punchOutTime, 'was_approved' => $wasApproved],
+                ]
+            );
+        }
 
         if ($request->ajax() || $request->wantsJson()) {
             return response()->json([
@@ -763,6 +810,12 @@ class AttendanceRegularisationController extends Controller
             $overtime = '00:00:00';
         }
 
+        // LOP rule: less than 4 hours worked => actual worked hours go to OT
+        $workedSecs = strtotime($date . ' ' . $clockOut) - strtotime($date . ' ' . $clockIn);
+        if ($workedSecs > 0 && $workedSecs < 14400) {
+            $overtime = sprintf('%02d:%02d:%02d', floor($workedSecs / 3600), floor($workedSecs / 60 % 60), $workedSecs % 60);
+        }
+
         // Calculate status using the same logic as AttendanceEmployeeController
         $status = $this->calculateAttendanceStatus($clockIn, $clockOut, $date, $regularisation->employee_id);
 
@@ -816,6 +869,12 @@ class AttendanceRegularisationController extends Controller
             $overtime = sprintf('%02d:%02d:%02d', $hours, $mins, $secs);
         } else {
             $overtime = '00:00:00';
+        }
+
+        // LOP rule: less than 4 hours worked => actual worked hours go to OT
+        $workedSecs = strtotime($date . ' ' . $clockOut) - strtotime($date . ' ' . $clockIn);
+        if ($workedSecs > 0 && $workedSecs < 14400) {
+            $overtime = sprintf('%02d:%02d:%02d', floor($workedSecs / 3600), floor($workedSecs / 60 % 60), $workedSecs % 60);
         }
 
         // Calculate status using the same logic as AttendanceEmployeeController
@@ -917,6 +976,11 @@ class AttendanceRegularisationController extends Controller
 
         $totalMinutes = $end->diffInMinutes($start);
         $workedHours = $totalMinutes / 60;
+
+        // LOP rule: worked less than 4 hours => LOP day (Absent)
+        if ($totalMinutes < 240) {
+            return AttendanceEmployee::STATUS_ABSENT;
+        }
 
         // Check if worked hours < 4.5 hours
         if ($workedHours < AttendanceEmployee::HALF_DAY_HOURS_THRESHOLD) {

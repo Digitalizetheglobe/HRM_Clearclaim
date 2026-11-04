@@ -330,7 +330,7 @@ class LeaveController extends Controller
         // Single Leave Entry Per Day Validation
         $validator->after(function ($validator) use ($request) {
             $existingLeavesQuery = \App\Models\Leave::where('employee_id', $request->employee_id)
-                ->where('status', '!=', 'Rejected');
+                ->whereNotIn('status', ['Reject', 'Rejected']);
 
             if ($request->leave_duration == 'Full Day') {
                 $hasOverlap = (clone $existingLeavesQuery)->where(function ($query) use ($request) {
@@ -601,13 +601,23 @@ class LeaveController extends Controller
         return redirect()->route('leave.index');
     }
 
+    private function isOwnRejectedLeave($leave)
+    {
+        if (!$leave || \Auth::user()->type != 'employee') {
+            return false;
+        }
+        $me = Employee::where('user_id', \Auth::user()->id)->first();
+        return $me && (int) $leave->employee_id === (int) $me->id
+            && in_array($leave->status, ['Reject', 'Rejected'], true);
+    }
+
     public function edit(LocalLeave $leave)
     {
-        if (\Auth::user()->can('Edit Leave')) {
-            if ($leave->created_by == \Auth::user()->creatorId()) {
+        if (\Auth::user()->can('Edit Leave') || $this->isOwnRejectedLeave($leave)) {
+            if ($leave->created_by == \Auth::user()->creatorId() || $this->isOwnRejectedLeave($leave)) {
 
                 if (Auth::user()->type == 'employee') {
-                    $employees = Employee::where('employee_id', '=', \Auth::user()->creatorId())->first();
+                    $employees = Employee::where('user_id', '=', \Auth::user()->id)->first();
                 } else {
                     $employees = Employee::where('created_by', '=', \Auth::user()->creatorId())->get()->pluck('name', 'id');
                 }
@@ -624,8 +634,9 @@ class LeaveController extends Controller
     public function update(Request $request, $leave)
     {
         $leave = LocalLeave::find($leave);
-        if (\Auth::user()->can('Edit Leave')) {
-            if ($leave->created_by == Auth::user()->creatorId()) {
+        $isResubmit = $this->isOwnRejectedLeave($leave);
+        if (\Auth::user()->can('Edit Leave') || $isResubmit) {
+            if ($leave->created_by == Auth::user()->creatorId() || $isResubmit) {
                 $validator = \Validator::make(
                     $request->all(),
                     [
@@ -654,7 +665,7 @@ class LeaveController extends Controller
                 $validator->after(function ($validator) use ($request, $employeeId, $leave) {
                     $existingLeavesQuery = \App\Models\Leave::where('employee_id', $employeeId)
                         ->where('id', '!=', $leave->id)
-                        ->where('status', '!=', 'Rejected');
+                        ->whereNotIn('status', ['Reject', 'Rejected']);
 
                     if ($request->leave_duration == 'Full Day') {
                         $hasOverlap = (clone $existingLeavesQuery)->where(function ($query) use ($request) {
@@ -794,6 +805,13 @@ class LeaveController extends Controller
                     $leave->is_lop = !$isPaidLeave;
                     $leave->leave_reason = $request->leave_reason;
                     $leave->remark = $request->remark ?? null;
+
+                    // Resubmission of a rejected leave: back to Pending for fresh approval
+                    if (in_array($leave->status, ['Reject', 'Rejected'], true)) {
+                        $leave->status = 'Pending';
+                        $leave->approved_by = null;
+                        $leave->approved_at = null;
+                    }
 
                     $leave->save();
 

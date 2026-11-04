@@ -131,8 +131,38 @@
                                                 </a>
                                             </div>
                                             
-                                            @if (\Auth::user()->hasCompanyAccess() || \Auth::user()->type == 'hr')
-                                                @if ($regularisation->status == 'Pending')
+                                            @if (\Auth::user()->type == 'employee' && in_array($regularisation->status, ['Rejected', 'Reject']))
+<div class="action-btn bg-primary ms-2">
+    <a href="#"
+       class="mx-3 btn btn-sm align-items-center edit-regularisation"
+       data-id="{{ $regularisation->id }}"
+       data-date="{{ \Carbon\Carbon::parse($regularisation->date)->format('Y-m-d') }}"
+       data-punch-in="{{ date('H:i', strtotime($regularisation->punch_in_time)) }}"
+       data-punch-out="{{ date('H:i', strtotime($regularisation->punch_out_time)) }}"
+       data-reason="{{ $regularisation->reason }}"
+       data-remarks="{{ $regularisation->remarks }}"
+       data-bs-toggle="tooltip"
+       title="{{ __('Edit & Resubmit') }}">
+        <i class="ti ti-pencil text-white"></i>
+    </a>
+</div>
+@endif
+                                             @if (\Auth::user()->hasCompanyAccess() || \Auth::user()->type == 'hr')
+                                                <div class="action-btn bg-primary ms-2">
+    <a href="#"
+       class="mx-3 btn btn-sm align-items-center edit-regularisation"
+       data-id="{{ $regularisation->id }}"
+       data-date="{{ \Carbon\Carbon::parse($regularisation->date)->format('Y-m-d') }}"
+       data-punch-in="{{ date('H:i', strtotime($regularisation->punch_in_time)) }}"
+       data-punch-out="{{ date('H:i', strtotime($regularisation->punch_out_time)) }}"
+       data-reason="{{ $regularisation->reason }}"
+       data-remarks="{{ $regularisation->remarks }}"
+       data-bs-toggle="tooltip"
+       title="{{ __('Edit') }}">
+        <i class="ti ti-pencil text-white"></i>
+    </a>
+</div>
+                                                 @if ($regularisation->status == 'Pending')
                                                     <div class="action-btn bg-success ms-2">
                                                         <a href="#" 
                                                            class="mx-3 btn btn-sm align-items-center approve-regularisation" 

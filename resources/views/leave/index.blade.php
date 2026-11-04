@@ -217,6 +217,14 @@
                                             @elseif($leave->status == 'Reject')
                                                 <div class="badge bg-danger p-2 px-3 rounded status-badge5">
                                                     {{ $leave->status }}</div>
+                                                @if (\Auth::user()->type == 'employee' && isset($employee) && $employee && $leave->employee_id == $employee->id)
+                                                    <a href="#" class="btn btn-sm btn-primary ms-2"
+                                                        data-size="lg"
+                                                        data-url="{{ URL::to('leave/' . $leave->id . '/edit') }}"
+                                                        data-ajax-popup="true" data-title="{{ __('Edit & Resubmit Leave') }}">
+                                                        <i class="ti ti-pencil"></i> {{ __('Edit & Resubmit') }}
+                                                    </a>
+                                                @endif
                                             @endif
                                         </td>
                                         @if ($currentStatus != 'Pending')

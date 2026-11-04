@@ -254,7 +254,7 @@ class AttendanceEmployeeController extends Controller
             $employeeAttendance->clock_out     = $request->clock_out . ':00';
             $employeeAttendance->late          = $late;
             $employeeAttendance->early_leaving = $earlyLeaving;
-            $employeeAttendance->overtime      = $overtime;
+            $employeeAttendance->overtime      = $this->shortDayOvertime($employeeAttendance->clock_in, $employeeAttendance->clock_out, $date ?? $request->date) ?? $overtime;
             $employeeAttendance->total_rest    = '00:00:00';
             $employeeAttendance->created_by    = \Auth::user()->creatorId();
             
@@ -829,7 +829,7 @@ class AttendanceEmployeeController extends Controller
                         $employeeAttendance->clock_out     = $out;
                         $employeeAttendance->late          = $late;
                         $employeeAttendance->early_leaving = ($earlyLeaving > 0) ? $earlyLeaving : '00:00:00';
-                        $employeeAttendance->overtime      = $overtime;
+                        $employeeAttendance->overtime      = $this->shortDayOvertime($employeeAttendance->clock_in, $employeeAttendance->clock_out, $date ?? $request->date) ?? $overtime;
                         $employeeAttendance->total_rest    = '00:00:00';
                         $employeeAttendance->save();
 
@@ -2242,6 +2242,22 @@ class AttendanceEmployeeController extends Controller
     }
 
     /**
+     * LOP rule helper: if less than 4 hours were worked, the actual worked
+     * time is returned (to be stored as OT). Otherwise returns null.
+     */
+    public function shortDayOvertime($clockIn, $clockOut, $date)
+    {
+        if (empty($clockIn) || empty($clockOut) || $clockIn == '00:00:00' || $clockOut == '00:00:00') {
+            return null;
+        }
+        $secs = strtotime($date . ' ' . $clockOut) - strtotime($date . ' ' . $clockIn);
+        if ($secs > 0 && $secs < 14400) {
+            return sprintf('%02d:%02d:%02d', floor($secs / 3600), floor($secs / 60 % 60), $secs % 60);
+        }
+        return null;
+    }
+
+    /**
      * Calculate attendance status with new rules for Half Day scenarios
      * 
      * Rules:
@@ -2297,12 +2313,18 @@ class AttendanceEmployeeController extends Controller
         $totalMinutes = $end->diffInMinutes($start);
         $workedHours = $totalMinutes / 60;
         
+        // LOP rule: worked less than 4 hours => LOP day (Absent, no payable credit).
+        // The actual worked hours are still stored as overtime by the callers.
+        if ($totalMinutes < 240) {
+            return AttendanceEmployee::STATUS_ABSENT;
+        }
+        
         // Rule 3: If 4th+ late mark, return Half Day (Late)
         if ($isLateMark && $lateMarksCount >= AttendanceEmployee::MAX_LATE_MARKS_PER_MONTH) {
             return AttendanceEmployee::STATUS_HALF_DAY_LATE;
         }
         
-        // Rule 1: If worked ≤ 5 hours OR punch-out within 5 hours, return Half Day
+        // Rule 1: Half Day only when worked between 4 and 5 hours (<4h is LOP, handled above)
         if ($totalMinutes <= 300) { // 5 hours = 300 minutes
             // For late marks with ≤ 5 hours, still return Half Day (not Half Day Late)
             return AttendanceEmployee::STATUS_HALF_DAY;
