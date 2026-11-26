@@ -250,6 +250,35 @@ class LeaveController extends Controller
     }
 
     /**
+     * Preserve explicit LOP requests on approval; otherwise enforce the 2-day monthly paid cap.
+     */
+    private function applyApprovalPaidStatus(LocalLeave $leave): void
+    {
+        if ($leave->is_lop || !$leave->is_paid) {
+            $leave->is_paid = false;
+            $leave->is_lop = true;
+            return;
+        }
+
+        $leaveStart = \Carbon\Carbon::parse($leave->start_date);
+        $monthlyPaidLeavesUsed = $this->paidLeaveDaysInMonth(
+            $leave->employee_id,
+            $leave->leave_type_id,
+            $leaveStart->year,
+            $leaveStart->month,
+            ['Approved'],
+            $leave->id
+        );
+
+        $monthlyLimit = 2;
+        $isPaidLeave = ($monthlyPaidLeavesUsed < $monthlyLimit)
+            && (($monthlyPaidLeavesUsed + (float) $leave->total_leave_days) <= $monthlyLimit);
+
+        $leave->is_paid = $isPaidLeave;
+        $leave->is_lop = !$isPaidLeave;
+    }
+
+    /**
      * Calculate pro-rata leave entitlement based on employee joining date
      * 15 leaves per year = 1.25 leaves per month
      * If employee joins in month 4, they get (12 - 4 + 1) = 9 months * 1.25 = 11.25 leaves
@@ -943,33 +972,7 @@ class LeaveController extends Controller
         
         if ($leave->status == 'Approved') {
             $total_leave_days = $leave->total_leave_days;
-            
-            // Check monthly paid leaves limit against the leave's month (not today)
-            $leaveStart = \Carbon\Carbon::parse($leave->start_date);
-            $monthlyPaidLeavesUsed = $this->paidLeaveDaysInMonth(
-                $leave->employee_id,
-                $leave->leave_type_id,
-                $leaveStart->year,
-                $leaveStart->month,
-                ['Approved'],
-                $leave->id
-            );
-
-            $monthlyLimit = 2;
-            // Determine if this leave should be paid or LOP
-            $isPaidLeave = true;
-            if ($monthlyPaidLeavesUsed >= $monthlyLimit) {
-                $isPaidLeave = false;
-            } else {
-                // Check if this leave would exceed 2 paid leaves this month
-                if ($monthlyPaidLeavesUsed + $total_leave_days > $monthlyLimit) {
-                    $isPaidLeave = false;
-                }
-            }
-
-            // Update paid/LOP status
-            $leave->is_paid = $isPaidLeave;
-            $leave->is_lop = !$isPaidLeave;
+            $this->applyApprovalPaidStatus($leave);
             
             $now = now();
             $balance = EmployeeLeaveBalance::where('employee_id', $leave->employee_id)
@@ -1114,31 +1117,8 @@ class LeaveController extends Controller
             $leave->approved_by = \Auth::user()->id;
             $leave->approved_at = now();
             
-            // Re-apply the logic from changeaction for 'Approved' status
             $total_leave_days = $leave->total_leave_days;
-            
-            $leaveStart = \Carbon\Carbon::parse($leave->start_date);
-            $monthlyPaidLeavesUsed = $this->paidLeaveDaysInMonth(
-                $leave->employee_id,
-                $leave->leave_type_id,
-                $leaveStart->year,
-                $leaveStart->month,
-                ['Approved'],
-                $leave->id
-            );
-
-            $monthlyLimit = 2;
-            $isPaidLeave = true;
-            if ($monthlyPaidLeavesUsed >= $monthlyLimit) {
-                $isPaidLeave = false;
-            } else {
-                if ($monthlyPaidLeavesUsed + $total_leave_days > $monthlyLimit) {
-                    $isPaidLeave = false;
-                }
-            }
-
-            $leave->is_paid = $isPaidLeave;
-            $leave->is_lop = !$isPaidLeave;
+            $this->applyApprovalPaidStatus($leave);
             
             $now = now();
             $balance = EmployeeLeaveBalance::where('employee_id', $leave->employee_id)
